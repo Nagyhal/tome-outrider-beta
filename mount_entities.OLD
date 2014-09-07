@@ -1,0 +1,28 @@
+newEntity{
+	define_as = "BASE_MOUNT",
+	slot = "MOUNT",
+	type = "mount",
+	display = "&", color=colors.SLATE,
+	encumber = 0,
+	desc = [[A mount]],
+}
+
+newEntity{ base = "BASE_MOUNT", define_as = "ALCHEMIST_GOLEM_MOUNT",
+	subtype = "golem",
+	name = "alchemist golem mount",
+	cost = 0,
+	mount = {
+		share_damage = 75,
+		attack_with_rider = 1,
+	},
+}
+
+newEntity{ base = "BASE_MOUNT", define_as = "OUTRIDER_BEAST_MOUNT",
+	subtype = "beast",
+	name = "outrider beast mount",
+	cost = 0,
+	mount = {
+		share_damage = 75,
+		attack_with_rider = 1,
+	},
+}

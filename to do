@@ -1,0 +1,32 @@
+Wolf--talent touchup
+
+General
+	Make mounts attack.
+	To do that, you'll have to make mounts tick energy as usual.
+	Make mounts /regen/
+	Grant mounting talents sensibly
+	Make dismounts properly accept a target, and remove the same from mounting
+
+Sly Senses
+	needs a better name.
+	or, to better live up to its name
+	attack, defense and saves are out of vogue, so an additonal benefit might not be amiss
+	also, don't forget to add attack
+	+perception that it shares with its owner?
+	the bonus would have to be mirrored in Loyal to the Pack
+	something crit-related might be cool, along with something detection-related
+Go for the Throat
+	reduce cooldown with talent levels
+	it'll be this tree's killer app
+Uncanny Tenacity
+	absolutely needs to be jazzed up
+	+speed to fit with the power attack theme of this tree
+	but then, wolves are not supposed to be too powerful
+	but they are supposed to be well balanced
+	could have an activated so that Go for the Throat gets a synergistic boost
+Loyal to the Pack
+	provide symmetry to sly senses' new feature
+Together, Forever
+	define "damage"
+Predatory Flanking
+	then all damage by allies
