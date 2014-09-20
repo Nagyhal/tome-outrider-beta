@@ -100,7 +100,7 @@ function _M:mountTarget(target)
 		self:move(old_x, old_y, force)
 		self:setEffect(self.EFF_MOUNT, 100, {mount=target})
 		target:setEffect(self.EFF_RIDDEN, 100, {rider=self})
-		game.logSeen(self, "%s rides %s!", self.name:capitalize(), target.name:capitalize())
+		game.logSeen(self, "%s mounts %s!", self.name:capitalize(), target.name:capitalize())
 		return true
 	else return false end
 end
