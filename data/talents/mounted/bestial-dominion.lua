@@ -45,8 +45,8 @@ local mounts_list = {
 			["wolf/pack-hunter"] = true,
 		},
 		gainExp = function() end,
-		unused_stats = 30,
-		unused_talents = 30,
+		unused_stats = 0,
+		unused_talents = 0,
 		unused_generics = 0,
 		unused_talents_types = 0,
 		mount = {
@@ -218,7 +218,54 @@ newTalent{
 		end
 	end,
 	info = function(self, t)
-		return ([[Your hurl your fury at the wilderness, letting out a luring, primal call and intensifying every one of your senses so that you might close upon a savage ally, a steed to carry you to victory and spoil. Finding a suitable wild mount takes time and effort; you gain the "Challenge the Wilds" status with a counter of %d, and every time you slay an enemy, that counter depletes by 1. As it approaches 0, your chances of happening upon your quarry are increased. The beast that is called will depend on your surroundings: either a wolf, agile and dependable; a spider, ruthless yet versatile; or a rare and mighty drake. You must subdue the beast by blade or bow; it will not come to your side immediately, but after you have asserted your dominance. Care must be taken not to slay it unwittingly. The quality of beast will increase with talent level.]])
-		:format(math.ceil(self:getTalentLevel(t)*5) + 10)
+		local dam = t.getDam(self, t)
+		return ([[Your hurl your fury at the wilderness, letting out a luring, primal call and intensifying every one of your senses so that you might close upon a savage ally, a steed to carry you to victory and spoil. Finding a suitable wild mount takes time and effort; you gain the "Challenge the Wilds" status with a counter of %d, and every time you slay an enemy, that counter depletes by 1. As it approaches 0, your chances of happening upon your quarry are increased. The beast that is called will depend on your surroundings: either a wolf, agile and dependable; a spider, ruthless yet versatile; or a rare and mighty drake. You must subdue the beast by blade or bow; it will not come to your side immediately, but after you have asserted your dominance. Care must be taken not to slay it unwittingly. The quality of beast will increase with talent level.
+
+			Levelling Bestial Dominion will also increase the physical power of your mount by %d.]])
+		:format(math.ceil(self:getTalentLevel(t)*5) + 10, dam)
 	end,
+	getDam = function(self, t) return self:getTalentLevel(t) * 10 end,
+
+}
+
+newTalent{
+	name = "Subdue The Beast",
+	type = {"mounted/bestial-dominion", 2},
+	require = mnt_str_req2,
+	points = 5,
+	cooldown = 50,
+	-- tactical = { STAMINA = 2 },
+	getRestore = function(self, t) return self:combatTalentScale(t, 20, 40) end,
+	getMaxLoyalty = function(self, t) return math.round(self:combatTalentScale(t, 5, 15), 5) end,
+	action = function(self, t)
+		self:incLoyalty(t.getRestore(self, t)*self.max_loyalty/ 100)
+		return true
+	end,
+	info = function(self, t)
+		local restore = t.getRestore(self, t)
+		local max_loyalty = t.getMaxLoyalty(self, t)
+		return ([[With a mighty effort, you rein in your mount's feral tendencies, increasing its Loyalty by %d%% of its maximum. Also grants a passive increase of %d to maximum Loyalty with all mounts.
+
+			As you master the domestication of wild riding beasts, you are able to still their fury long enough to inscribe them with infusions. You gain an infusion slot for your mount, and may gain others for each Bestial Dominion talent you raise to 5/5 (up to 3 slots).]]):
+		format(restore, max_loyalty)
+	end,
+}
+
+
+newTalent{
+	name = "Feral Affinity",
+	type = {"mounted/bestial-dominion", 3},
+	require = mnt_str_req3,
+	mode = "passive",
+	points = 5,
+	passives = function(self, t, p)
+	end,
+	info = function(self, t)
+		local res = t.getResistPct(self, t)
+		local save = t.getSavePct(self, t)
+		return ([[You share %d%% of the resistances of your steed, while your steed partakes of some of your own defenses against mental attacks (%d%% of your mental save and up to %d%% of your confusion & fear resistance).]]
+			):format(res, save, res)
+	end,
+	getSavePct = function(self, t) return self:combatTalentScale(t, 15, 35) end,
+	getResistPct = function(self, t) return self:combatTalentScale(t, 25, 50) end,
 }

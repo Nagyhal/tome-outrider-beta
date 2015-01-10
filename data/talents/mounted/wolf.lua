@@ -5,33 +5,19 @@ newTalent{
 	points = 5,
 	require = mnt_dex_req1,
 	mode = "passive",
-	getDexterity = function(self, t) return self:getTalentLevelRaw(t) * t.getDexterityInc(self, t) end,
-	getDefense = function(self, t) return self:getTalentLevelRaw(t) * t.getDefenseInc(self, t) end,
-	getSaves = function(self, t) return self:getTalentLevelRaw(t) * t.getSavesInc(self, t) end,
-	--If I want to tweak this I only want to change 1 of the following functions - extensibility, essentially.
-	getDexterityInc = function(self, t) return 2 end,
-	getDefenseInc = function(self, t) return 3 end,
-	getSavesInc = function(self, t) return 3 end, 
-	on_learn = function(self, t)
-		-- local dex = 2
-		-- local def = 3
-		-- local saves = 3
-		self.inc_stats[self.STAT_DEX] = self.inc_stats[self.STAT_DEX] + t.getDexterityInc(self, t)
-		self:onStatChange(self.STAT_DEX,  t.getDexterityInc(self, t))
-		self.combat_def = self.combat_def + t.getDefenseInc(self, t)
-		self.combat_physresist = self.combat_physresist + t.getSavesInc(self, t)
-		self.combat_spellresist = self.combat_spellresist + t.getSavesInc(self, t)
-	end,
-	on_unlearn = function(self, t)
-		self.inc_stats[self.STAT_DEX] = self.inc_stats[self.STAT_DEX] - t.getDexterityInc(self, t)
-		self:onStatChange(self.STAT_DEX, -t.getDexterityInc(self, t))
-		self.combat_def = self.combat_def - t.getDefenseInc(self, t)
-		self.combat_physresist = self.combat_physresist - t.getSavesInc(self, t)
-		self.combat_spellresist = self.combat_spellresist - t.getSavesInc(self, t)
+	getStatBoost = function(self, t) return self:getTalentLevelRaw(t) * 2 end,
+	getDefense = function(self, t) return self:getTalentLevelRaw(t) *5 end,
+	getSaves = function(self, t) return self:getTalentLevelRaw(t) * 3 end,
+	passives = function(self, t, p)
+		self:talentTemporaryValue(p, "inc_stats",  {[self.STAT_DEX] = t.getStatBoost(self, t)})
+		self:talentTemporaryValue(p, "inc_stats",  {[self.STAT_CUN] = t.getStatBoost(self, t)})
+		self:talentTemporaryValue(p, "combat_def", t.getDefense(self, t))
+		self:talentTemporaryValue(p, "combat_physresist", t.getSaves(self, t))
+		self:talentTemporaryValue(p, "combat_spellresist", t.getSaves(self, t))
 	end,
 	info = function(self, t)
-		return ([[The wolf gains a %d bonus to Dexterity, a %d bonus to defense and a %d bonus to physical and spell saves.]]):
-		format(t.getDexterity(self, t),
+		return ([[The wolf gains a %d bonus to Dexterity and Cunning, a %d bonus to defense and a %d bonus to physical and spell saves.]]):
+		format(t.getStatBoost(self, t),
 		t.getDefense(self, t),
 		t.getSaves(self, t)
 		)
@@ -135,13 +121,17 @@ newTalent{
 	points = 5,
 	require = mnt_dex_req1,
 	mode = "passive",
-	getThreshold = function (self, t) return ( 13 + self:getTalentLevelRaw(t) * 12 ) end,
-	getSave = function (self, t) return math.floor( 3 * self:getTalentLevel(t)) end,
+	getThreshold = function (self, t) return math.round(self:combatTalentScale(t, 25, 40), 5) end,
+	getSaves = function (self, t) return math.round(self:combatTalentScale(t, 5, 20), 1) end,
+	getRes = function (self, t) return self:combatTalentScale(t, 8, 20) end,
 	--getReduction = function (self, t) return math.floor(10 * self:getTalentLevel(t)) end,
 	
 	info = function(self, t)
-		return ([[The wolf will stop at nothing to hound and harry its prey; if it is inflicted with status effects by an enemy it targets at less than %d%% health, the wolf gains a %d bonus to the relevant save.]]):
-		format(t.getThreshold(self, t), t.getSave(self, t))
+		local threshold =  t.getThreshold(self, t)
+		local saves = t.getSaves(self, t)
+		local resist = t.getRes(self, t)
+		return ([[The wolf will stop at nothing to hound and harry its prey; while adjacent to an enemy at less than %d%% health, the wolf gains a %d bonus to saves and a %d%% bonus to resist all (including stuns, pins, knockback, confusion and fear.)]]):
+		format(threshold, saves, resist)
 	end,
 }
 
@@ -195,11 +185,10 @@ newTalent{
 	require = mnt_cun_req1,
 	mode = "passive",
 	getCunning = function(self, t) return self:getTalentLevelRaw(t) * t.getCunningInc(self, t) end,
-	getRegen = function(self, t) return self:getTalentLevelRaw(t) * t.getRegenInc(self, t) end,
+	getRegen = function(self, t) return math.round(self:combatTalentScale(t, 1.5, 5, .35), .5)  end,
 	getSaves = function(self, t) return self:getTalentLevelRaw(t) * t.getSavesInc(self, t) end,
 	--If I want to tweak this I only want to change 1 of the following functions - extensibility, essentially.
 	getCunningInc = function(self, t) return 2 end,
-	getRegenInc = function(self, t) return 3 end,
 	getSavesInc = function(self, t) return 3 end, 
 	on_learn = function(self, t)
 		-- local dex = 2
@@ -217,10 +206,10 @@ newTalent{
 		self.combat_mentalresist = self.combat_mentalresist - t.getSavesInc(self, t)
 	end,
 	info = function(self, t)
-		return ([[The wolf gains a %d bonus to Cunning, a %d bonus to mental saves and a %d bonus to Loyalty regen.]]):
+		return ([[The wolf gains a %d bonus to Willpower and Cunning, a %d bonus to mental saves and a %.1f bonus to Loyalty regen.]]):
 		format(t.getCunning(self, t),
-		t.getRegen(self, t),
-		t.getSaves(self, t)
+		t.getSaves(self, t),
+		t.getRegen(self, t)
 		)
 	end,
 }
@@ -232,11 +221,12 @@ newTalent{
 	points = 5,
 	require = mnt_cun_req1,
 	mode = "passive",
-	getHealingMod = function(self, t) return 15 + self:getTalentLevel(t) * 10 end,
+	-- getHealingMod = function(self, t) return 15 + self:getTalentLevel(t) * 10 end,
+	getHealingMod = function(self, t) return math.round(self:combatTalentScale(t, 5, 20), 5) end,
 	getLoyaltyRegen = function(self, t) return 1 + self:getTalentLevel(t) end,
 	getHealthThreshold = function(self,t) return 10 + self:getTalentLevel(t) * 2.5 end,
 	getRushRange = function(self, t) return 5 + self:getTalentLevelRaw(t) end,
-	info = function(self, t) return ([[The wolf gains a +%d%% healing modifier bonus and each heal or inscription usage restores its loyalty to you by %d points. Also, when your health is below %d%% of its total, if your wolf is not adjacent to you, it will activate Steady Companion to come rushing to your side, dealing heavy damage at a maximum range of %d]]):
+	info = function(self, t) return ([[The wolf gains a +%d%% healing modifier bonus and each heal or inscription usage restores its loyalty to you by %d points. Also, when your health is below %d%% of its total, if your wolf is not adjacent to you, it will activate Together, Forever to come rushing to your side, dealing heavy damage at a maximum range of %d]]):
 		format(t.getHealingMod(self, t),
 		t.getLoyaltyRegen(self, t),
 		t.getHealthThreshold(self, t),
@@ -253,8 +243,19 @@ newTalent{
 	require = mnt_cun_req1,
 	mode = "passive",
 	getPct = function(self, t) return 15 + (self:getTalentLevel(t) + self:getTalentLevelRaw(t))/2 * 10 end,
+	getSecondaryPct = function(self, t)
+		--shift property of combatTalentScale doesn't really work
+		local shifted_tl = self:getTalentLevel(t)-1
+		--0 at TL1 ; 5 at TL2 ; 12 at TL5
+		local val = shifted_tl>=1 and self:combatScale(shifted_tl, 5, 1,  12, 4, .5) or 0
+		return math.round(val, .5)
+	end,
 	info = function(self, t)
-		return ([[If you and one of your allies both stand adjacent to the same enemy, but not adjacent to one another, then your damage is increased by %d%%]]):format(t.getPct(self, t))end,
+		local pct = t.getPct(self, t)
+		local secondary = t.getSecondaryPct(self, t)
+		return ([[If you and one of your allies both stand adjacent to the same enemy, but not adjacent to one another, then your damage is increased by %d%%, and your flanking ally's damage by %.1f%%.]])
+			:format(pct, secondary)
+		end,
 }
 
 newTalent{
@@ -271,7 +272,7 @@ newTalent{
 	on_pre_use = function(self, t) end,
 	action = function(self, t) end,
 	info = function(self, t)
-		return ([[The wolf summons between %d and %d of its allies, with a %d%% chance for a legendary wolf to be present. Also, as you level this talent, wolves you encounter have a %d%% chance to be friendly if they fail a mental save]]):
+		return ([[The wolf summons between %d and %d of its allies, with a %d%% chance for a legendary wolf to be present. Also, as you level this talent, wolves you encounter have a %d%% chance to be friendly if they fail a mental save against the wolf's mindpower.)]]):
 		format(
 		t.getWolfMin(self, t),
 		t.getWolfMax(self, t),

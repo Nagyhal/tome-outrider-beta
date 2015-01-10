@@ -7,7 +7,6 @@ newTalent{
 	no_unlearn_last = true,
 }
 
-
 newTalent{
 	name = "Mount",
 	type = {"mounted/mounted-base", 1},
@@ -20,8 +19,7 @@ newTalent{
 	no_unlearn_last = true,
 	range = function(self, t)
 		if self:knowTalent(self.T_MOUNTED_ACROBATICS) then
-			local range = self:callTalent(self.T_MOUNTED_ACROBATICS, "getMountRange")
-			return range
+			return self:callTalent(self.T_MOUNTED_ACROBATICS, "getRange")
 		else return 1 end
 	end,
 	on_pre_use = function(self, t)
@@ -54,8 +52,8 @@ newTalent{
 		else return true
 		end
 	end,
-	info = function(self, t)
-		return ([[Climb atop your mount]])
+	info=function(self, t)
+		return ([[Climb atop your mount.]])
 	end,
 }
 
@@ -73,7 +71,7 @@ newTalent{
 	range = function(self, t)
 		if self:knowTalent(self.T_MOUNTED_ACROBATICS) then
 			-- t_acr = self:getTalentFromId(self.T_MOUNTED_ACROBATICS)
-			return 3 --t_acr.getMountRange()
+			return self:callTalent(self.T_MOUNTED_ACROBATICS, "getRange")
 		else return 1 end
 	end,
 	on_pre_use = function(self, t)
@@ -91,6 +89,6 @@ newTalent{
 	end,
 	info = function(self, t)
 		return ([[Get down from your mount to a square within range %d]]):
-		format (self:getTalentRange(t))
+		format(self:getTalentRange(t))
 	end,
 }

@@ -147,7 +147,7 @@ newTalent{
 		return true
 	end,
 	info = function(self, t)
-		return ([[For 5 turns, your mount's global speed is increased by %d%% You may be riding or adjacent to your mount to activate this effect]]):format(t.getGoadSpeed(self, t)*100)
+		return ([[For 5 turns, your mount's global speed is increased by %d%%. You may be riding or adjacent to your mount to activate this effect]]):format(t.getGoadSpeed(self, t)*100)
 	end,
 }
 
@@ -260,6 +260,9 @@ newTalent{
 		return true
 	end,
 	info = function(self, t)
-		return ([[When you dismount, you may leap a great distance, jumping an extra %d squares away. All enemies you pass through during this manoeuvre suffer a %d%% damage attack, if you are wielding a melee weapon; if you wield a ranged weapon, then you shoot one enemy nearest to you (but not adjacent) when you land for %d%% damage. In addition, you may mount from an extra %d squares away.]]):format(t.getRange(self, t), t.getDamage(self, t), t.getDamage(self, t), t.getRange(self, t))
+		local range = self:getTalentRange(t)
+		local dam = t.getDamage(self, t)*100
+		return ([[When you dismount, you may leap a great distance, jumping an extra %d squares away. All enemies you pass through during this manoeuvre suffer a %d%% damage attack, if you are wielding a melee weapon; if you wield a ranged weapon, then you shoot one enemy nearest to you (but not adjacent) when you land for %d%% damage. In addition, you may mount from an extra %d squares away.]]
+		):format(range, dam, dam, range)
 	end,
 }

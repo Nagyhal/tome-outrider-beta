@@ -18,13 +18,15 @@
 -- darkgod@te4.org
 
 -- Talent trees
-newTalentType{ allow_random=true, type="mounted/mounted-base", name = "mounted - base", description = "Exercise your dominion over the wild beasts of Maj'Eyal."}
-newTalentType{ allow_random=true, type="mounted/bestial-dominion", name = "bestial dominion", generic = true, description = "Exercise your dominion over the wild beasts of Maj'Eyal."}
-newTalentType{ allow_random=true, type="mounted/mounted-mobility", name = "mounted mobility", generic = true, description = "Wresting mastery over your fleet pawed steed,  you dance the last dance with those not quick enough to match you."}
+setfenv(1, Talents.main_env)
+
+newTalentType{ allow_random=true, type="mounted/mounted-base", name = "mounted - base", description = "Basic mount abilities"}
+newTalentType{ allow_random=true, type="mounted/bestial-dominion", name = "bestial dominion", description = "Exercise your dominion over the wild beasts of Maj'Eyal."}
+newTalentType{ allow_random=true, type="mounted/mounted-mobility", name = "mounted mobility", generic = true, description = "Wresting mastery over your fleet pawed steed, you leave slower foes bleeding in the dust."}
 newTalentType{ allow_random=true, type="mounted/teamwork", name = "teamwork", description = "Wresting mastery over your fleet pawed steed, you dance the last dance with those not quick enough to match you."}
-newTalentType{ allow_random=true, type="mounted/skirmish-tactics", name = "skirmish tactics", description = "Beside your beast, not even the winds can outpace your surging onslaught; atop it, not even the sky can outreach your aim."}
+newTalentType{ allow_random=true, type="mounted/skirmish-tactics", name = "skirmish tactics", description = "Beside your beast, not even the winds can outpace you; atop it, not even the sky can outreach your aim."}
 newTalentType{ allow_random=true, type="mounted/shock-tactics", name = "shock tactics", description = "Shattering your foes' ranks with devastating charge attacks, your shock tactics represent the pinnacle of mounted martial domination and the ultimate unison of steel and steed."}
-newTalentType{ allow_random=true, type="mounted/beast-heart", name = "beast heart", description = "Become no longer beastrider, but beastbrother."}
+newTalentType{ allow_random=true, type="mounted/beast-heart", name = "beast heart", description = "Become no longer beast-rider, but beastkind."}
 
 --Mount talents
 --Wolf, the basic mount, and its subtypes
@@ -33,6 +35,7 @@ newTalentType{ type="wolf/pack-hunter", name = "pack hunter", description = "Wol
 newTalentType{ type="wolf/will-of-winter", name = "will of winter", description = "White wolf gifts" }
 newTalentType{ type="wolf/alpha-predator", name = "alpha predator", description = "Wolf power abilities" }
 --Spider, the basic underground / tactical mount
+newTalentType{ type="spider/stalker-in-the-shadows", name = "stalker in the shadows", description = "Spider ambush tactics" }
 newTalentType{ type="spider/fanged-killer", name = "fanged killer", description = "Spider tactical abilities" }
 newTalentType{ type="spider/lurking-menace", name = "lurking menace", description = "Spider tactical abilities" }
 --Drakes, the basic power mount
@@ -40,7 +43,7 @@ newTalentType{ type="drake/dragonflight", name = "dragonflight", description = "
 --Griffins, secret aerial mount.
 newTalentType{ type="griffin/wingborne-supremacy", name = "wingborne supremacy", description = "Griffin airborne abilities." }
 --Dread steeds, undead / corrupted mount
-newTalentType{ type="drake/dread-herald", name = "dread herald", description = "Dread steed basic abilities." }
+newTalentType{ type="dread-steed/dread-herald", name = "dread herald", description = "Dread steed basic abilities." }
 --Treants, halfing mount
 newTalentType{ type="treant/striding-canopy", name = "striding canopy", description = "Treant defensive abilities." }
 --Minotaurs, halfling mount
@@ -60,9 +63,12 @@ newTalentType{ type="yeek/upholder-of-the-way", name = "upholder of the way", de
 newTalentType{ type="ritch/hive-sentinel", name = "hive sentinel", description = "Ritch cooperative power abilities." }
 
 
---technique
+--Techniques and Cunning
 newTalentType{ allow_random=true, type="technique/dreadful-onset", name = "dreadful onset", description = "Far and wide, kingdoms shall quake at the onset of your terrible reign of blood, arrows and steel."}
 newTalentType{ allow_random=true, type="technique/barbarous-combat", name = "barbarous combat", description = "Mounted or afoot, your brutal blademastery shall ravage legions."}
+newTalentType{ allow_random=true, type="technique/combined-arms", name = "combined arms", description = "Master many styles of warfare, each complimenting the others."}
+newTalentType{ allow_random=true, type="cunning/raider", name = "seasoned raider", generic = true, description = "Relish the danger the unknown brings."}
+
 
 mnt_str_req1 = {
 	stat = { str=function(level) return 12 + (level-1) * 2 end },
@@ -202,17 +208,6 @@ mnt_dexwil_req4 = {
 	level = function(level) return 12 + (level-1)  end,
 }
 
--- Archery range talents
--- From techinques.
-archery_range = function(self, t)
-	local weapon = self:hasArcheryWeapon()
-	if not weapon or not weapon.combat then return 1 end
-	return weapon.combat.range or 6
-end
-
-
-
-
 --Calling /bestial/ mounts
 
 --[[function mountSetupSummon(self, m, x, y, level, no_control)
@@ -321,6 +316,7 @@ load("/data-outrider/talents/mounted/mounted-mobility.lua")
 --load("/data-outrider/talents/mounted/shock-tactics.lua")
 --load("/data-outrider/talents/mounted/beast-heart.lua")
 
---technique
+--technique and cunning
 load("/data-outrider/talents/techniques/barbarous-combat.lua")
 load("/data-outrider/talents/techniques/dreadful-onset.lua")
+load("/data-outrider/talents/cunning/raider.lua")
