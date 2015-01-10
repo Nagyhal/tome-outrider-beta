@@ -307,7 +307,7 @@ end
 
 load("/data-outrider/talents/mounted/mounts.lua")
 load("/data-outrider/talents/mounted/wolf.lua")
---load("/data-outrider/talents/mounted/spider.lua")
+load("/data-outrider/talents/mounted/spider.lua")
 --load("/data-outrider/talents/mounted/drake.lua")
 load("/data-outrider/talents/mounted/bestial-dominion.lua")
 load("/data-outrider/talents/mounted/mounted-mobility.lua")

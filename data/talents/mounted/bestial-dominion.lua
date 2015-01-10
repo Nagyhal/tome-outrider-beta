@@ -54,18 +54,43 @@ local mounts_list = {
 			share_damage = 0.4
 		}
 	},
-	giant_spider = {	
+	spider = {	
 		base = "BASE_NPC_SPIDER",
-		name = "giant spider", color=colors.LIGHT_DARK,
-		desc = [[A huge arachnid, it produces even bigger webs.]],
+		type = "spiderkin", subtype = "spider",
+		name = "giant spider", color=colors.DARK_GREY,
+		display = "S", image = "npc/spiderkin_spider_giant_spider.png",
+		desc = [[A jagged hulk of chitinous appendages and bristles. Its quick, tentative movement belies a great cunning.]],
 		rarity = 1,
-		max_life = 50,
-		life_rating = 10,
+		max_life = 90,
+		life_rating = 9,
 		combat_armor = 5, combat_def = 5,
-		resolvers.talents{
-			[Talents.T_SPIDER_WEB]={base=1, every=10, max=5},
-			[Talents.T_LAY_WEB]={base=1, every=10, max=5},
-		}
+		combat = { dam=resolvers.levelup(9, 1, 1), atk=8, apr=8 },
+		body = { INVEN = 10},
+		rank = 1,
+		size_category = 3,
+		autolevel = "rogue",
+		ai = "tactical", 
+		ai_state = { talent_in=1, ai_move="move_astar", ally_compassion=10 },
+		ai_tactic = resolvers.tactic("melee"),
+		global_speed_base = 1.0,
+		resolvers.nice_tile{image="invis.png", color=colors.UMBER, image="npc/spiderkin_spider_giant_spider.png"},
+		level_range = {1, nil}, exp_worth = 0,
+		talents_types = {
+			["wolf/tenacity"] = true,
+			["wolf/pack-hunter"] = true,
+		},
+		gainExp = function() end,
+		talents_types = {
+			["spider/stalker-in-the-shadows"] = true,
+		},
+		unused_stats = 0,
+		unused_talents = 0,
+		unused_generics = 0,
+		unused_talents_types = 0,
+		mount = {
+			loyalty = 90,
+			share_damage = 0.5
+		},
 	}
 }
 
@@ -78,7 +103,7 @@ local chances = getBestialMountChances(self)
 	local tot = 0
 	local list = {}
 	for k, e in pairs(chances) do for i = 1, e do list[#list+1] = k end tot = tot + e end
-	local m = require "mod.class.NPC".new(mounts_list.wolf)
+	local m = require "mod.class.NPC".new(mounts_list.spider)
 	return m
 end
 

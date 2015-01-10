@@ -1,11 +1,70 @@
-Wolf--talent touchup
+Release Phase 1
+---------------------------------------------------
+Add a LOAD of mechanical improvements to mounts
+
+New AI routine lets mount take targets independently.
+Mount and rider can share non-damaging inscriptions.
+Player riding the mount around will expend the mount's energy.
+Mount can cast instant-cast abilities even when being moved around by the player.
+Dismounting and mounting half-way fixed, but the system is due further improvement.
+
+Bump attacks do not make mount think it has moved
+--------
+Implement all wolf talents
+--------
+Create original and unique wolf mounts
+--------
+Provide means to change mount name
+--------
+Add interface to "command" mount while riding
+--------
+Implement proper function of Bestial Dominion
+--------
+Implement Loyalty effects
+
+Forcible Dismounting
+Cowardice
+Turning
+--------
+Create initial talent icon set using borrowed artwork
+--------
+Create Photoshop / Illustrator macro to shade all talent icons in a series
+--------
+Release!
+--------
+
 
 General
-	Make mounts attack.
-	To do that, you'll have to make mounts tick energy as usual.
-	Make mounts /regen/
-	Grant mounting talents sensibly
-	Make dismounts properly accept a target, and remove the same from mounting
+	Fix whatever happens with the minimap
+	Implement basic Loyalty mechanics
+		-depletion on damage
+		-depletion imparts status effects
+		-status effects affect mount when both ridden and running free
+		-consider how to make the mount rebel once Loyalty is at 0
+	Look at alchemist golems for how to provide petes with levelup, etc, dialogs
+	Yes I DO have a  mount.
+	Should not be able to remain "mounted" when mount is dead
+	Display owner's loyalty when controlling the mount
+
+New Talents
+	Finish Mounted Acrobatics-
+		idea for clinging to underside of the mount and using it as a shield
+	Add melee functionality to Howling Arrows, split the talent
+	Living Shield- import and polish Beholder's drag code
+	Brazen Lunge redesign
+
+Ideas Needed
+	A touch-up for the wolf's talents-
+		possibly make Fetch a player-controlled ability (maybe via Bestial Dominion)
+	Talent trees for the Spider
+	Talent trees for the Drake
+	Final talent for "Raider" category
+	Decide how to fill out Barbarous / Dreadful - maybe Catch could go in Barbarous and Dreadful get some kind of Combined Arms?
+	An ability that provides a bonus after using a "command" (party option) on a mount. This also serves a design purpose, that of reinforcing the player's awareness that you can do this sort of thing.
+
+Spider
+
+ideas-------
 
 Sly Senses
 	needs a better name.
@@ -15,18 +74,25 @@ Sly Senses
 	+perception that it shares with its owner?
 	the bonus would have to be mirrored in Loyal to the Pack
 	something crit-related might be cool, along with something detection-related
+	probably actually really going to add Cunning as well as Dexterity
 Go for the Throat
-	reduce cooldown with talent levels
-	it'll be this tree's killer app
+	reduce cooldown with talent levels (it'll totally be this tree's killer app)
 Uncanny Tenacity
 	absolutely needs to be jazzed up
 	+speed to fit with the power attack theme of this tree
 	but then, wolves are not supposed to be too powerful
 	but they are supposed to be well balanced
 	could have an activated so that Go for the Throat gets a synergistic boost
+	yeah, like a bonus against weakened adjacent enemies and also an attack that procs post-threshold
 Loyal to the Pack
 	provide symmetry to sly senses' new feature
+	probably going to add Cunning as well as Willpower
 Together, Forever
 	define "damage"
 Predatory Flanking
-	then all damage by allies
+	also improve all damage by allies
+
+----Bestial Dominion----
+
+Challenge the Wilds
+	Maybe levels in this could reduce the chances of beast's rebellion - %% chance that enemies' attempts to deplete loyalty will be averted, for example, plus a %% chance to regain it or increased regeneration at low Loyalty levels
