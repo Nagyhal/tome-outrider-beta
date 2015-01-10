@@ -139,7 +139,11 @@ function mountSetupSummon(self, m, x, y, no_control)
 	m.ai_tactic.escape = 0
 
 	--Bind rider to mount
-	self.has_mount = mount
+	self.mounts_owned = self.mounts_owned or {}
+	self.mounts_owned[#self.mounts_owned+1] = m
+	m.show_owner_loyalty_pool = true
+	--Mount used for Mounted Combat abilities, TODO: Consider making this more modular for multiple mounts owned
+	self.outrider_pet = m
 end
 
 newTalent{
@@ -202,7 +206,17 @@ newTalent{
 		--game:playSoundNear(self, "talents/spell_generic")
 		return true
 	end,
-	
+	--Handle sharing of inscriptions here.
+	callbackOnTalentPost = function(self, t, ab, ret, silent)
+		-- if ab.tactical and (ab.tactical.attack or ab.tactical.attackarea or ab.tactical.disable) then return end
+		if self.mount and string.find(ab.type[1],  "inscriptions") then
+			old_fake = self.mount.__inscription_data_fake
+			local name = string.sub(ab.id, 3)
+			self.mount.__inscription_data_fake = self.inscriptions_data[name]
+			self.mount:forceUseTalent(ab.id, {no_energy=true, talent_reuse=true, no_talent_fail=true, silent=true})
+			if old_fake then self.mount.__inscription_data_fake=old_fake end
+		end
+	end,
 	info = function(self, t)
 		return ([[Your hurl your fury at the wilderness, letting out a luring, primal call and intensifying every one of your senses so that you might close upon a savage ally, a steed to carry you to victory and spoil. Finding a suitable wild mount takes time and effort; you gain the "Challenge the Wilds" status with a counter of %d, and every time you slay an enemy, that counter depletes by 1. As it approaches 0, your chances of happening upon your quarry are increased. The beast that is called will depend on your surroundings: either a wolf, agile and dependable; a spider, ruthless yet versatile; or a rare and mighty drake. You must subdue the beast by blade or bow; it will not come to your side immediately, but after you have asserted your dominance. Care must be taken not to slay it unwittingly. The quality of beast will increase with talent level.]])
 		:format(math.ceil(self:getTalentLevel(t)*5) + 10)

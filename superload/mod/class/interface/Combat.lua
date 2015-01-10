@@ -1,8 +1,10 @@
 local _M = loadPrevious(...)
 
-local base_bumpInto = _M.bumpInto
-
 local Map = require "engine.Map"
+
+local base_bumpInto = _M.bumpInto
+local base_combatMovementSpeed = _M.combatMovementSpeed
+local base_hasTwoHandedWeapon = _M.hasTwoHandedWeapon
 
 function _M:bumpInto(target, x, y)
 	if self:hasEffect(self.EFF_LIVING_SHIELDED) and target==self.tmp[self.EFF_LIVING_SHIELDED].trgt then
@@ -27,7 +29,6 @@ end
 -- 		if not self.reaction_actor then self.reaction_actor = {} end
 -- 		if not self.reaction_actor[tg] then self.reaction_actor[tg.name] = 0 end
 -- 		self.reaction_actor[tg] = self.reaction_actor[tg.name] + 200
--- 		game.logPlayer(game.player, "DEBUG: bump hijinx, reactio is..."..self:reactionToward(tg, no_relfection))
 -- 		base_bumpInto(self, target, x, y)
 -- 		self.reaction_actor[tg] = self.reaction_actor[tg.name] - 200
 -- 		return
@@ -35,5 +36,19 @@ end
 -- 	base_bumpInto(self, target, x, y)
 -- end
 
+function _M:combatMovementSpeed(x, y)
+	local mount = self.mount
+	if mount then return base_combatMovementSpeed(mount, x, y) / mount.global_speed
+	else return base_combatMovementSpeed(self, x, y)
+	end
+end
+
+function _M:hasTwoHandedWeapon()
+	if self:knowTalent(self.T_ORCHESTRATOR_OF_DISMAY) then
+		local weaponry = self:getInven("MAINHAND") or {}
+		return weaponry[1]
+	end
+	return base_hasTwoHandedWeapon(self)
+end
 
 return _M

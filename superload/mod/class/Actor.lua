@@ -1,7 +1,9 @@
 local _M = loadPrevious(...)
 
-
+local base_move = _M.move
 local base_init = _M.init
+local base_onTakeHit = _M.onTakeHit
+local base_useEnergy = _M.useEnergy
 
 function _M:init(t, no_default)
 	t.mount = nil
@@ -25,10 +27,6 @@ end
 -- 	end
 -- end
 
-
-local base_onTakeHit = _M.onTakeHit
-
-local base_useEnergy = _M.useEnergy
 
 -- function _M:mountAct()
 -- 	local m = self.mount
@@ -67,12 +65,17 @@ function _M:getMount()
 end
 
 function _M:canMount(src)
-	if self.can_mount and (self.summoner == src or self.owner == src) then return true else return false end
+	if src.can_mount and (src.summoner == self or src.owner == self) then return true else return false end
 end
 
 function _M:hasMount()
-	return self.has_mount or nil
+	return #self.mounts_owned>0 and true or nil
 end
+
+function _M:getOutriderPet()
+	return self.outrider_pet or nil
+end
+
 
 local Map = require "engine.Map"
 
@@ -92,7 +95,7 @@ end
 
 function _M:mountTarget(target)
 	if self:isMounted() then game.logPlayer(self, "You are already mounted!") return false end
-	if target:canMount(self) then
+	if self:canMount(target) then
 		self.mount = target
 		self.mount.rider = self
 		local old_x, old_y = target.x, target.y  -- not sure this is necessary, test
@@ -148,6 +151,24 @@ function _M:learnPool(t)
 		self:checkPool(t.id, self.T_DISMOUNT)
 	end
 	base_learnPool(self,t)
+end
+
+function _M:move(x, y, force)
+	local energy, mount = self.energy.value, self.mount
+	local ret = base_move(self, x, y, force)
+	local energy_diff = energy - self.energy .value
+	if mount and energy_diff>0 then
+		--Global speed multiplier depletes mount's and rider's energy at same rate
+		--TODO: Consider removing rider's global speed from movespeed calculation altogether
+		local factor = mount.global_speed
+		mount:useEnergy(energy_diff*factor)
+		--Quick hack while I work on multi-occupant tiles.
+		mount:doFOV()
+		--Let the mount get targets and use instant-activate abilities, as if it had had a turn.
+		mount:runAI("target_mount")
+		mount:doAI()
+	end
+	return ret
 end
 
 -- function _M:learnPool(t)

@@ -167,7 +167,7 @@ newTalent{
 	range = function(self, t) return math.floor(2.5 + 0.7*self:getTalentLevel(t)) end,
 	requires_target = true,
 	action = function(self, t)
-		local a = self:isMounted() and self or (self:hasMount() and self.has_mount or nil)
+		local a = self:isMounted() and self or (self:hasMount() and self:getOutriderPet())
 
 		local tg = {type="hit", range=self:getTalentRange(t), start_x=a.x, start_y=a.y}
 

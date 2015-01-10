@@ -4,16 +4,18 @@ local ActorTemporaryEffects = require "engine.interface.ActorTemporaryEffects"
 local Birther = require "engine.Birther"
 local ActorInventory = require "engine.interface.ActorInventory"
 local ActorResource = require "engine.interface.ActorResource"
-
-
+local ActorAI = require "engine.interface.ActorAI"
+local DamageType = require "engine.DamageType" 
 
 class:bindHook("ToME:load", function(self, data)
 	ActorTalents:loadDefinition("/data-outrider/talents/mounted/mounted.lua")
 	Birther:loadDefinition("/data-outrider/birth/mounted.lua")
 	ActorResource:defineResource("Loyalty", "loyalty", ActorTalents.T_LOYALTY_POOL, "loyalty_regen", "Loyalty represents the devotion of your pet.")
 	--ActorInventory:defineInventory("MOUNT", "Mount", false, "Your mount.")
-    ActorTemporaryEffects:loadDefinition("/data-outrider/timed_effects/timed_effects.lua")
-    ActorInventory:defineInventory("MOUNT", "Ridden", true, "Trained characters may ride atop a mount", nil)
+	ActorTemporaryEffects:loadDefinition("/data-outrider/timed_effects/timed_effects.lua")
+	ActorInventory:defineInventory("MOUNT", "Ridden", true, "Trained characters may ride atop a mount", nil)
+	DamageType:loadDefinition("data-outrider/damage_types.lua")
+	ActorAI:loadDefinition("/data-outrider/ai/")
 end)
 
 class:bindHook("Actor:takeHit", function(self, data)
@@ -154,20 +156,21 @@ class:bindHook("UISet:Minimalist:Resources", function(self, data)
 	local a = data.a
 	local x, y, bx, by = data.x, data.y, data.bx, data.by
 	local orient, scale = data.orient, data.scale
-	if player:knowTalent(player.T_LOYALTY_POOL) and not player._hide_resource_loyalty then
+	local src = player.display_owner_loyalty_pool and player.summoner or player
+	if src:knowTalent(player.T_LOYALTY_POOL) and not src._hide_resource_loyalty then
 		sshat[1]:toScreenFull(x-6, y+8, sshat[6], sshat[7], sshat[2], sshat[3], 1, 1, 1, a)
 		bshat[1]:toScreenFull(x, y, bshat[6], bshat[7], bshat[2], bshat[3], 1, 1, 1, a)
 		if loyalty_sha.shad then loyalty_sha:setUniform("a", a) loyalty_sha.shad:use(true) end
-		local p = player:getLoyalty() / player.max_loyalty
+		local p = src:getLoyalty() / src.max_loyalty
 		shat[1]:toScreenPrecise(x+49, y+10, shat[6] * p, shat[7], 0, p * 1/shat[4], 0, 1/shat[5], loyalty_c[1], loyalty_c[2], loyalty_c[3], a)
 		if loyalty_sha.shad then loyalty_sha.shad:use(false) end
 
 		if not self.res.loyalty or self.res.loyalty.vc ~= player.loyalty or self.res.loyalty.vm ~= player.max_loyalty or self.res.loyalty.vr ~= player.loyalty_regen then
 			self.res.loyalty = {
 				hidable = "Loyalty",
-				vc = player.loyalty, vm = player.max_loyalty, vr = player.loyalty_regen,
-				cur = {core.display.drawStringBlendedNewSurface(font_sha, ("%d/%d"):format(player.loyalty, player.max_loyalty), 255, 255, 255):glTexture()},
-				regen={core.display.drawStringBlendedNewSurface(sfont_sha, ("%+0.2f"):format(player.loyalty_regen), 255, 255, 255):glTexture()},
+				vc = src.loyalty, vm = src.max_loyalty, vr = src.loyalty_regen,
+				cur = {core.display.drawStringBlendedNewSurface(font_sha, ("%d/%d"):format(src.loyalty, src.max_loyalty), 255, 255, 255):glTexture()},
+				regen={core.display.drawStringBlendedNewSurface(sfont_sha, ("%+0.2f"):format(src.loyalty_regen), 255, 255, 255):glTexture()},
 			}
 		end
 
@@ -178,10 +181,14 @@ class:bindHook("UISet:Minimalist:Resources", function(self, data)
 		dt[1]:toScreenFull(2+x+144, 2+y+10 + (shat[7]-dt[7])/2, dt[6], dt[7], dt[2], dt[3], 0, 0, 0, 0.7 * a)
 		dt[1]:toScreenFull(x+144, y+10 + (shat[7]-dt[7])/2, dt[6], dt[7], dt[2], dt[3], 1, 1, 1, a)
 
+		TOOLTIP_LOYALTY =  [[#GOLD#Magic#LAST#
+		Loyalty represents the devotion of an ally to you - devotion that can be lost should you disabuse it.
+		In the case of a mount, at less than 50% Loyalty there is a chance it will struggle to obey orders when under threat. At less than 25% Loyalty, you will have to treat it with great care to keep it under your control.
+		]]
 		local front = fshat_loyalty_dark
-		if player.loyalty >= player.max_loyalty then front = fshat_loyalty end
+		if src.loyalty >= src.max_loyalty then front = fshat_loyalty end
 		front[1]:toScreenFull(x, y, front[6], front[7], front[2], front[3], 1, 1, 1, a)
-		self:showResourceTooltip(bx+x*scale, by+y*scale, fshat[6], fshat[7], "res:loyalty", self.TOOLTIP_LOYALTY)
+		self:showResourceTooltip(bx+x*scale, by+y*scale, fshat[6], fshat[7], "res:loyalty", TOOLTIP_LOYALTY)
 		x, y = self:resourceOrientStep(orient, bx, by, scale, x, y, fshat[6], fshat[7])
 	elseif game.mouse:getZone("res:loyalty") then 
 		game.mouse:unregisterZone("res:loyalty") 
