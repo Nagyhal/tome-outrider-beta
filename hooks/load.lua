@@ -44,8 +44,10 @@ end)
 
 class:bindHook("Actor:move", function(self, data)
 	if self.mount then
-		self.mount:move(self.x, self.y, true)
-		game.level.map(self.x, self.y, engine.Map.ACTOR, self)
+		if not game.level.map(data.x, data.y, engine.Map.ACTOR) then
+			self.mount:move(self.x, self.y, true)
+			game.level.map(self.x, self.y, engine.Map.ACTOR, self)
+		end
 		-- game.level:removeEntity(self.mount)
 		-- self.mount.x, self.mount.y = self.x, self.y
 	end	

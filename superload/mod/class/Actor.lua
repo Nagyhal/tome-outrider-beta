@@ -155,9 +155,11 @@ end
 
 function _M:move(x, y, force)
 	local energy, mount = self.energy.value, self.mount
+	local ox, oy = self.x, self.y
 	local ret = base_move(self, x, y, force)
+	local new_x, new_y = self.x, self.y
 	local energy_diff = energy - self.energy .value
-	if mount and energy_diff>0 then
+	if mount and energy_diff>0 and (ox~=new_x or oy~=new_y) then
 		--Global speed multiplier depletes mount's and rider's energy at same rate
 		--TODO: Consider removing rider's global speed from movespeed calculation altogether
 		local factor = mount.global_speed
