@@ -125,8 +125,9 @@ class:bindHook("Actor:getTalentFullDescription:ressources", function(self, data)
 end)
 
 class:bindHook("UISet:Classic:Resources", function(self, data)
-	if data.player:knowTalent(data.player.T_LOYALTY_POOL) then
-		self:mouseTooltip(self.TOOLTIP_LOYALTY, self:makeTextureBar("#SALMON#Loyalty:", nil, data.player:getLoyalty(), data.player.max_loyalty, data.player.loyalty_regen, data.x, data.h, 255, 255, 255,
+	local src = data.player.show_owner_loyalty_pool and data.player.summoner or data.player
+	if src:knowTalent(data.player.T_LOYALTY_POOL) then
+		self:mouseTooltip(self.TOOLTIP_LOYALTY, self:makeTextureBar("#SALMON#Loyalty:", nil, src:getLoyalty(), src.max_loyalty, src.loyalty_regen, data.x, data.h, 255, 255, 255,
 	 		{r=0xff / 3, g=0xcc / 3, b=0x80 / 3},
 	 		{r=0xff / 6, g=0xcc / 6, b=0x80 / 6})) 
 		data.h = data.h + self.font_h
@@ -158,8 +159,8 @@ class:bindHook("UISet:Minimalist:Resources", function(self, data)
 	local a = data.a
 	local x, y, bx, by = data.x, data.y, data.bx, data.by
 	local orient, scale = data.orient, data.scale
-	local src = player.display_owner_loyalty_pool and player.summoner or player
-	if src:knowTalent(player.T_LOYALTY_POOL) and not src._hide_resource_loyalty then
+	local src = player.show_owner_loyalty_pool and player.summoner or player
+	if src:knowTalent(src.T_LOYALTY_POOL) and not src._hide_resource_loyalty then
 		sshat[1]:toScreenFull(x-6, y+8, sshat[6], sshat[7], sshat[2], sshat[3], 1, 1, 1, a)
 		bshat[1]:toScreenFull(x, y, bshat[6], bshat[7], bshat[2], bshat[3], 1, 1, 1, a)
 		if loyalty_sha.shad then loyalty_sha:setUniform("a", a) loyalty_sha.shad:use(true) end
@@ -167,7 +168,7 @@ class:bindHook("UISet:Minimalist:Resources", function(self, data)
 		shat[1]:toScreenPrecise(x+49, y+10, shat[6] * p, shat[7], 0, p * 1/shat[4], 0, 1/shat[5], loyalty_c[1], loyalty_c[2], loyalty_c[3], a)
 		if loyalty_sha.shad then loyalty_sha.shad:use(false) end
 
-		if not self.res.loyalty or self.res.loyalty.vc ~= player.loyalty or self.res.loyalty.vm ~= player.max_loyalty or self.res.loyalty.vr ~= player.loyalty_regen then
+		if not self.res.loyalty or self.res.loyalty.vc ~= src.loyalty or self.res.loyalty.vm ~= src.max_loyalty or self.res.loyalty.vr ~= src.loyalty_regen then
 			self.res.loyalty = {
 				hidable = "Loyalty",
 				vc = src.loyalty, vm = src.max_loyalty, vr = src.loyalty_regen,

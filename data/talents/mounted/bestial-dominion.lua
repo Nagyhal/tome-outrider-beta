@@ -154,6 +154,7 @@ function mountSetupSummon(self, m, x, y, no_control)
 			end,
 		})
 	end
+
 	m:forceLevelup(self.level)
 	m:resolve() m:resolve(nil, true)
 	game.zone:addEntity(game.level, m, "actor", x, y)
@@ -167,6 +168,10 @@ function mountSetupSummon(self, m, x, y, no_control)
 	self.mounts_owned = self.mounts_owned or {}
 	self.mounts_owned[#self.mounts_owned+1] = m
 	m.show_owner_loyalty_pool = true
+	--Other mount stuff
+	if self:knowTalent(self.T_FERAL_AFFINITY) then
+		m:learnTalent(m.T_FERAL_AFFINITY_MOUNT, true, 1)
+	end
 	--Mount used for Mounted Combat abilities, TODO: Consider making this more modular for multiple mounts owned
 	self.outrider_pet = m
 end
@@ -234,12 +239,14 @@ newTalent{
 	--Handle sharing of inscriptions here.
 	callbackOnTalentPost = function(self, t, ab, ret, silent)
 		-- if ab.tactical and (ab.tactical.attack or ab.tactical.attackarea or ab.tactical.disable) then return end
-		if self.mount and string.find(ab.type[1],  "inscriptions") then
-			old_fake = self.mount.__inscription_data_fake
+		local mount = self.outrider_pet
+		local max_dist = self:callTalent(self.T_FERAL_AFFINITY, "getMaxDist") or 1
+		if mount and core.fov.distance(self.x, self.y, mount.x, mount.y)<max_dist and string.find(ab.type[1],  "inscriptions") then
+			old_fake = mount.__inscription_data_fake
 			local name = string.sub(ab.id, 3)
-			self.mount.__inscription_data_fake = self.inscriptions_data[name]
-			self.mount:forceUseTalent(ab.id, {no_energy=true, talent_reuse=true, no_talent_fail=true, silent=true})
-			if old_fake then self.mount.__inscription_data_fake=old_fake end
+			mount.__inscription_data_fake = self.inscriptions_data[name]
+			mount:forceUseTalent(ab.id, {no_energy=true, talent_reuse=true, no_talent_fail=true, silent=true})
+			if old_fake then mount.__inscription_data_fake=old_fake end
 		end
 	end,
 	info = function(self, t)
@@ -272,7 +279,7 @@ newTalent{
 		return ([[With a mighty effort, you rein in your mount's feral tendencies, increasing its Loyalty by %d%% of its maximum. Also grants a passive increase of %d to maximum Loyalty with all mounts.
 
 			As you master the domestication of wild riding beasts, you are able to still their fury long enough to inscribe them with infusions. You gain an infusion slot for your mount, and may gain others for each Bestial Dominion talent you raise to 5/5 (up to 3 slots).]]):
-		format(restore, max_loyalty)
+		format(restore, max_loyalty, max_dist)
 	end,
 }
 
@@ -284,13 +291,65 @@ newTalent{
 	mode = "passive",
 	points = 5,
 	passives = function(self, t, p)
+		local mount = self.outrider_pet
+		if mount then
+			for damtype, val in pairs(mount.resists) do
+				self:talentTemporaryValue(p, "resists", {[damtype]=val*t.getResistPct(self, t)})
+			end
+		end
+	end,
+	on_learn = function(self, t)
+		local mount = self.outrider_pet
+		if mount then
+			mount:learnTalent(mount.T_FERAL_AFFINITY_MOUNT, true, 1)
+		end
 	end,
 	info = function(self, t)
 		local res = t.getResistPct(self, t)
 		local save = t.getSavePct(self, t)
-		return ([[You share %d%% of the resistances of your steed, while your steed partakes of some of your own defenses against mental attacks (%d%% of your mental save and up to %d%% of your confusion & fear resistance).]]
-			):format(res, save, res)
+		local max_dist = t.getMaxDist(self, t)
+		return ([[You share %d%% of the resistances of your steed, while your steed partakes of some of your own defenses against mental attacks (%d%% of your mindpower, contributing to mental save, and up to %d%% of your confusion & fear resistance).
+
+			Levelling Feral Affinity will increase the distance at which you can share your infusions with your mount; currently %d]]
+			):format(res, save, res, max_dist)
 	end,
 	getSavePct = function(self, t) return self:combatTalentScale(t, 15, 35) end,
 	getResistPct = function(self, t) return self:combatTalentScale(t, 25, 50) end,
+	getMaxDist = function(self, t) return math.round(self:combatTalentScale(t, 1, 4.2, .85)) end,
+}
+
+newTalent{
+	name = "Feral Affinity (Mount)",
+	short_name = "FERAL_AFFINITY_MOUNT",
+	type = {"technique/other", 1},
+	mode = "passive",
+	points = 1,
+	passives = function(self, t, p)
+		--TODO: These need to be updated frequently
+		local owner = self.summoner
+		if owner then
+			local save_pct = owner:callTalent(owner.T_FERAL_AFFINITY, "getSavePct")/100
+			local resist_pct = owner:callTalent(owner.T_FERAL_AFFINITY, "getResistPct")/100
+			local save = owner:combatMindpower()*save_pct
+			self:talentTemporaryValue(p, "combat_mentalresist", save)
+			local confusion = (owner:attr("confusion_immune") or 0) * resist_pct
+			local fear = (owner:attr("fear_immune") or 0) * resist_pct
+			local sleep = (owner:attr("sleep_immune") or 0) * resist_pct
+			self:talentTemporaryValue(p, "confusion_immune", confusion)
+			self:talentTemporaryValue(p, "fear_immune", fear)
+			self:talentTemporaryValue(p, "sleep_immune", sleep)
+		end
+	end,
+	info = function(self, t)
+		local res = t.getResistPct(self, t)
+		local save = t.getSavePct(self, t)
+		local max_dist = t.getMaxDist(self, t)
+		return ([[You share some of your rider's defenses against mental attacks (%d%% of mindpower, contributing to mental save, and up to %d%% of your confusion, sleep & fear resistance).
+
+			Levelling Feral Affinity will increase the distance at which you can share your infusions with your mount; currently %d]]
+			):format(res, save, res, max_dist)
+	end,
+	getSavePct = function(self, t) return self:combatTalentScale(t, 25, 50) end,
+	getResistPct = function(self, t) return self:combatTalentScale(t, 35, 60) end,
+	getMaxDist = function(self, t) return math.round(self:combatTalentScale(t, 1, 4.2, .85)) end,
 }
