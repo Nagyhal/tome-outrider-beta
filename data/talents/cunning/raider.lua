@@ -12,6 +12,17 @@ newTalent{
 			Also, scattering your enemies and sundering their armour now exposes opportunity that would go unnoticed by less honed combatants. Gain a %d%% chance to apply the counterattack debuff for each enemy who attacks you while they are under any such effect (sunder, confusion, or fear).]])
 		:format(fatigue_pct, counter_pct)
 	end,
+	doCounterCheck = function(self, t, src)
+		if not rng.percent(t.getCounterPct(self, t)) then return end
+		local effs = src:effectsFilter{ subtype = { confusion=true, fear=true, sunder=true }, status = "detrimental" }
+		if #effs>0 then src:setEffect(src.EFF_COUNTERSTRIKE, 2, {src=self}) end
+	end,
+	callbackOnMeleeHit = function(self, t, src, dam)
+		t.doCounterCheck(self, t, src)
+	end,
+	callbackOnMeleeMiss = function(self, t, src, dam)
+		t.doCounterCheck(self, t, src)
+	end,
 	getFatiguePct = function(self, t) return self:combatTalentScale(t, 70, 35) end,
 	getCounterPct = function(self, t) return self:combatTalentScale(t, 15, 50) end
 }
@@ -39,6 +50,26 @@ newTalent{
 			Defense: %d]]):
 		format(sunder, move, atk, crit, def)
 	end,
+	callbackOnMove = function(self, t, moved, force, ox, oy, x, y)
+		if not ox or not oy or (ox==x and oy==y) then return end
+		local _, dx, dy = util.getDir(x, y, ox, oy)
+		local tg = {type="cone", angle=45, radius=self.sight}
+		local ok = false
+		local acts = {}
+		local filter = function(px, py, t, self)
+			local a = game.level.map(px, py, engine.Map.ACTOR) 
+			if a then acts[a], ok = true, true end
+		end
+		local grids = self:project(tg, self.x+dx, self.y+dy, filter)
+		if ok then 
+			self:setEffect(self.EFF_STRIKE_THE_HEART, 3, {
+				move=t.getMove(self, t),
+				atk=t.getAtk(self, t),
+				crit=t.getCrit(self, t),
+				def=t.getDef(self, t)
+			}) 
+		end
+	end,
 	getMove = function(self, t) return self:combatTalentScale(t, 10, 30) end,
 	getAtk = function(self, t) return self:combatTalentScale(t, 3, 8) end,
 	getCrit = function(self, t) return self:combatTalentScale(t, 8, 15) end,
@@ -47,7 +78,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Hit and Run",
+	name = "Spring Attack",
 	type = {"cunning/raider", 3},
 	mode = "passive",
 	require = cun_req3,
@@ -95,7 +126,7 @@ newTalent{
 		local saves_pct = t.getSavesPct(self, t)
 		local range = self:getTalentRange(t)
 		local chance = t.getChance(self, t)
-		return ([[Increase your defense by %d and your saves by %d%% of your defense.
+		return ([[Increase your defense by %d (mitigated by your fatigue) and your saves by %d%% of your defense.
 
 			Also, you may sustain to gain positional dominance on the battlefield. When you are within range %d of an enemy, and have an attack projected against you, have a %d%% chance to switch places with that enemy if it would take you out of the projection area. This effect scales with defense, and its activation will put Impunity of Warlords on cooldown.]]):
 		format(def, saves_pct, range, chance)

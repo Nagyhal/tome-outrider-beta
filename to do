@@ -1,13 +1,9 @@
 Release Phase 1
 ---------------------------------------------------
-Add a LOAD of mechanical improvements to mounts
-
-New AI routine lets mount take targets independently.
-Mount and rider can share non-damaging inscriptions.
-Player riding the mount around will expend the mount's energy.
-Mount can cast instant-cast abilities even when being moved around by the player.
-Dismounting and mounting half-way fixed, but the system is due further improvement.
-
+Add a LOAD of changes & outlines for talents, including a Raider tree
+--------
+Add Spider and test a range instant-use talent (Blinding Spittle)
+--------
 Bump attacks do not make mount think it has moved
 --------
 Implement all wolf talents

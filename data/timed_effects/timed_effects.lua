@@ -203,7 +203,7 @@ desc = "Dragging",
 long_desc = function(self, eff) return ("The target is engaged in a mobile grapple, leading its helpless defender whereever it wills.") end,
 type = "physical",
 subtype = { grapple=true },
-status = "detrimental",
+status = "beneficial",
 parameters = {trgt=nil},
 on_gain = function(self, err) return "#Target# drags its victim!", "+Dragged" end,
 on_lose = function(self, err) return "#Target# can no longer drag its victim", "Dragged" end,
@@ -217,5 +217,61 @@ on_timeout = function(self, eff)
 	if not p or p.src ~= self or core.fov.distance(self.x, self.y, eff.trgt.x, eff.trgt.y) > 1 or eff.trgt.dead or not game.level:hasEntity(eff.trgt) then
 		self:removeEffect(self.EFF_DRAGGING)
 	end
+end,
+}
+
+newEffect{
+name = "STRIKE_AT_THE_HEART",
+desc = "Strike at the Heart",
+long_desc = function(self, eff) return ("The target's charge emboldens it, granting %d%% movement speed, %d accuracy, %d%% critical chance and %d defense until the next attack."):format(eff.move, eff.atk, eff.crit, eff.def) end,
+type = "physical",
+subtype = { charge=true, tactic=true, speed=true },
+status = "beneficial",
+parameters = { tgts={}, ct=1, move=5, atk=3, crit=3, def=3 },
+--TODO: As you can use this with archers, the terminology "charge" isn't really appropriate
+on_gain = function(self, eff) return "#Target# prepares a deadly charge!", "+Strike at the Heart" end,
+on_lose = function(self, eff) return "#Target# ends the charge.", "-Strike at the Heart" end,
+activate = function(self, eff)
+	local ct = eff.ct
+	self:effectTemporaryValue(eff, "movement_speed", eff.move/100*ct)
+	self:effectTemporaryValue(eff, "combat_atk", eff.atk*ct)
+	self:effectTemporaryValue(eff, "combat_physcrit", eff.crit*ct)
+	self:effectTemporaryValue(eff, "combat_def", eff.def*ct)
+end,
+on_merge = function(self, old_eff, new_eff)
+	eff.ct = math.min(old_eff.ct+1, 3)
+end,
+deactivate = function(self, eff)
+	if self:knowTalent(self.T_SPRING_ATTACK) then
+		local t = self:getTalentFromId(self.T_SPRING_ATTACK)
+		self:setEffect(self.EFF_SPRING_ATTACK, t.getDur(self,t), {
+			move = eff.move,
+			def = eff.def,
+			min_pct = t.getMinPct(self, t),
+			max_pct = t.getMaxPct(self, t)
+			})
+	end
+	--TODO: Decide how to pass a target
+end,
+}
+
+newEffect{
+name = "SPRING_ATTACK",
+desc = "Spring Attack",
+long_desc = function(self, eff) return ("The target's charge has ended, but it retains a bonus of %d%% movement speed and %d to defense"):format(eff.move, eff.atk, eff.crit, eff.def) end,
+type = "physical",
+subtype = { tactic=true, speed=true },
+status = "beneficial",
+parameters = { move=10, def=6, min_pct=5, max_pct=15},
+--TODO: As you can use this with archers, the terminology "charge" isn't really appropriate
+on_gain = function(self, eff) return "#Target# enters into a spring attack!", "+Spring Attack" end,
+on_lose = function(self, eff) return "#Target# ends the spring attcack.", "-Spring Attack" end,
+activate = function(self, eff)
+	self:effectTemporaryValue(eff, "movement_speed", eff.move/100*ct)
+	self:effectTemporaryValue(eff, "combat_atk", eff.atk*ct)
+end,
+callbackOnDealDamage = function(self, eff, val, self, dead, death_note)
+end,
+deactivate = function(self, eff)
 end,
 }
