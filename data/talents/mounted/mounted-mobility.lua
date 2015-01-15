@@ -138,6 +138,9 @@ newTalent{
 	require = mnt_str_req2,
 	getGoadSpeed = function (self, t) return self:combatTalentScale(t, 0.2, 0.65, 0.85) end,
 	tactical = { BUFF = 2, CLOSEIN = 2, ESCAPE = 2 },
+	on_pre_use = function(self, t, silent)
+		return preCheckHasMountInRange(self, t, silent, 1)
+	end,
 	action = function(self, t)
 		--TODO: Create hasMount method
 		if not self:isMounted() then game.logPlayer(self, "You cannot use Goad without a mount!") return nil end
@@ -166,19 +169,24 @@ newTalent{
 	getPinDuration = function(self, t) return math.floor(3 + 0.5*self:getTalentLevel(t)) end, 
 	range = function(self, t) return math.floor(2.5 + 0.7*self:getTalentLevel(t)) end,
 	requires_target = true,
+	on_pre_use = function(self, t, silent)
+		return preCheckHasMountPresent(self, t, silent)
+	end,
 	action = function(self, t)
-		local a = self:isMounted() and self or (self:hasMount() and self:getOutriderPet())
+		local mount = self:hasMount()
+		--TODO: Make rider also follow when the mount is moved
+		local mover = self:isMounted() and self or mount
 
-		local tg = {type="hit", range=self:getTalentRange(t), start_x=a.x, start_y=a.y}
+		local tg = {type="hit", range=self:getTalentRange(t), start_x=mount.x, start_y=mount.y}
 
 		local x, y, target = self:getTarget(tg)
 		if not x or not y then return nil end
-		if core.fov.distance(a.x, a.y, x, y) > self:getTalentRange(t) then return nil end
+		if core.fov.distance(mount.x, mount.y, x, y) > self:getTalentRange(t) then return nil end
 
-		local block_actor = function(_, bx, by) return game.level.map:checkAllEntities(bx, by, "block_move", a) end
-		local l = a:lineFOV(x, y, block_actor)
+		local block_actor = function(_, bx, by) return game.level.map:checkAllEntities(bx, by, "block_move", mount) end
+		local l = mount:lineFOV(x, y, block_actor)
 		local lx, ly, is_corner_blocked = l:step()
-		local tx, ty, _ = a.x, a.y
+		local tx, ty, _ = mount.x, mount.y
 		local ox, oy = tx, ty
 		while lx and ly do
 			if is_corner_blocked or block_actor(_, lx, ly) then break end
@@ -193,13 +201,13 @@ newTalent{
 			if not fx then
 				return
 			end
-			a:move(fx, fy, true)
-		else a:move(tx, ty, true) end
+			mover:move(fx, fy, true)
+		else mover:move(tx, ty, true) end
 		local target = game.level.map(lx, ly, Map.ACTOR)
 		if target then
-			if core.fov.distance(a.x, a.y, tx, ty) > 1 then return true end
-			self.has_mount:attackTarget(target, nil, t.getDamage(self, t), true)
-			target:setEffect(target.EFF_PINNED, t.getPinDuration(self, t), {apply_power=self.has_mount:combatPhysicalpower(),  apply_save="combatPhysicalResist"})
+			if core.fov.distance(mount.x, mount.y, tx, ty) > 1 then return true end
+			mount:attackTarget(target, nil, t.getDamage(self, t), true)
+			target:setEffect(target.EFF_PINNED, t.getPinDuration(self, t), {apply_power=mount:combatPhysicalpower(),  apply_save="combatPhysicalResist"})
 		end
 		return true
 	end,

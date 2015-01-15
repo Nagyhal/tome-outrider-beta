@@ -3,7 +3,6 @@ local _M = loadPrevious(...)
 local base_move = _M.move
 local base_init = _M.init
 local base_onTakeHit = _M.onTakeHit
-local base_useEnergy = _M.useEnergy
 
 function _M:init(t, no_default)
 	t.mount = nil
@@ -45,36 +44,37 @@ function _M:onTakeHit(value, src)
 	return base_onTakeHit(self, value, src)
 end
 
-function _M:useEnergy(val)
-	-- if self.mount then
-	-- 	val = val or game.energy_to_act
-	-- 	self.mount.energy.value = self.mount.energy.value - val
-	-- 	self.mount.energy.used = true
-	-- 	self.mount:act()
-	-- 	end
-	return base_useEnergy(self, val)
-end
-
 --New mount functions
 function _M:isMounted()
-	if self.mount then return true else return false end
+	local mount = self:hasMount()
+	if mount and self:hasEffect(self.EFF_MOUNT) then return true else return false end
 end
 
 function _M:getMount()
 	if self:isMounted() then return self.mount else return nil end
 end
 
-function _M:canMount(src)
-	if src.can_mount and (src.summoner == self or src.owner == self) then return true else return false end
+function _M:canMount(mount)
+	if mount.can_mount and mount.summoner == self then return true else return false end
 end
 
 function _M:hasMount()
-	return #self.mounts_owned>0 and true or nil
+	--Truly simple placeholder function intended for Outrider use only
+	--TODO: Make it accept any kind of mount
+	--TODO: Make hasEntity return true if the player is riding a (hidden) mount
+	local mount = self.outrider_pet
+	if mount and not mount.dead and (mount.x==self.x and mount.y==self.y or game.level:hasEntity(mount)) then return mount else return false end
+	--OLD: return #self.mounts_owned>0 and true or nil
 end
 
-function _M:getOutriderPet()
-	return self.outrider_pet or nil
+function _M:hasMountPresent()
+	local mount = self:hasMount(); if not mount then return false end
+	if self:isMounted() or self:hasLOS(mount.x, mount.y, "block_sight", self.sight) then return true else return false end
 end
+
+-- function _M:getOutriderPet()
+-- 	return self.outrider_pet or nil
+-- end
 
 
 local Map = require "engine.Map"

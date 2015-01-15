@@ -239,9 +239,9 @@ newTalent{
 	--Handle sharing of inscriptions here.
 	callbackOnTalentPost = function(self, t, ab, ret, silent)
 		-- if ab.tactical and (ab.tactical.attack or ab.tactical.attackarea or ab.tactical.disable) then return end
-		local mount = self.outrider_pet
+		local mount = self:hasMount()
 		local max_dist = self:callTalent(self.T_FERAL_AFFINITY, "getMaxDist") or 1
-		if mount and core.fov.distance(self.x, self.y, mount.x, mount.y)<max_dist and string.find(ab.type[1],  "inscriptions") then
+		if mount and core.fov.distance(self.x, self.y, mount.x, mount.y)<=max_dist and string.find(ab.type[1],  "inscriptions") then
 			old_fake = mount.__inscription_data_fake
 			local name = string.sub(ab.id, 3)
 			mount.__inscription_data_fake = self.inscriptions_data[name]
@@ -315,7 +315,7 @@ newTalent{
 	end,
 	getSavePct = function(self, t) return self:combatTalentScale(t, 15, 35) end,
 	getResistPct = function(self, t) return self:combatTalentScale(t, 25, 50) end,
-	getMaxDist = function(self, t) return math.round(self:combatTalentScale(t, 1, 4.2, .85)) end,
+	getMaxDist = function(self, t) return math.round(self:combatTalentScale(t, 2, 4.2, .85)) end,
 }
 
 newTalent{

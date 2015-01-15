@@ -208,102 +208,34 @@ mnt_dexwil_req4 = {
 	level = function(level) return 12 + (level-1)  end,
 }
 
---Calling /bestial/ mounts
-
---[[function mountSetupSummon(self, m, x, y, level, no_control)
-	m.faction = self.faction
-	m.summoner = self
-	m.summoner_gain_exp = true
-	m.necrotic_minion = true
-	m.exp_worth = 0
-	m.life_regen = 0
-	m.unused_stats = 0
-	m.unused_talents = 0
-	m.unused_generics = 0
-	m.unused_talents_types = 0
-	m.silent_levelup = true
-	m.no_points_on_levelup = true
-	m.ai_state = m.ai_state or {}
-	m.ai_state.tactic_leash = 100
-	-- -- Try to use stored AI talents to preserve tweaking over multiple summons
-	-- m.ai_talents = self.stored_ai_talents and self.stored_ai_talents[m.name] or {}
-	m.inc_damage = table.clone(self.inc_damage, true)
-	m.no_breath = 1
-
-	if self:knowTalent(self.T_DARK_EMPATHY) then
-		local t = self:getTalentFromId(self.T_DARK_EMPATHY)
-		local perc = t.getPerc(self, t)
-		for k, e in pairs(self.resists) do
-			m.resists[k] = (m.resists[k] or 0) + e * perc / 100
-		end
-		m.combat_physresist = m.combat_physresist + self:combatPhysicalResist() * perc / 100
-		m.combat_spellresist = m.combat_spellresist + self:combatSpellResist() * perc / 100
-		m.combat_mentalresist = m.combat_mentalresist + self:combatMentalResist() * perc / 100
-
-		m.poison_immune = (m.poison_immune or 0) + (self:attr("poison_immune") or 0) * perc / 100
-		m.disease_immune = (m.disease_immune or 0) + (self:attr("disease_immune") or 0) * perc / 100
-		m.cut_immune = (m.cut_immune or 0) + (self:attr("cut_immune") or 0) * perc / 100
-		m.confusion_immune = (m.confusion_immune or 0) + (self:attr("confusion_immune") or 0) * perc / 100
-		m.blind_immune = (m.blind_immune or 0) + (self:attr("blind_immune") or 0) * perc / 100
-		m.silence_immune = (m.silence_immune or 0) + (self:attr("silence_immune") or 0) * perc / 100
-		m.disarm_immune = (m.disarm_immune or 0) + (self:attr("disarm_immune") or 0) * perc / 100
-		m.pin_immune = (m.pin_immune or 0) + (self:attr("pin_immune") or 0) * perc / 100
-		m.stun_immune = (m.stun_immune or 0) + (self:attr("stun_immune") or 0) * perc / 100
-		m.fear_immune = (m.fear_immune or 0) + (self:attr("fear_immune") or 0) * perc / 100
-		m.knockback_immune = (m.knockback_immune or 0) + (self:attr("knockback_immune") or 0) * perc / 100
-		m.stone_immune = (m.stone_immune or 0) + (self:attr("stone_immune") or 0) * perc / 100
-		m.teleport_immune = (m.teleport_immune or 0) + (self:attr("teleport_immune") or 0) * perc / 100
+--These pre-check functions are used by on_pre_use
+function preCheckIsMounted(self, t, silent)
+	if self:isMounted() then return true
+	else
+		if not silent then game.logPlayer(self, "You have to be mounted to do that!") end
+		return false
 	end
-
-	if game.party:hasMember(self) then
-		local can_control = not no_control
-
-		m.remove_from_party_on_death = true
-		game.party:addMember(m, {
-			control=can_control and "full" or "no",
-			type="minion",
-			title="Bestial Mount",
-			orders = {target=true},
-		})
-	end
-	m:resolve() m:resolve(nil, true)
-	m.max_level = self.level + (level or 0)
-	m:forceLevelup(math.max(1, self.level + (level or 0)))
-	game.zone:addEntity(game.level, m, "actor", x, y)
-	game.level.map:particleEmitter(x, y, 1, "summon")
-
-	-- Summons decay
-	-- m.on_act = function(self)
-		-- local src = self.summoner
-		-- local p = src:isTalentActive(src.T_NECROTIC_AURA)
-		-- if p and self.x and self.y and not src.dead and src.x and src.y and core.fov.distance(self.x, self.y, src.x, src.y) <= self.summoner.necrotic_aura_radius then return end
-
-		-- self.life = self.life - self.max_life * (p and p.necrotic_aura_decay or 10) / 100
-		-- self.changed = true
-		-- if self.life <= 0 then
-			-- game.logSeen(self, "#{bold}#%s decays into a pile of ash!#{normal}#", self.name:capitalize())
-			-- local t = src:getTalentFromId(src.T_NECROTIC_AURA)
-			-- t.die_speach(self, t)
-			-- self:die(self)
-		-- end
-	-- end
-
-	-- m.on_die = function(self, killer)
-		-- local src = self.summoner
-		-- local w = src:isTalentActive(src.T_WILL_O__THE_WISP)
-		-- local p = src:isTalentActive(src.T_NECROTIC_AURA)
-		-- if not w or not p or not self.x or not self.y or not src.x or not src.y or core.fov.distance(self.x, self.y, src.x, src.y) > self.summoner.necrotic_aura_radius then return end
-		-- if not rng.percent(w.chance) then return end
-
-		-- local t = src:getTalentFromId(src.T_WILL_O__THE_WISP)
-		-- t.summon(src, t, w.dam, self, killer)
-	-- end
-
-	-- Summons never flee
-	m.ai_tactic = m.ai_tactic or {}
-	m.ai_tactic.escape = 0
 end
--------------------------------------------]]
+
+function preCheckHasMountPresent(self, t, silent)
+	if self:hasMountPresent() then return true
+	else
+		if not silent then game.logPlayer(self, "You must have a mount present to do that!") end
+		return false
+	end
+end
+
+function preCheckHasMountInRange(self, t, silent, range)
+	local mount = self:hasMount()
+	assert(range, "no range sent to preCheckHasMountInRange")
+	assert(type(range)=="number", "range sent to preCheckHasMountInRange is not a number")
+	if mount and core.fov.distance(self.x, self.y, mount.x, mount.y) <= range then return true
+	else
+		if not silent then game.logPlayer(self, "You must have a mount within range %d to do that!", range) end
+		return false
+	end
+end
+
 
 load("/data-outrider/talents/mounted/mounts.lua")
 load("/data-outrider/talents/mounted/wolf.lua")
