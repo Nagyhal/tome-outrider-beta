@@ -15,7 +15,7 @@ newTalent{
 	doCounterCheck = function(self, t, src)
 		if not rng.percent(t.getCounterPct(self, t)) then return end
 		local effs = src:effectsFilter{ subtype = { confusion=true, fear=true, sunder=true }, status = "detrimental" }
-		if #effs>0 then src:setEffect(src.EFF_COUNTERSTRIKE, 2, {src=self}) end
+		if #effs>0 then src:setEffect(src.EFF_COUNTERSTRIKE, 2, {src=self, power=0}) end
 	end,
 	callbackOnMeleeHit = function(self, t, src, dam)
 		t.doCounterCheck(self, t, src)
@@ -34,7 +34,7 @@ newTalent{
 	require = cun_req2,
 	points = 5,
 	info = function(self, t)
-		local move = t.getMove(self, t)
+		local move = t.getMove(self, t)  --; local move_max = move * t.getMult(self, t, ct)
 		local atk = t.getAtk(self, t)
 		local crit = t.getCrit(self, t)
 		local def = t.getDef(self, t)
@@ -51,9 +51,9 @@ newTalent{
 		format(sunder, move, atk, crit, def)
 	end,
 	callbackOnMove = function(self, t, moved, force, ox, oy, x, y)
-		if not ox or not oy or (ox==x and oy==y) then return end
+		if not ox or not oy or (ox==self.x and oy==self.y) then return end
 		local _, dx, dy = util.getDir(x, y, ox, oy)
-		local tg = {type="cone", angle=45, radius=self.sight}
+		local tg = {type="cone", angle=45, radius=self.sight, selffire=false}
 		local ok = false
 		local acts = {}
 		local filter = function(px, py, t, self)
@@ -61,13 +61,20 @@ newTalent{
 			if a then acts[a], ok = true, true end
 		end
 		local grids = self:project(tg, self.x+dx, self.y+dy, filter)
-		if ok then 
-			self:setEffect(self.EFF_STRIKE_THE_HEART, 3, {
-				move=t.getMove(self, t),
-				atk=t.getAtk(self, t),
-				crit=t.getCrit(self, t),
-				def=t.getDef(self, t)
-			}) 
+		if ok then
+			if not self:attr("building_strike_at_heart") then
+				self:attr("building_strike_at_heart", 1, true)
+			else
+				self:setEffect(self.EFF_STRIKE_AT_THE_HEART, 3, {
+					move=t.getMove(self, t),
+					atk=t.getAtk(self, t),
+					crit=t.getCrit(self, t),
+					def=t.getDef(self, t)
+				}) 
+			end
+		else
+			self:removeEffect(self.EFF_STRIKE_AT_THE_HEART)
+			self:attr("building_strike_at_heart", 0, true)
 		end
 	end,
 	getMove = function(self, t) return self:combatTalentScale(t, 10, 30) end,
@@ -95,8 +102,8 @@ newTalent{
 		format(dur, min_pct, max_pct)
 	end,
 	getDur = function(self, t) return self:combatTalentScale(t, 2, 5) end,
-	getMinPct = function(self, t) return self:combatTalentScale(t, 5, 15) end,
-	getMaxPct = function(self, t) return self:combatTalentScale(t, 15, 30) end,
+	getMinPct = function(self, t) return self:combatTalentScale(t, 10, 22.5) end,
+	getMaxPct = function(self, t) return self:combatTalentScale(t, 20, 35) end,
 }
 
 

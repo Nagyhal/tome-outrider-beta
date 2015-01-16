@@ -85,15 +85,23 @@ end)
 --class:bindHook{"Actor:actBase:Effects", function(self, data)}
 	
 	
---[[
-class:bindHook("Actor:takeHit", function(self, data)
-	if self:hasEffect(self.EFF_DIPLOMATIC_IMMUNITY) then data.value = 0 return true end
-end)
+-- class:bindHook("Actor:takeHit", function(self, data)
+-- 	if self:hasEffect(self.EFF_DIPLOMATIC_IMMUNITY) then data.value = 0 return true end
+-- end)
 
 class:bindHook("DamageProjector:base", function(self, data)
-	if self.hasEffect and self:hasEffect(self.EFF_TOURIST_FURY) then data.dam = data.dam * 5 return true end
+	local eff = self:hasEffect(self.EFF_SPRING_ATTACK) 
+	if eff then
+		local dist = core.fov.distance(self.x, self.y, data.x, data.y)
+		if dist >= 2 then
+			dist = util.bound(dist, 2, 5)
+			local pct = 100 + self:combatScale(dist, eff.min_pct, 2, eff.max_pct, 5)
+			data.dam = data.dam * pct/100 return true
+		end
+	end
+	return false
 end)
---]]
+
 class:bindHook("Actor:postUseTalent", function(self, data)
 	local ab = data.t
 	local trigger = data.trigger
