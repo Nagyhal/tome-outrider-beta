@@ -19,7 +19,7 @@ newTalent{
 	no_unlearn_last = true,
 	range = function(self, t)
 		if self:knowTalent(self.T_MOUNTED_ACROBATICS) then
-			return self:callTalent(self.T_MOUNTED_ACROBATICS, "getRange")
+			return self:callTalent(self.T_MOUNTED_ACROBATICS, "range")
 		else return 1 end
 	end,
 	on_pre_use = function(self, t)
@@ -62,30 +62,40 @@ newTalent{
 	type = {"mounted/mounted-base", 1},
 	no_energy = "fake",
 	points = 1,
-	message = false,
 	no_break_stealth = true, -- stealth is broken in attackTarget
-	requires_target = true,
 	tactical = { CLOSEIN = 1, ESCAPE = 1 },
-	target = function(self, t) return {type="hit", range=self:getTalentRange(t)} end,
+	target = function(self, t) 
+		local display_default_target = function(self, d) return end
+		local first_target
+		local range = self:getTalentRange(t)
+		if range == 1 then first_target=util.findFreeGrid(self.x, self.y, 1) end
+		return {type="hit", range=range, first_target=first_target}
+	end,
 	no_unlearn_last = true,
 	range = function(self, t)
 		if self:knowTalent(self.T_MOUNTED_ACROBATICS) then
 			-- t_acr = self:getTalentFromId(self.T_MOUNTED_ACROBATICS)
-			return self:callTalent(self.T_MOUNTED_ACROBATICS, "getRange")
+			return self:callTalent(self.T_MOUNTED_ACROBATICS, "range")
 		else return 1 end
 	end,
-	on_pre_use = function(self, t)
-		if not self:isMounted() then
-			return false
-		else return true
-		end
+	on_pre_use = function(self, t, silent)
+		return preCheckIsMounted(self, t, silent)
 	end,
 	action = function(self, t)
-		m = self:getMount()
+		local mount = self:getMount()
 		local tg = self:getTalentTarget(t)
+		if self:isTalentCoolingDown(self.T_MOUNTED_ACROBATICS) then tg.range=1 end
 		local x, y, _ = self:getTarget(tg)
+		if not x or not y then return nil end
+		local ox, oy = self.x, self.y
 		if game.level.map:checkAllEntities(x, y, "block_move") then game.logPlayer(self, "You can't dismount there!") return nil end
-		if self:dismountTarget(m, x, y) then return true end
+		if self:dismountTarget(mount, x, y) then
+			if core.fov.distance(ox, oy, x, y) > 1 then
+				self:callTalent(self.T_MOUNTED_ACROBATICS, "doAttack", ox, oy, x, y)
+				self:startTalentCooldown(self.T_MOUNTED_ACROBATICS)
+			end
+			return true
+		end
 	end,
 	info = function(self, t)
 		return ([[Get down from your mount to a square within range %d]]):

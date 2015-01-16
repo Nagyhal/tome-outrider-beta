@@ -131,8 +131,8 @@ function _M:dismountTarget(target, x, y)
 		target:move(ox, oy, true)
 		target.changed = true
 		self.changed = true
-	else return false end
-	
+		return true
+	else return nil end
 end
 
 function _M:mountActBase()

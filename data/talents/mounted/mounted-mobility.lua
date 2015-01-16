@@ -44,7 +44,7 @@ newTalent{
 		if not self:isMounted() then game.logPlayer(self, "You cannot use Overrun without riding a mount!") return nil end
 		local tg = {type="beam", range=self:getTalentRange(t), nolock=true, talent =t}
 		local tx, ty, target = self:getTarget(tg)
-		if not tx or not ty then return nil end
+		if not tx or not ty or game.level.map(tx, ty, engine.Map.ACTOR) then return nil end
 		if core.fov.distance(self.x, self.y, tx, ty) > self:getTalentRange(t) then return nil end
 
 		local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", target) end
@@ -173,7 +173,7 @@ newTalent{
 		return preCheckHasMountPresent(self, t, silent)
 	end,
 	action = function(self, t)
-		local mount = self:hasMount()
+		local mount = self:hasMount()	
 		--TODO: Make rider also follow when the mount is moved
 		local mover = self:isMounted() and self or mount
 
@@ -221,56 +221,48 @@ newTalent{
 	type = {"mounted/mounted-mobility", 4},
 	require = mnt_str_req4,
 	points = 5,
-	stamina = 30,
-	getRange = function (self, t) return math.floor(3 + self:getTalentLevel(t)/2) end,
-	range = function (self, t) return t.getRange(self, t) end,
+	mode = "passive",
+	range = function (self, t) return math.floor(3 + self:getTalentLevel(t)/2) end,
 	cooldown = function (self, t) return 13-self:getTalentLevelRaw(t) end,
 	getDamage = function (self, t) return self:combatTalentWeaponDamage(t, 0.8, 1.6)  end,
-	tactical = { ESCAPE = 2, },
-	action = function(self, t)
-		if not self:HasMount() then
-			game.logPlayer(self, "You cannot use mounted acrobatics without a mount.")
-			return
-		end
-		local mount = self:getMount()
-		if not self:IsMounted() then
-			if math.floor(core.fov.distance(self.x, self.y, mount.x, mount.y)) > self:getRange(t) then
-				game.logPlayer(self, "You are too far away from your mount.")
-				return
-			end
-			--mount the character
-		else  --do a Ghoulish Leap  (heh)
-			local tg = {type="hit", range=self:getTalentRange(t)}
-			local x, y, target = self:getTarget(tg)
-			if not x or not y then return nil end
-			if core.fov.distance(self.x, self.y, x, y) > self:getTalentRange(t) then return nil end
+	doAttack = function(self, t, ox, oy, x, y)
+		local main = self:getInven"MAINHAND"; if main then main=main[1] else return end
+		if main.archery then
+			if not self:hasArcheryWeapon() then return end -- This checks for ammo & disarming among other things.
+			local range = archery_range(self, t)
+			--Get actors in a ball around user; we only want targets we can shoot at, hence the block function.
+			local actors_list = {}
+			local block = function(_, lx, ly) return game.level.map:checkAllEntities(lx, ly, "block_move") end
+			local tg = {type="ball", block_radius=block, radius=range, talent=t}
+			self:project(tg, x, y, function(px, py)
+				local a = game.level.map(px, py, Map.ACTOR)
+				if a and  a ~= self and self:reactionToward(a) < 0 then actors_list[a] = true end
+			end)
 
-			local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", self) end
-			local l = self:lineFOV(x, y, block_actor)
-			local lx, ly, is_corner_blocked = l:step()
-			local tx, ty, _ = lx, ly
-			while lx and ly do
-				if is_corner_blocked or block_actor(_, lx, ly) then break end
-				tx, ty = lx, ly
-				lx, ly, is_corner_blocked = l:step()
+			local actors = table.keys(actors_list)
+			for i = 1, 2 do
+				local a = rng.tableRemove(actors); if not a then break end
+				local tg = {friendlyfire=false, friendlyblock=false, no_energy=true}
+				tg = self:archeryAcquireTargets(tg, {x=a.x, y=a.y})
+				self:archeryShoot(tg, t, nil, {mult=t.getDamage(self, t)})
 			end
-
-			-- Find space
-			if block_actor(_, tx, ty) then return nil end
-			local fx, fy = util.findFreeGrid(tx, ty, 5, true, {[Map.ACTOR]=true})
-			if not fx then
-				return
+		elseif main.combat then
+			if not self:hasWeaponType() then return end -- This only  checks for disarming, really
+			local tg = {type="beam", start_x=ox, start_y=oy, talent=t}
+			local actors_list = {}
+			self:project(tg, x, y, function(px, py)
+				local a = game.level.map(px, py, Map.ACTOR)
+				if a and a ~= self and self:reactionToward(a) < 0 then actors_list[#actors_list+1] = a end
+			end)
+			for _ , a in ipairs(actors_list) do
+				self:attackTarget(a, nil, t.getDamage(self, t), true)
 			end
-			self:Dismount()  -- unsure
-			self:move(fx, fy, true)
-			return true
 		end
-		return true
 	end,
 	info = function(self, t)
 		local range = self:getTalentRange(t)
 		local dam = t.getDamage(self, t)*100
-		return ([[When you dismount, you may leap a great distance, jumping an extra %d squares away. All enemies you pass through during this manoeuvre suffer a %d%% damage attack, if you are wielding a melee weapon; if you wield a ranged weapon, then you shoot one enemy nearest to you (but not adjacent) when you land for %d%% damage. In addition, you may mount from an extra %d squares away.]]
+		return ([[When you mount or dismount, you may leap a great distance, jumping an extra %d squares away. All enemies you pass through during this manoeuvre suffer a %d%% damage attack, if you are wielding a melee weapon; if you wield a ranged weapon, then when you land you shoot up to two enemies within range for %d%% damage.]]
 		):format(range, dam, dam, range)
 	end,
 }
