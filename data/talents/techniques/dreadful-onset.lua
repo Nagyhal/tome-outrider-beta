@@ -1,73 +1,53 @@
 newTalent{
-	name = "Howling Arrows",
+	name = "Wailing Weapon",
 	type = {"technique/dreadful-onset", 1},
-	--no_energy = "fake",  --What does this mean?
 	points = 5,
-	--random_ego = "attack",  --What?
 	cooldown = 10,
 	stamina = 10,
 	require = mnt_cun_req1,
-	range = archery_range,
-	radius = function(self, t)
-		return 2
-		--return 2 + math.floor(self:getTalentLevel(t) / 3)
-	end,
-	tactical = { ATTACKAREA = { weapon = 2 }, DISABLE = { stun = 3 } }, 
-	getDamage = function(self, t)
-		return self:combatTalentWeaponDamage(t, 0.3, 0.8)
-	end,
-	getDuration = function(self, t)
-		return 3 + math.floor(self:getTalentLevel(t) / 2)
-	end,
-	getConfusePower = function(self, t) --cheeky hack so Cat point spenders are not left out.
-		return 25 + 5 * math.max(self:getTalentLevel(t) / 1.3, self:getTalentLevelRaw(t))
-	end,
-	tactical = { ATTACKAREA = { weapon = 2 }, DISABLE = { stun = 3 } },
-	requires_target = true,
-	target = function(self, t)
-		local weapon, ammo = self:hasArcheryWeapon()
-		return {type="ball", radius=self:getTalentRadius(t), range=self:getTalentRange(t), display=self:archeryDefaultProjectileVisual(weapon, ammo)}
-	end,
-	on_pre_use = function(self, t, silent) if not self:hasArcheryWeapon() then if not silent then game.logPlayer(self, "You require a bow or sling for this talent.") end return false end return true end,
-	archery_onhit = function(self, t, target, x, y)
-		local eff ="confuse"  --Not sure which fear to use
-		--if self:getTalentLevelRaw(t) >= 3 then eff = rngtable({"fear", "confuse"}) else eff="fear" end
-		--if eff == "fear" then
-			--if target:canBe("fear") then
-				--if actor:checkHit(self:combatMindpower(), actor:combatMentalResist(), 0, 95) then      --code from fears.lua
-				--target:setEffect(target.EFF_PANICKED, 2 + self:getTalentLevelRaw(t), {apply_power=self:combatAttack()})     --bad code, do not use
-			--else
-				--game.logSeen(target, "%s resists!", target.name:capitalize())
-		--end
-		--end
-		if eff == "confuse" then
-			if target:canBe("confused") then
-				target:setEffect(target.EFF_CONFUSED, t.getDuration(self, t), {power=t.getConfusePower(self, t)})
-			else
-				game.logSeen(target, "%s resists!", target.name:capitalize())
-			end
-		end
-		if self:getTalentLevelRaw(t) >= 5 then
-			if target:canBe("silenced") then
-				target:setEffect(target.EFF_SILENCED, t.getDuration(self, t))
-			else
-				game.logSeen(target, "%s resists!", target.name:capitalize())
-			end
-		end
-	end,
-	action = function(self, t)
-		local tg = self:getTalentTarget(t)
-		local targets = self:archeryAcquireTargets(tg, {one_shot=true})
-		if not targets then return end
-		self:archeryShoot(targets, t, tg, {mult=t.getDamage(self, t)})
+	no_energy = true,
+	tactical = { BUFF = { weapon = 2 }, DISABLE = { confusion = 2 } }, 
+	on_pre_use = function(self, t)
+		if self:hasEffect(self.EFF_DISARMED) or self:isUnarmed() then if silent then game.logPlayer(self, "You must equip a weapon to convert it into a Wailing Weapon!") end return false end
 		return true
 	end,
-	info = function(self, t)
-		return ([[Taking specially notched arrows from your quiver, you let off a volley of whistling arrows, besieging your enemies in a radius of %d with horridly screeching missiles and breaking their ranks, doing %d%% damage with a chance to confuse (power %d). At level 5, the cacophony created is enough to drown out the chants of spellcasters, applying an additional silence chance.]])
-		:format(self:getTalentRadius(t), 
-		t.getDamage(self, t)*100, 
-		t.getConfusePower(self, t))
+	action = function(self, t)
+		local eff_id
+		if self:hasArcheryWeapon() then eff_id = self.EFF_HOWLING_ARROWS else eff_id = self.EFF_SHRIEKING_STRIKES end
+		self:setEffect(eff_id, t.getDur(self, t), {power=t.getConfusePower(self, t)})
+		return true
 	end,
+	doTryConfuse = function(self, t, target)
+		assert(target, "No target sent to doTryConfuse")
+		if target:canBe("confusion") and rng.percent(t.getConfuseChance(self, t)) then
+			target:setEffect(target.EFF_CONFUSED, t.getConfuseDur(self, t), {power=t.getConfusePower(self, t)})
+			local eff = target:hasEffect(target.EFF_CONFUSED)
+			if eff then
+				if self:hasEffect(self.EFF_HOWLING_ARROWS) then self:logCombat(target, "#Source#'s howling arrows confuse #target#!") end
+				if self:hasEffect(self.EFF_SHRIEKING_STRIKES) then self:logCombat(target, "#Source#'s shrieking strikes confuse #target#!") end
+			end
+		end
+	end,
+	info = function(self, t)
+		local dur = t.getDur(self, t)
+		local confuse_dur = t.getConfuseDur(self, t)
+		local chance = t.getConfuseChance(self, t)
+		local power = t.getConfusePower(self, t)
+		local silence_chance = t.getSilenceChance(self, t)
+		return ([[Taking either specially notched arrows from your quiver, or sought-after feathers which you affix to your melee weaponry, you let loose horridly screeching missiles or hack at your foes with howling strikes. For %d turns, attacks you make with your current weaponry have a %d%% chance to confuse their target (power %d, duration %d). At level 5, the cacophony created is enough to drown out the chants of spellcasters, applying an additional silence chance of %d%%.]])
+		:format(dur, chance, power, confuse_dur, silence_chance)
+	end,
+	getDur = function(self, t) return self:combatTalentScale(t, 2.75, 6, .35) end,
+	getConfuseDur = function(self, t) return self:combatTalentScale(t, 2.75, 4, .35) end,
+	getConfusePower = function(self, t) return self:combatTalentLimit(t, 70, 25, 50) end,
+	getConfuseChance = function(self, t)
+		local base = self:combatStatTalentIntervalDamage(t, "combatMindpower", 10, 50)
+		return self:combatLimit(base, 100, 10, 10, 75, 75)
+	end,
+	getSilenceChance = function(self, t)
+		local base = self:combatStatTalentIntervalDamage(t, "combatMindpower", 5, 20)
+		return self:combatLimit(base, 50, 5, 5, 25,25)
+	end
 }
 	
 --[[	

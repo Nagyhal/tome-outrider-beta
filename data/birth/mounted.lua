@@ -76,7 +76,7 @@ newBirthDescriptor{
 		-- [ActorTalents.T_DEATH_DANCE] = 1,
 		[ActorTalents.T_BOW_MASTERY] = 1,
 		[ActorTalents.T_WEAPON_COMBAT] = 1,
-		[ActorTalents.T_HOWLING_ARROWS] = 1,
+		[ActorTalents.T_WAILING_WEAPON] = 1,
 		-- [ActorTalents.T_BRAZEN_LUNGE] = 1,
 		-- [ActorTalents.T_TYRANNY_OF_STEEL] = 1,
 		[ActorTalents.T_WEAPONS_MASTERY] = 1,

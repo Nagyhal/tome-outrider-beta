@@ -295,6 +295,38 @@ activate = function(self, eff)
 	self:effectTemporaryValue(eff, "movement_speed", eff.move)
 	self:effectTemporaryValue(eff, "combat_def", eff.def)
 end,
-deactivate = function(self, eff)
-end,
+}
+
+newEffect{
+	name = "HOWLING_ARROWS",
+	desc = "Howling Arrows",
+	long_desc = function(self, eff) return ("The target has a %d%% chance to confuse (power %d) with each archery attack."):format(eff.chance, eff.power) end,
+	type = "physical",
+	subtype = { tactic=true },
+	status = "beneficial",
+	parameters = { power=35, chance=25 },
+	callbackOnArcheryAttack = function(self, t, target, hitted, crit, weapon, ammo, damtype, mult, dam)
+		self:callTalent(self.T_WAILING_WEAPON, "doTryConfuse", target)
+	end,
+	activate = function(self, eff)
+	end,
+	deactivate = function(self, eff)
+	end,
+}
+
+newEffect{
+	name = "SHRIEKING_STRIKES",
+	desc = "Shrieking Strikes",
+	long_desc = function(self, eff) return ("The target has a %d%% chance to confuse (power %d) with each melee attack."):format(eff.chance, eff.power) end,
+	type = "physical",
+	subtype = { tactic=true },
+	status = "beneficial",
+	parameters = { power=35, chance=25 },
+	callbackOnMeleeAttack = function(self, t, target, hitted, crit, weapon, damtype, mult, dam)
+		self:callTalent(self.T_WAILING_WEAPON, "doTryConfuse", target)
+	end,
+	activate = function(self, eff)
+	end,
+	deactivate = function(self, eff)
+	end,
 }
