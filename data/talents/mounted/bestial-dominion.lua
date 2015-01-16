@@ -353,3 +353,32 @@ newTalent{
 	getResistPct = function(self, t) return self:combatTalentScale(t, 35, 60) end,
 	getMaxDist = function(self, t) return math.round(self:combatTalentScale(t, 1, 4.2, .85)) end,
 }
+
+newTalent{
+	name = "Unbridled Ferocity",
+	type = {"mounted/bestial-dominion", 4},
+	points = 5,
+	cooldown = function(self, t) return self:combatTalentLimit(t, 20, 50, 30) end,
+	stamina = 80,
+	require = mnt_str_req4,
+	no_energy = true,
+	tactical = { BUFF = 3 }, 
+	on_pre_use = function(self, t)
+		return preCheckHasMountPresent(self, t)
+	end,
+	action = function(self, t)
+		local mount = self:hasMount()
+		mount:setEffect(mount.EFF_UNBRIDLED_FEROCITY, t.getDur(self, t, {
+			power=t.getPower(self, t)
+			}))
+		return true
+	end,
+	info = function(self, t)
+		local dur = t.getDur(self, t)
+		local power = t.getPower(self, t)
+		return ([[You throw caution to the wind and let your bestial steed revel in the glory of the hunt, gaining a %d increase in physical power for %d turns, and not depleting but regaining Loyalty with each hit that it endures. However, if you fall from your beast while it is in this furious state, you will not be able to re-mount.]]):
+		format(power, dur)
+	end,
+	getDur = function(self, t) return self:combatTalentScale(t, 4.75, 6, .35) end,
+	getPower = function(self, t) return self:combatTalentScale(t, 10, 30) end,
+}

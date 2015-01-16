@@ -330,3 +330,20 @@ newEffect{
 	deactivate = function(self, eff)
 	end,
 }
+
+newEffect{
+	name = "UNBRIDLED_FEROCITY", image = "talents/willful_combat.png",
+	desc = "Unbridled Ferocity",
+	long_desc = function(self, eff) return ("The target is unleashed, gaining a %d bonus to physical power; however, the target cannot be mounted while in this state. Furthermore, when taking damage, the target will not lose Loyalty but will regain it."):format(eff.power) end,
+	type = "mental",
+	subtype = { focus=true },
+	status = "beneficial",
+	parameters = { power=8 },
+	on_gain = function(self, err) return "#Target#'s ferocity is unleashed!" end,
+	on_lose = function(self, err) return "#Target#' becomes less ferocious." end,
+	activate = function(self, eff)
+		self:effectTemporaryValue(eff, "combat_dam", eff.power)
+	end,
+	deactivate = function(self, eff)
+	end,
+}

@@ -55,7 +55,10 @@ function _M:getMount()
 end
 
 function _M:canMount(mount)
-	if mount.can_mount and mount.summoner == self then return true else return false end
+	if mount.can_mount and mount.summoner == self and not mount:hasEffect(mount.EFF_UNBRIDLED_FEROCITY) then
+		return true
+	else return false
+	end
 end
 
 function _M:hasMount()

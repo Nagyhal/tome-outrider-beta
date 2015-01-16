@@ -4,6 +4,7 @@ local Map = require "engine.Map"
 
 local base_bumpInto = _M.bumpInto
 local base_combatMovementSpeed = _M.combatMovementSpeed
+local base_combatPhysicalPower = _M.combatPhysicalpower
 local base_hasTwoHandedWeapon = _M.hasTwoHandedWeapon
 
 function _M:bumpInto(target, x, y)
@@ -49,6 +50,18 @@ function _M:hasTwoHandedWeapon()
 		return weaponry[1]
 	end
 	return base_hasTwoHandedWeapon(self)
+end
+
+function _M:combatPhysicalpower(mod, weapon, add)
+	--TODO: Replace this with getOwner or somesuch
+	local summoner = self.summoner
+	if summoner and summoner.outrider_pet and summoner.outrider_pet == self then
+		if summoner:knowTalent(summoner.T_CHALLENGE_THE_WILDS) then
+			if not add then add=0 end
+			add = add + summoner:callTalent(summoner.T_CHALLENGE_THE_WILDS, "getDam")
+		end
+	end
+	return base_combatPhysicalPower(self, mod, weapon, add)
 end
 
 return _M
