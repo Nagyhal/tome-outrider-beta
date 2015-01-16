@@ -347,3 +347,25 @@ newEffect{
 	deactivate = function(self, eff)
 	end,
 }
+
+newEffect{
+	name = "WILD_CHALLENGE", image = "talents/challenge_the_wilds.png",
+	desc = "Wild Hunt",
+	long_desc = function(self, eff) return ("Slay %d more creatures to find your bestial challenger!"):format(eff.ct) end,
+	type = "other",
+	subtype = { focus=true },
+	decrease = 0, no_remove = true,
+	status = "beneficial",
+	charges = function(self, eff) return eff.ct>0 and eff.ct or "" end,
+	parameters = { ct=15 },
+	callbackOnKill = function(self, eff, tgt, death_note)
+		if tgt.exp_worth and tgt.exp_worth > 0 then eff.ct=math.max(0, eff.ct-1) end
+	end,
+	on_gain = function(self, err) return "#Target#'s wild challenge begins!" end,
+	on_lose = function(self, err) return "#Target#' has ended the wild challenge" end,
+	activate = function(self, eff)
+	end,
+	deactivate = function(self, eff)
+	end,
+}
+

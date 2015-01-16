@@ -185,63 +185,25 @@ newTalent{
 	stamina = 50,
 	no_npc_use = true,
 	range = 10,
-	requires_target = true,
---	action = function (self, t)
---		if not self.mount and if not **CHALLENGE** then
 	tactical = { BUFF = 5 },
-	target = function(self, t)
-		local tg = {type="bolt", nowarning=true, range=self:getTalentRange(t), nolock=true, talent=t}
-		return tg
+	on_pre_use = function(self, t, silent)
+		if self:hasMount() then if not silent then game.logPlayer(self, "Use Challenge the Wilds when you do not already have a mount.") end return false
+		else
+			local eff = self:hasEffect(self.EFF_WILD_CHALLENGE)
+			if eff and eff.ct>0 then if not silent then game.logPlayer(self, "You must slay %d enemies before you may prove your might to the wilderness.", eff.ct) end return false 
+			else return true
+			end
+		end
 	end,
-	action = function(self, t)
-		local tg = self:getTalentTarget(t)
-		local tx, ty = self:getTarget(tg)
-		if not tx or not ty then return nil end
-		local _ _, tx, ty = self:canProject(tg, tx, ty)
-		target = game.level.map(tx, ty, Map.ACTOR)
-		if target == self then target = nil end
-
-		-- Find space
-		local x, y = tx, ty
-		
-		local m = makeBestialMount(self, self:getTalentLevel(t))
-		m.summoner = self
-		mountSetupSummon(self, m, x, y, false)
-		self:mountTarget(m)
-
-		-- local m = NPC.new{
-			-- type = "animal", subtype = "canine",
-			-- display = "C", color=colors.LIGHT_DARK, image = "npc/summoner_wardog.png",
-			-- name = "doggy", faction = self.faction,
-			-- desc = [[]],
-			-- autolevel = "none",
-			-- ai = "summoned", ai_real = "dumb_talented_simple", ai_state = { talent_in=5, },
-			-- stats = {str=0, dex=0, con=0, cun=0, wil=0, mag=0},
-			-- inc_stats = { str=15 + (self:getCun(130, true) * self:getTalentLevel(t) / 5) + (self:getTalentLevel(t) * 2), dex=10 + self:getTalentLevel(t) * 2, mag=5, con=15},
-			-- level_range = {self.level, self.level}, exp_worth = 0,
-			-- global_speed = 1.2,
-
-			-- max_life = resolvers.rngavg(25,50),
-			-- life_rating = 6,
-			-- infravision = 10,
-
-			-- combat_armor = 2, combat_def = 4,
-			-- combat = { dam=self:getTalentLevel(t) * 10 + rng.avg(12,25), atk=10, apr=10, dammod={str=0.8} },
-
-			-- summoner = self, summoner_gain_exp=true, wild_gift_summon=false,
-			-- summon_time = math.ceil(self:getTalentLevel(t)*5) + 5,
-			-- ai_target = {actor=target}
-		-- }		
-
-		--game:playSoundNear(self, "talents/spell_generic")
-		return true
+	callbackOnSummonDeath = function(self, t, summon, src, death_note)
+		if summon == self.outrider_pet then self.outrider_pet = nil end
 	end,
 	--Handle sharing of inscriptions here.
 	callbackOnTalentPost = function(self, t, ab, ret, silent)
 		-- if ab.tactical and (ab.tactical.attack or ab.tactical.attackarea or ab.tactical.disable) then return end
-		local mount = self:hasMount()
+		local mount = self:hasMount(); if not mount then return end
 		local max_dist = self:callTalent(self.T_FERAL_AFFINITY, "getMaxDist") or 1
-		if mount and core.fov.distance(self.x, self.y, mount.x, mount.y)<=max_dist and string.find(ab.type[1],  "inscriptions") then
+		if core.fov.distance(self.x, self.y, mount.x, mount.y)<=max_dist and string.find(ab.type[1],  "inscriptions") then
 			old_fake = mount.__inscription_data_fake
 			local name = string.sub(ab.id, 3)
 			mount.__inscription_data_fake = self.inscriptions_data[name]
@@ -249,15 +211,47 @@ newTalent{
 			if old_fake then mount.__inscription_data_fake=old_fake end
 		end
 	end,
+	action = function(self, t)
+		if self:hasEffect(self.EFF_WILD_CHALLENGE) then
+			t.doSummon(self, t)
+		else self:setEffect(self.EFF_WILD_CHALLENGE, 3, {ct=t.getNum(self, t)})
+		end
+		return true
+	end,
+	doSummon = function(self, t )
+		--params: file, no_default, res, mod, loaded
+		-- local npc_list = mod.class.NPC:loadList("data/general/npcs/canine.lua")
+		local coords = {}
+		self:project({type="ball", radius=10, talent=t}, self.x, self.y, function(px, py)
+			local a = game.level.map(px, py, engine.Map.ACTOR)
+			if not a then coords[#coords+1] = {px, py, core.fov.distance(self.x, self.y, px, py), rng.float(0,1)} end
+		end)
+		local f = function(a, b)
+			if a[3]~=b[3] then return a[3] > b[3] else return a[4] < b[4] end
+		end
+		table.sort(coords, f)
+		-- for i, coord in ipairs(coords) do
+		-- 	game.log(("DEBUG: got coords table: %s %s %s %s"):format(tostring(coord[1]), tostring(coord[2]), tostring(coord[3]), tostring(coord[4])))
+		-- end
+		for i=1, rng.range(6, 8) do
+			local filter = {
+				base_list="mod.class.NPC:data/general/npcs/canine.lua",
+			}
+			local e = game.zone:makeEntity(game.level, "actor", filter, true)
+			game.zone:addEntity(game.level, e, "actor", coords[i][1], coords[i][2])
+		end
+		return npc_list
+	end,
 	info = function(self, t)
 		local dam = t.getDam(self, t)
+		local num = t.getNum(self, t)
 		return ([[Your hurl your fury at the wilderness, letting out a luring, primal call and intensifying every one of your senses so that you might close upon a savage ally, a steed to carry you to victory and spoil. Finding a suitable wild mount takes time and effort; you gain the "Challenge the Wilds" status with a counter of %d, and every time you slay an enemy, that counter depletes by 1. As it approaches 0, your chances of happening upon your quarry are increased. The beast that is called will depend on your surroundings: either a wolf, agile and dependable; a spider, ruthless yet versatile; or a rare and mighty drake. You must subdue the beast by blade or bow; it will not come to your side immediately, but after you have asserted your dominance. Care must be taken not to slay it unwittingly. The quality of beast will increase with talent level.
 
 			Levelling Bestial Dominion will also increase the physical power of your mount by %d.]])
-		:format(math.ceil(self:getTalentLevel(t)*5) + 10, dam)
+		:format(num, dam)
 	end,
 	getDam = function(self, t) return self:getTalentLevel(t) * 10 end,
-
+	getNum = function(self, t) return math.ceil(self:getTalentLevel(t)*5) + 10 end,
 }
 
 newTalent{
