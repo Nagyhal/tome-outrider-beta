@@ -8,8 +8,8 @@ newTalent{
 	mode = "activated",
 	require = cuns_req1,
 	tactical = { ATTACK = { PHYSICAL = 1, poison = 1}, DISABLE = function(self, t)
-			if self:getTalentLevelRaw(t)>=5 then ret["DISABLE"] = 3 
-			elseif self:getTalentLevelRaw(t)>=3 then ret["DISABLE"] = 2
+			if self:getTalentLevelRaw(t)>=5 then return {cripple=3}
+			elseif self:getTalentLevelRaw(t)>=3 then return {cripple=2}
 			end
 		end},
 	-- cooldown = function(self, t) return math.floor(self:combatTalentLimit(t, 7, 10.5, 8)) end,
@@ -301,9 +301,10 @@ newTalent{
 		local p = self:isTalentActive(self.T_SHADOW_WALK); if not p then return end --This can happen!
 
 		if not p.shadow or p.shadow.dead or not game.level:hasEntity(p.shadow) then
+			if not t.doCheckInCombat(self, t) then p.time_to_summon = t.getTime(self, t) return end
 			if p.time_to_summon > 0 then
 				p.time_to_summon = p.time_to_summon - 1
-				return true
+				return
 			else
 				t.createShadow(self, t)
 				return true
@@ -313,13 +314,23 @@ newTalent{
 	callbackOnActBase = function(self, t)
 		local p = self:isTalentActive(self.T_SHADOW_WALK); if not p then return end --This can happen!
 		--Try to create shadow if we don't have one (then quit the function)
-		local done = t.tryCreateShadow(self, t); if done then return end
+		local done = t.tryCreateShadow(self, t)
 		--Teleport shadow if it is too far or close
-		local shadow = p.shadow
+		local shadow = p.shadow; if done or not shadow then return end
+		if not t.doCheckInCombat(self, t) then shadow:die() end
 		local dist = core.fov.distance(self.x, self.y, shadow.x, shadow.y)
 		if dist~=util.bound(dist, 2, 5) or rng.percent(20) then
 			shadow:teleportRandom(self.x, self.y, 5, 2)
 		end
+	end,
+	doCheckInCombat = function(self, t)
+		local actors_list = {}
+		local tg = {type="ball", radius=5, talent=t}
+		self:project(tg, self.x, self.y, function(px, py)
+			local a = game.level.map(px, py, Map.ACTOR)
+			if a and a ~= self and self:reactionToward(a) < 0 then actors_list[#actors_list+1] = a end
+		end)
+		if #actors_list>=1 then return true end
 	end,
 	info = function(self, t)
 		local health = t.getHealth(self, t)
@@ -334,5 +345,63 @@ newTalent{
 	getStealthPower = function(self, t) return self:combatScale(self:getCun(15, true) * self:getTalentLevel(t), 25, 0, 100, 75) end,
 	getHealth = function(self, t) return self:combatLimit(self:combatTalentSpellDamage(t, 20, 500), 1, 0.2, 0, 0.584, 384) end, -- Limit to < 100% health of summoner
 	getDam = function(self, t) return self:combatLimit(self:combatTalentSpellDamage(t, 10, 500), 1.6, 0.4, 0, 0.761 , 361) end, -- Limit to <160% Nerf?
-	getTime = function(self, t) return math.max(3, self:combatTalentScale(t, 7, 4, .35)) end,
+	getTime = function(self, t) return math.max(3, self:combatTalentScale(t, 5, 4, .35)) end,
+}
+
+newTalent{
+	name = "Web Ambush",
+	type = {"spider/weaver-of-woes", 2},
+	require = cuns_req1,
+	points = 5,
+	cooldown = function(self, t) return self:combatTalentLimit(t, 8, 10, 12) end,
+	stamina = 20,
+	range = function(self, t) return self:combatTalentLimit(t, 8, 5, 2) end,
+	tactical = { DISABLE = {slow = 1, pin = 1}, CLOSEIN = 2 },
+	requires_target = true,
+	speed = "combat",
+	target = function(self, t) return {type="bolt", range=self:getTalentRange(t)} end,
+	action = function(self, t)
+		local tg = self:getTalentTarget(self, t)
+		local x, y, target = self:getTarget(tg)
+		if not x or not y or not target then return nil end
+		local _ _, x, y = self:canProject(tg, x, y)
+		target = game.level.map(x, y, Map.ACTOR)
+		if not target then return nil end
+
+		if not self:checkHit(self:combatAttack(), target:combatDefense()) or target:checkEvasion(self) then 
+			self:logCombat("#Target# evades the grasping webs of #source#!")
+			return true
+		end
+
+		local sx, sy = util.findFreeGrid(self.x, self.y, 5, true, {[engine.Map.ACTOR]=true})
+		if not sx then return end
+
+		target:move(sx, sy, true)
+
+		if core.fov.distance(self.x, self.y, sx, sy) <= 1 then
+			local resist=true
+			if rng.percent(t.getSlowChance(self, t)) then
+				target:setEffect(target.EFF_SLOW, 5, {apply_power=self:combatPhysicalpower(), src=self})
+				resist=false
+			end
+			if target:canBe("pin") and rng.percent(t.getPinChance(self, t)) then
+				target:setEffect(target.EFF_PINNED, 5, {apply_power=self:combatPhysicalpower(), src=self})
+				resist=false
+			end
+			if resist then game.logSeen(target, "%s resists the sticky webs!", target.name:capitalize()) end
+		end
+
+		return true
+	end,
+	info = function(self, t)
+		local slow_chance = t.getSlowChance(self, t)
+		local pin_chance = t.getPinChance(self, t)
+		return ([[Make a ranged attack against a nearby foe, attempting to pull it toward you and encase it in sticky webs.
+
+			Webs have a %d%% chance to slow and a %d%% chance to pin for a duration of 5 turns.]]):
+		format(slow_chance, pin_chance)
+	end,
+	getSlowChance = function(self,t) return self:combatTalentLimit(t, 100, 50, 25) end,
+	getPinChance = function(self,t) return self:combatTalentLimit(t, 100, 25, 10) end,
+	-- getDur = function(self, t) return math.floor(self:combatTalentScale(t, 2, 6)) end,
 }

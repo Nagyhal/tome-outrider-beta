@@ -36,8 +36,7 @@ newTalentType{ type="wolf/will-of-winter", name = "will of winter", description 
 newTalentType{ type="wolf/alpha-predator", name = "alpha predator", description = "Wolf power abilities" }
 --Spider, the basic underground / tactical mount
 newTalentType{ type="spider/stalker-in-the-shadows", name = "stalker in the shadows", description = "Spider ambush tactics" }
-newTalentType{ type="spider/fanged-killer", name = "fanged killer", description = "Spider tactical abilities" }
-newTalentType{ type="spider/lurking-menace", name = "lurking menace", description = "Spider tactical abilities" }
+newTalentType{ type="spider/weaver-of-woes", name = "fanged killer", description = "Spider web attacks and stealth" }
 --Drakes, the basic power mount
 newTalentType{ type="drake/dragonflight", name = "dragonflight", description = "Drake airborne abilities." }
 --Griffins, secret aerial mount.
