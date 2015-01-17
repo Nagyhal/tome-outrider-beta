@@ -135,7 +135,7 @@ newTalent{
 		local chance = t.getChance(self, t)
 		return ([[Increase your defense by %d (mitigated by your fatigue) and your saves by %d%% of your defense.
 
-			Also, you may sustain to gain positional dominance on the battlefield. When you are within range %d of an enemy, and have an attack projected against you, have a %d%% chance to switch places with that enemy if it would take you out of the projection area. This effect scales with defense, and its activation will put Impunity of Warlords on cooldown.]]):
+			Also, you may sustain to gain positional dominance on the battlefield. When you are within range %d of an enemy, and have an attack projected against you, have a %d%% chance to switch places with that enemy if it would take you out of the projection area. This effect scales with defense, will check for knockback resistance, and its activation will put Impunity of Warlords on cooldown.]]):
 		format(def, saves_pct, range, chance)
 	end,
 	getDef = function(self, t) return self:combatTalentScale(t, 6, 18) end,

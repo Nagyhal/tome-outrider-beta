@@ -16,7 +16,6 @@
 --
 -- Nicolas Casalini "DarkGod"
 -- darkgod@te4.org
-local Chat = require "engine.Chat"
 
 newTalent{
 }

@@ -176,6 +176,43 @@ function _M:move(x, y, force)
 	return ret
 end
 
+local base_projected = _M.projected
+function  _M:projected(tx, ty, who, t, x, y, damtype, dam, particles)
+	local grids = self.impunity_avoid_grids
+	if grids then
+		local actors_list = {}
+		local t =self:getTalentFromId(self.T_IMPUNITY_OF_WARLORDS)
+		local tg = {type="ball", radius=self:getTalentRange(self, t), talent=t}
+		self:project(tg, x, y, function(px, py)
+			--Don't switch with enemies in the danger grids
+			if grids[px] and grids[px][py] then return end
+			local a = game.level.map(px, py, Map.ACTOR)
+			if a and a ~= self and self:reactionToward(a) < 0 then actors_list[a] = true end
+		end)
+		local a = rng.tableRemove(actors_list)
+		if a and not (a:attr("never_move") or self:attr("never_move")) and not a:canBe("knockback") then 
+			game.level.map:remove(a.x, a.y, engine.Map.ACTOR)
+			local ox, oy = self.x, self.y
+			self:move(a.x, a.y, true)
+			a:move(ox, oy, true)
+			self:startTalentCooldown(t.id)
+			return true
+		end
+	end
+	return base_projected(self, tx, ty, who, t, x, y, damtype, dam, particles)
+end
+
+local base_on_project = _M.on_project
+function _M:on_project(tx, ty, who, t, x, y, damtype, dam, particles)
+	--Handle Impunity of Warlords
+	if self:isTalentActive(self.T_IMPUNITY_OF_WARLORDS) then
+		self.impunity_avoid_grids = self.impunity_avoid_grids or {}
+		self.impunity_avoid_grids[tx] = self.impunity_avoid_grids[tx] or {}
+		self.impunity_avoid_grids[tx][ty] = true
+	end
+	return base_on_project(self, tx, ty, who, t, x, y, damtype, dam, particles)
+end
+
 -- function _M:learnPool(t)
 -- 	local tt = self:getTalentTypeFrom(t.type[1])
 
