@@ -34,54 +34,76 @@ newTalent{
 	require = cuns_req2,
 	points = 5,
 	info = function(self, t)
+		local mult1 = t.getMult(self, t, 1)
+		local mult3= t.getMult(self, t, 3)
 		local move = t.getMove(self, t)  --; local move_max = move * t.getMult(self, t, ct)
 		local atk = t.getAtk(self, t)
 		local crit = t.getCrit(self, t)
 		local def = t.getDef(self, t)
 		local sunder = t.getSunder(self, t)
+		local stacks = t.getSunderStacks(self, t)
+		local stacks_string = stacks..(stacks>1 and " stacks" or " stack")
 		return ([[When you set your sights on the highest of castles, nothing can stand in your way.
-			As long as you move toward an enemy in an unbroken line, gain a bonus to movement speed, accuracy, critical chance and defense. You may diverge from your path to centre on an evading or awkwardly located enemy,; however, any other non-instantaneous action will reset the effect.
-			If the enemy's rank is above 1, the effect will be increased by 50%% for each rank.
-			Also, successfully striking with melee weapons while in this state confers a chance to sunder weaponry and armour, affecting either armour and saves or accuracy by %d for 3 turns.
+			As long as you move toward an enemy in an unbroken line, gain a bonus to movement speed, accuracy, critical chance and defense. You may diverge from your path to centre on an evading or awkwardly located enemy; however, any other non-instantaneous action will reset the effect.
+			If the enemy's rank is above 1, the effect will be increased by 50%%.
+			Also, successfully striking with melee weapons while in this state confers a chance to sunder the enemy's defenses, reducing armour and saves by %d for 3 turns. The effect requires a minimum of %s.
 			Current bonuses:
-			Movement Speed: %d%%
-			Accuracy: %d
-			Critical Chance: %d%%
-			Defense: %d]]):
-		format(sunder, move, atk, crit, def)
+			Movement Speed: %d%% to %d%%
+			Accuracy: %d to %d
+			Critical Chance: %d%% to %d%%
+			Defense: %d to %d]]):
+		format(sunder, stacks_string, move*mult1, move*mult3, atk*mult1, atk*mult3, crit*mult1, crit*mult3, def*mult1, def*mult3)
 	end,
 	callbackOnMove = function(self, t, moved, force, ox, oy, x, y)
 		if not ox or not oy or (ox==self.x and oy==self.y) then return end
-		local _, dx, dy = util.getDir(x, y, ox, oy)
-		local tg = {type="cone", angle=45, radius=self.sight, selffire=false}
-		local ok = false
-		local acts = {}
-		local filter = function(px, py, t, self)
-			local a = game.level.map(px, py, engine.Map.ACTOR) 
-			if a then acts[a], ok = true, true end
-		end
-		local grids = self:project(tg, self.x+dx, self.y+dy, filter)
-		if ok then
-			if not self:attr("building_strike_at_heart") then
-				self:attr("building_strike_at_heart", 1, true)
-			else
-				self:setEffect(self.EFF_STRIKE_AT_THE_HEART, 3, {
-					move=t.getMove(self, t),
-					atk=t.getAtk(self, t),
-					crit=t.getCrit(self, t),
-					def=t.getDef(self, t)
-				}) 
+		local ab = self.__talent_running or (self.mount and self.mount.__talent_running); if ab and ab.is_teleport then return end
+		local lineFunction = core.fov.line(ox, oy, self.x, self.y)
+
+		lx, ly, _ = lineFunction:step(); lx, ly = (lx or x), (ly or y)
+		local stacks = 0
+		repeat
+			local _, dx, dy = util.getDir(lx, ly, ox, oy)
+			local tg = {type="cone", start_x=ox, start_y=oy, angle=45, radius=self.sight, selffire=false}
+			local acts = {}
+			local filter = function(px, py, t, self)
+				local a = game.level.map(px, py, engine.Map.ACTOR) 
+				if a then acts[a]=true; stacks=stacks+1 end
+			end
+			self:project(tg, lx+dx, ly+dy, filter)
+			ox, oy = lx, ly
+			lx, ly, _ = lineFunction:step()
+		until (not lx)
+		
+		if stacks>0 then
+			for i = 1, stacks do
+				if not self:attr("building_strike_at_heart") then
+					self:attr("building_strike_at_heart", 1, true)
+				else
+					local p = self:hasEffect(self.EFF_STRIKE_AT_THE_HEART)
+					local ct=p and math.min(3, p.ct+1) or 1
+					local mult = t.getMult(self, t, ct)
+					self:setEffect(self.EFF_STRIKE_AT_THE_HEART, 3, {
+					ct=ct,
+					move=t.getMove(self, t)*mult,
+					atk=t.getAtk(self, t)*mult,
+					crit=t.getCrit(self, t)*mult,
+					def=t.getDef(self, t)*mult,
+					sunder=ct>=t.getSunderStacks(self,t) and t.getSunder(self, t) or 0
+					}) 
+				end
 			end
 		else
 			self:removeEffect(self.EFF_STRIKE_AT_THE_HEART)
 			self:attr("building_strike_at_heart", 0, true)
 		end
 	end,
+	getMult = function(self, t, ct) return self:combatScale(ct, 1, 1, 2.5, 3, .75) end,
 	getMove = function(self, t) return self:combatTalentScale(t, 10, 30) end,
 	getAtk = function(self, t) return self:combatTalentScale(t, 3, 8) end,
-	getCrit = function(self, t) return self:combatTalentScale(t, 8, 15) end,
+	getCrit = function(self, t) return self:combatTalentScale(t, 10, 18) end,
 	getDef = function(self, t) return self:combatTalentScale(t, 5, 12) end,
 	getSunder = function(self, t) return self:combatTalentScale(t, 6, 18) end,
+	getSunderStacks = function(self, t) return math.max(1, self:combatTalentScale(t, 3, 1, 1)) end,
 }
 
 newTalent{

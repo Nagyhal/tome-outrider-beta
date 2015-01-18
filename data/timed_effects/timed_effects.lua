@@ -225,76 +225,116 @@ newEffect{
 	desc = "Strike at the Heart",
 	long_desc = function(self, eff)
 		local ct = eff.ct
-		return ("The target's charge emboldens it, granting %d%% movement speed, %d accuracy, %d%% critical chance and %d defense until the next attack."):format(eff.move*ct, eff.atk*ct, eff.crit*ct, eff.def*ct) end,
+		return ("The target's charge emboldens it, granting %d%% movement speed, %d accuracy, %d%% critical chance and %d defense until the next attack."):format(eff.move, eff.atk, eff.crit, eff.def) end,
 	type = "physical",
 	subtype = { charge=true, tactic=true, speed=true },
 	status = "beneficial",
-	parameters = { targets={}, ct=1, move=5, atk=3, crit=3, def=3},
+	parameters = { ct=1, move=5, atk=3, crit=3, def=3, sunder=0},
+	charges = function(self, eff) return eff.ct end,
 	--TODO: As you can use this with archers, the terminology "charge" isn't really appropriate
 	on_gain = function(self, eff) return "#Target# prepares a deadly charge!", "+Strike at the Heart" end,
 	on_lose = function(self, eff) return "#Target# ends the charge.", "-Strike at the Heart" end,
-	activate = function(self, eff)
-		local ct = eff.ct
-		eff.move_id = self:addTemporaryValue("movement_speed", eff.move/100*ct)
-		eff.atk_id = self:addTemporaryValue("combat_atk", eff.atk*ct)
-		eff.crit_id = self:addTemporaryValue("combat_physcrit", eff.crit*ct)
-		eff.def_id = self:addTemporaryValue("combat_def", eff.def*ct)
+	activate = function(self, eff, p)
+		eff.targets={}
+		self:effectTemporaryValue(eff, "movement_speed", eff.move/100)
+		self:effectTemporaryValue(eff, "combat_def", eff.def)
+		self:effectTemporaryValue(eff, "combat_atk", eff.atk)
+		self:effectTemporaryValue(eff, "combat_physcrit", eff.crit)
+		-- p = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
+		p.doStoreBonuses(self, eff)
 	end,
-	on_merge = function(self, old_eff, new_eff)
-		new_eff.ct = math.min(old_eff.ct+1, 3)
-		self:removeTemporaryValue("movement_speed", old_eff.move_id)
-		self:removeTemporaryValue("combat_atk", old_eff.atk_id)
-		self:removeTemporaryValue("combat_physcrit", old_eff.crit_id)
-		self:removeTemporaryValue("combat_def", old_eff.def_id)
-		local ct = new_eff.ct
-		new_eff.move_id = self:addTemporaryValue("movement_speed", new_eff.move/100*ct)
-		new_eff.atk_id = self:addTemporaryValue("combat_atk", new_eff.atk*ct)
-		new_eff.crit_id = self:addTemporaryValue("combat_physcrit", new_eff.crit*ct)
-		new_eff.def_id = self:addTemporaryValue("combat_def", new_eff.def*ct)
+	updateValues = function(self, eff)
+		for i = 1, #eff.__tmpvals do
+			self:removeTemporaryValue(eff.__tmpvals[i][1], eff.__tmpvals[i][2])
+		end
+		self:effectTemporaryValue(eff, "movement_speed", eff.move/100)
+		self:effectTemporaryValue(eff, "combat_def", eff.def)
+		self:effectTemporaryValue(eff, "combat_atk", eff.atk)
+		self:effectTemporaryValue(eff, "combat_physcrit", eff.crit)
+	end,
+	doStoreBonuses = function(self, eff)
+		local p = self:hasEffect(self.EFF_SPRING_ATTACK)
+		if p then
+			eff.move = math.max(0, eff.move - p.move)
+			eff.def = math.max(0, eff.def - p.def)
+			eff.store={def=math.min(p.def, eff.def), move=math.min(p.move, eff.move)}
+		end
+		p = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
+		p.updateValues(self, eff)
+	end,
+	doUnstoreBonuses = function(self, eff)
+		if eff.store then
+			eff.move = eff.move + eff.store.move
+			eff.def = eff.def + eff.store.def
+			eff.store=nil
+			local p = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
+			p.updateValues(self, eff)
+		end
+	end,
+	on_merge = function(self, old_eff, new_eff, p)
+		new_eff.targets=old_eff.targets
+		self:removeEffect(self.EFF_STRIKE_AT_THE_HEART, true, true)
+		-- local p = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
+		p.activate(self, new_eff, p)
 		return new_eff
 	end,
 	callbackOnMeleeAttack = function(self, eff, target, hitted, crit, weapon, damtype, mult, dam)
-		if target then eff.targets[target] = true end
-		game:onTickEnd(function() self:removeEffect(self.EFF_STRIKE_AT_THE_HEART) end)
+		if target then eff.targets[target] = hitted and true or false end
+		game:onTickEnd(function() 
+			local p = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
+			if eff.store then p.doUnstoreBonuses(self, eff) end
+			if eff.sunder>0 then
+				for a, hitted in pairs(eff.targets) do
+					if hitted then
+						target:setEffect(target.EFF_SUNDER_ARMOUR, 3, {power=eff.sunder, apply_power=self:combatPhysicalpower()})
+					end
+				end
+			end
+			self:removeEffect(self.EFF_STRIKE_AT_THE_HEART)
+		end)
 	end,
 	callbackOnArcheryAttack = function(self, eff, target, hitted, crit, weapon, ammo, damtype, mult, dam)
 		if target then eff.targets[target] = true end
 		game:onTickEnd(function() self:removeEffect(self.EFF_STRIKE_AT_THE_HEART) end)
 	end,
-	deactivate = function(self, eff)
-		if self:knowTalent(self.T_SPRING_ATTACK) then
+	deactivate = function(self, eff, p)
+		local ct = eff.ct
+		if self:knowTalent(self.T_SPRING_ATTACK) and #table.keys(eff.targets)>0 then
 			local t = self:getTalentFromId(self.T_SPRING_ATTACK)
+			--Can't do callEffect in deactivate function
+			-- local p = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
+			p.doUnstoreBonuses(self, eff)
 			self:setEffect(self.EFF_SPRING_ATTACK, t.getDur(self,t), {
-				move = eff.move,
-				def = eff.def,
+				move = eff.move*ct,
+				def = eff.def*ct,
 				min_pct = t.getMinPct(self, t),
 				max_pct = t.getMaxPct(self, t)
 				})
 		end
-		self:removeTemporaryValue("movement_speed", eff.move_id)
-		self:removeTemporaryValue("combat_atk", eff.atk_id)
-		self:removeTemporaryValue("combat_physcrit", eff.crit_id)
-		self:removeTemporaryValue("combat_def", eff.def_id)
 		--TODO: Decide how to pass a target
 	end,
 }
 
 newEffect{
-name = "SPRING_ATTACK",
-desc = "Spring Attack",
-long_desc = function(self, eff) return ("The target's charge has ended, but it retains a bonus of %d%% movement speed and %d to defense. Also, the target gain a bonus to ranged damage against any marked targets for the duration. This bonus is dependent on distance: starting from %d%% at 2 tiles, increasing to %d%% at 5"):format(eff.move, eff.def, eff.min_pct, eff.max_pct) end,
-type = "physical",
-subtype = { tactic=true, speed=true },
-status = "beneficial",
-parameters = { move=10, def=6, min_pct=5, max_pct=15},
---TODO: As you can use this with archers, the terminology "charge" isn't really appropriate
-on_gain = function(self, eff) return "#Target# enters into a spring attack!", "+Spring Attack" end,
-on_lose = function(self, eff) return "#Target# ends the spring attack.", "-Spring Attack" end,
---callbackonDealDamage is not useful so we handle the damage increment in load.lua's DamageProjector:base hook
-activate = function(self, eff)
-	self:effectTemporaryValue(eff, "movement_speed", eff.move)
-	self:effectTemporaryValue(eff, "combat_def", eff.def)
-end,
+	name = "SPRING_ATTACK",
+	desc = "Spring Attack",
+	long_desc = function(self, eff) return ("The target's onslaught has ended, but it retains a bonus of %d%% to movement speed and %d to defense. Also, the target gains a bonus to ranged damage against any marked targets for the duration. This bonus is dependent on distance: starting from %d%% at 2 tiles, increasing to %d%% at 5 tiles."):format(eff.move, eff.def, eff.min_pct, eff.max_pct) end,
+	type = "physical",
+	subtype = { tactic=true, speed=true },
+	status = "beneficial",
+	parameters = { move=10, def=6, min_pct=5, max_pct=15},
+	on_gain = function(self, eff) return "#Target# enters into a spring attack!", "+Spring Attack" end,
+	on_lose = function(self, eff) return "#Target#'s spring attack has ended.", "-Spring Attack" end,
+	--callbackonDealDamage is not useful so we handle the damage increment in load.lua's DamageProjector:base hook
+	activate = function(self, eff)
+		self:effectTemporaryValue(eff, "movement_speed", eff.move/100)
+		self:effectTemporaryValue(eff, "combat_def", eff.def)
+	end,
+	deactivate = function(self, eff)
+		if self:hasEffect(self.EFF_STRIKE_AT_THE_HEART) then
+			self:callEffect(self.EFF_STRIKE_AT_THE_HEART, "doUnstoreBonuses")
+		end
+	end,
 }
 
 newEffect{
