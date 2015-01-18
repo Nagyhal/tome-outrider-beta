@@ -49,16 +49,11 @@ newTalent{
 		return self:combatLimit(base, 50, 5, 5, 25,25)
 	end
 }
-	
---[[	
-	Living Shield
-	Grapple an adjacent enemy; all ranged and melee attacks now have a XX% chance to hit this enemy instead of you. You may move to drag the enemy with you.
---]]
 
 newTalent{
 	name = "Living Shield",
-	type = {"technique/dreadful-onset", 1},
-	require = mnt_cun_req1,
+	type = {"technique/dreadful-onset", 2},
+	require = mnt_cun_req2,
 	points = 5,
 	random_ego = "attack",
 	cooldown = 20,
@@ -124,20 +119,15 @@ newTalent{
 	end,
 }
 
---[[
-Impalement/ Active, 25 stamina, 
-	Take a point-blank shot, pushing your enemy back and pinning it against any suitable obstacle, natural or man-made. At level 3 you may perform this manoeuvre with a melee weapon; but using it disarms you for the duration of the pin.
---]]
-
 newTalent{
 	name = "Impalement",
-	type = {"technique/dreadful-onset", 1}, --REM:3
+	type = {"technique/dreadful-onset", 3},
 	--no_energy = "fake",
 	points = 5,
 	--random_ego = "attack",
 	cooldown = function (self, t) return 21 - self:getTalentLevel(t) end,
 	stamina = 25,
-	require = mnt_cun_req1, --REM: mnt_cun_req3
+	require = mnt_cun_req3,
 	getArcheryTargetType = function(self, t)
 		local weapon, ammo = self:hasArcheryWeapon()
 		return {range=t.getArcheryRange(self, t)}
@@ -224,22 +214,17 @@ newTalent{
 	end,
 }
 
---[[
-Catch!
-	Hurl the severed head of your enemies' comrade back at them, causing them to gape in terror and flee. You may use this talent only after killing an adjacent enemy (up to 2->6 turns afterward), and then only with a critical hit.
---]]
-
 newTalent{
 	name = "Catch!",
 	short_name = "CATCH",
-	type = {"technique/dreadful-onset", 1},
+	type = {"technique/dreadful-onset", 4},
 	no_energy = "fake",
 	points = 5,
 	random_ego = "attack",
 	cooldown = 20,
 	stamina = 35,
+	require = mnt_cun_req4,
 	tactical = { DISABLE = { fear = 4 } },
-	require = mnt_cun_req1,
 	range = function (self, t) return math.floor(self:getTalentLevel(t) +4)  end,
 	getDuration = function(self, t) return 3 + math.ceil(self:getTalentLevel(t)) end,
 	getUsageWindow = function(self, t) return 2 + math.floor(self:getTalentLevel(t)) end,
@@ -263,23 +248,3 @@ newTalent{
 		format(t.getDuration(self, t), t.getUsageWindow(self, t))
 	end,
 }
-
---Junk code goes here (I'm new so I need this):
-
---Old pre-use weapon check for Impalement
-		-- if self:getTalentLevelRaw(t) < 3 then 
-			-- if not self:hasArcheryWeapon("bow")  then
-				-- if not silent then game.logPlayer(self, "You require a bow for this talent.")	
-				-- end
-				-- return false
-			-- end
-			-- return true 
-		-- end
-		-- if self:getTalentLevelRaw(t) >= 3 then
-			-- if self:hasArcheryWeapon() and not self:hasArcheryWeapon("bow")  then 
-				-- if not silent then game.logPlayer(self, "Only arrows can impale with range!") 
-				-- end
-			-- return false
-			-- end 
-		-- return true
-		-- end

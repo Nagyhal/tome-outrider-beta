@@ -178,7 +178,10 @@ end
 newTalent{
 	name = "Challenge the Wilds",
 	type = {("mounted/bestial-dominion"), 1},
-	require = mnt_str_req1,
+	require =  {
+		stat = { str=function(level) return 12 + (level-1) * 8 end },
+		level = function(level) return 0 + (level-1)*5  end,
+	},
 	points = 5,
 	cooldown = 50,
 	stamina = 50,

@@ -3,7 +3,7 @@ newTalent{
 	type = {"cunning/raider", 1},
 	mode = "passive",
 	points = 5,
-	require = cun_req1,
+	require = cuns_req1,
 	info = function(self, t)
 		local fatigue_pct = t.getFatiguePct(self, t)
 		local counter_pct = t.getCounterPct(self, t)
@@ -31,7 +31,7 @@ newTalent{
 	name = "Strike at the Heart",
 	type = {"cunning/raider", 2},
 	mode = "passive",
-	require = cun_req2,
+	require = cuns_req2,
 	points = 5,
 	info = function(self, t)
 		local move = t.getMove(self, t)  --; local move_max = move * t.getMult(self, t, ct)
@@ -88,7 +88,7 @@ newTalent{
 	name = "Spring Attack",
 	type = {"cunning/raider", 3},
 	mode = "passive",
-	require = cun_req3,
+	require = cuns_req3,
 	points = 5,
 	info = function(self, t)
 		local dur = t.getDur(self, t)
@@ -111,7 +111,7 @@ newTalent{
 	name = "Impunity of Warlords",
 	type = {"cunning/raider", 4},
 	mode = "sustained",
-	require = cun_req4,
+	require = cuns_req4,
 	points = 5,
 	sustain_stamina = 50,
 	cooldown = 10,

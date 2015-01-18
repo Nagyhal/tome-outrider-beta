@@ -20,7 +20,7 @@
 newTalent{
 	name = "Overrun",
 	type = {"mounted/mounted-mobility", 1},
-	require = mount_str_req1,
+	require = mnt_str_req1,
 	no_energy = "fake",
 	points = 5,
 	random_ego = "attack" ,
