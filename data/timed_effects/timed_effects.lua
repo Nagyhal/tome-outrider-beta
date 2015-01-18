@@ -369,3 +369,32 @@ newEffect{
 	end,
 }
 
+newEffect{
+	name = "WILD_CHALLENGER", image = "talents/challenge_the_wilds.png",
+	desc = "Wild Challenger",
+	long_desc = function(self, eff) return ("Beat down to 50%% life points to establish dominance over your mount!"):format(eff.ct) end,
+	type = "other",
+	subtype = { focus=true },
+	decrease = 0, no_remove = true,
+	status = "beneficial",
+	parameters = {},
+	callbackOnTakeDamage = function(self, eff, src, x, y, type, dam, tmp, no_martyr)
+		if (self.life-dam) < self.max_life*.5 then
+			game:onTickEnd(function()
+				local src = eff.src
+				src:callTalent(src.T_CHALLENGE_THE_WILDS, "doBefriendMount", self)
+			end)
+			self:removeEffect(self.EFF_WILD_CHALLENGER, nil, true)
+		end
+	end,
+	on_gain = function(self, err) return "#Target# rises to the challenge!" end,
+	on_lose = function(self, err) return "#Target#' has been subdued!" end,
+	activate = function(self, eff)
+		assert(eff.src, "No source sent to Wild Challenger.")
+		self:addShaderAura("wild_challenger", "awesomeaura", {time_factor=4000, alpha=0.6,  flame_scale=2}, "particles_images/naturewings.png")
+	end,
+	deactivate = function(self, eff)
+		self:removeShaderAura("wild_challenger")
+	end,
+}
+

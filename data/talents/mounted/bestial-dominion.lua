@@ -29,9 +29,10 @@ local mounts_list = {
 		rank = 1,
 		size_category = 2,
 		autolevel = "warrior",
-		ai = "tactical", ai_state = { ai_move="move_dmap", talent_in=2, },
-		ai_state = { talent_in=1, ai_move="move_astar", ally_compassion=10 },
-		ai_tactic = resolvers.tactic("tank"),
+		ai = "tactical", 
+		ai_state = { talent_in=2, ally_compassion=0},
+		ai_tactic = resolvers.tactic("melee"),
+		-- ai_tactic = resolvers.talented_ai_tactic(), --this breaks things :(
 		life_rating = 10,
 		global_speed_base = 1.2,
 		desc = [[A large and sturdy wolf, this one seems to have some greater cunning or purpose about it.]],
@@ -48,7 +49,7 @@ local mounts_list = {
 		unused_talents = 0,
 		unused_generics = 0,
 		unused_talents_types = 0,
-		mount = {
+		mount_data = {
 			loyalty = 100,
 			share_damage = 0.4
 		}
@@ -69,7 +70,7 @@ local mounts_list = {
 		size_category = 3,
 		autolevel = "rogue",
 		ai = "tactical", 
-		ai_state = { talent_in=1, ai_move="move_astar", ally_compassion=10 },
+		ai_state = { talent_in=1, ai_move="move_complex"},
 		ai_tactic = resolvers.tactic("melee"),
 		global_speed_base = 1.0,
 		resolvers.nice_tile{image="invis.png", color=colors.UMBER, image="npc/spiderkin_spider_giant_spider.png"},
@@ -98,12 +99,51 @@ local function getBestialMountChances(self)
 end
 
 local function makeBestialMount(self, lev)
-local chances = getBestialMountChances(self)
+	local chances = getBestialMountChances(self)
 	local tot = 0
 	local list = {}
 	for k, e in pairs(chances) do for i = 1, e do list[#list+1] = k end tot = tot + e end
-	local m = require "mod.class.NPC".new(mounts_list.spider)
+	local m = require "mod.class.NPC".new(mounts_list.wolf)
 	return m
+end
+
+function befriendMount(self, m)
+	m.summoner = self
+	m.faction = self.faction
+	if game.party:hasMember(self) then
+		local can_control = not no_control
+		m.remove_from_party_on_death = true
+		game.party:addMember(m, {
+			control=can_control and "full" or "no",
+			type="mount",
+			title="Mount",
+			orders = {target=true, leash=true, anchor=true, talents=true},
+			on_control = function(self)
+			end,
+			on_uncontrol = function(self)
+				self:removeEffect(self.EFF_SUMMON_CONTROL)
+			end,
+		})
+	end
+	--Mount used for Mounted Combat abilities, TODO: Consider making this more modular for multiple mounts owned
+	self.outrider_pet = m
+	-- Summons never flee
+	m.ai_tactic.escape = 0
+	m.ai_state = m.ai_state or {}
+	m.ai_state.tactic_leash = 10
+	m.ai_state.ai_move="move_astar"
+	m.ai_state.ally_compassion=10
+	m.ai_state.talent_in=1
+
+	--Bind rider to mount
+	self.mounts_owned = self.mounts_owned or {}
+	self.mounts_owned[#self.mounts_owned+1] = m
+	m.show_owner_loyalty_pool = true
+	--Other mount stuff
+	if self:knowTalent(self.T_FERAL_AFFINITY) then
+		m:learnTalent(m.T_FERAL_AFFINITY_MOUNT, true, 1)
+	end
+	m:resetToFull()	
 end
 
 function mountSetupSummon(self, m, x, y, no_control)
@@ -114,18 +154,11 @@ function mountSetupSummon(self, m, x, y, no_control)
 	loyalty_regen_coeff = 1,
 	share_damage = 50
 	}
-	m.faction = self.faction
-	m.unused_stats = 30
-	m.unused_talents = 30
-	m.unused_generics = 0
-	m.unused_talents_types = 0
 	m.no_inventory_access = true
 	m.no_points_on_levelup = false
 	m.save_hotkeys = true
-	m.ai_state = m.ai_state or {}
-	m.ai_state.tactic_leash = 10
 	-- Try to use stored AI talents to preserve tweaking over multiple summons
-	m.ai_talents = self.stored_ai_talents and self.stored_ai_talents[m.name] or {}
+	-- m.ai_talents = self.stored_ai_talents and self.stored_ai_talents[m.name] or {}
 	local main_weapon = self:getInven("MAINHAND") and self:getInven("MAINHAND")[1]
 	m:attr("combat_apr", self:combatAPR(main_weapon))
 	m.inc_damage = table.clone(self.inc_damage, true)
@@ -135,44 +168,11 @@ function mountSetupSummon(self, m, x, y, no_control)
 	m:attr("pin_immune", self:attr("pin_immune"))
 	m:attr("confusion_immune", self:attr("confusion_immune"))
 	m:attr("numbed", self:attr("numbed"))
-	if game.party:hasMember(self) then
-		local can_control = not no_control
-		m.remove_from_party_on_death = true
-		game.party:addMember(m, {
-			control=can_control and "full" or "no",
-			type="mount",
-			title="Mount",
-			orders = {target=true, leash=true, anchor=true, talents=true},
-			on_control = function(self)
-				-- local summoner = self.summoner
-				-- self:setEffect(self.EFF_SUMMON_CONTROL, 1000, {incdur=2 + summoner:getTalentLevel(self.T_CHALLENGE_THE_WILDS) * 3, res=summoner:getCun(7, true) * summoner:getTalentLevelRaw(self.T_CHALLENGE_THE_WILDS)})
-				-- self:hotkeyAutoTalents()
-			end,
-			on_uncontrol = function(self)
-				self:removeEffect(self.EFF_SUMMON_CONTROL)
-			end,
-		})
-	end
 
 	m:forceLevelup(self.level)
 	m:resolve() m:resolve(nil, true)
 	game.zone:addEntity(game.level, m, "actor", x, y)
 	game.level.map:particleEmitter(x, y, 1, "summon")
-
-	-- Summons never flee
-	m.ai_tactic = m.ai_tactic or {}
-	m.ai_tactic.escape = 0
-
-	--Bind rider to mount
-	self.mounts_owned = self.mounts_owned or {}
-	self.mounts_owned[#self.mounts_owned+1] = m
-	m.show_owner_loyalty_pool = true
-	--Other mount stuff
-	if self:knowTalent(self.T_FERAL_AFFINITY) then
-		m:learnTalent(m.T_FERAL_AFFINITY_MOUNT, true, 1)
-	end
-	--Mount used for Mounted Combat abilities, TODO: Consider making this more modular for multiple mounts owned
-	self.outrider_pet = m
 end
 
 newTalent{
@@ -213,38 +213,51 @@ newTalent{
 	action = function(self, t)
 		if self:hasEffect(self.EFF_WILD_CHALLENGE) then
 			t.doSummon(self, t)
+			self:removeEffect(self.EFF_WILD_CHALLENGE, nil, true)
 		else self:setEffect(self.EFF_WILD_CHALLENGE, 3, {ct=t.getNum(self, t)})
 		end
 		return true
 	end,
-	doSummon = function(self, t )
+	doSummon = function(self, t)
 		--params: file, no_default, res, mod, loaded
 		-- local npc_list = mod.class.NPC:loadList("data/general/npcs/canine.lua")
 		local coords = {}
-		self:project({type="ball", radius=10, talent=t}, self.x, self.y, function(px, py)
+		local block = function(_, lx, ly) return game.level.map:checkAllEntities(lx, ly, "block_move") end
+		self:project({type="ball", radius=10, block_radius=block, talent=t}, self.x, self.y, function(px, py)
 			local a = game.level.map(px, py, engine.Map.ACTOR)
-			if not a then coords[#coords+1] = {px, py, core.fov.distance(self.x, self.y, px, py), rng.float(0,1)} end
+			local terrain = game.level.map(px, py, engine.Map.TERRAIN)
+			if not a and not terrain.does_block_move then coords[#coords+1] = {px, py, core.fov.distance(self.x, self.y, px, py), rng.float(0,1)} end
 		end)
 		local f = function(a, b)
 			if a[3]~=b[3] then return a[3] > b[3] else return a[4] < b[4] end
 		end
 		table.sort(coords, f)
-		-- for i, coord in ipairs(coords) do
-		-- 	game.log(("DEBUG: got coords table: %s %s %s %s"):format(tostring(coord[1]), tostring(coord[2]), tostring(coord[3]), tostring(coord[4])))
-		-- end
+
+		--TODO: Make this not crash if not enough room.
+		local first = true
 		for i=1, rng.range(6, 8) do
-			local filter = {
-				base_list="mod.class.NPC:data/general/npcs/canine.lua",
-			}
-			local e = game.zone:makeEntity(game.level, "actor", filter, true)
-			game.zone:addEntity(game.level, e, "actor", coords[i][1], coords[i][2])
+			if first then 
+				local mount = makeBestialMount(self, self:getTalentLevel(t))
+				mountSetupSummon(self, mount, coords[i][1], coords[i][2], false)
+				mount:setEffect(mount.EFF_WILD_CHALLENGER, 2, {src=self})
+			else
+				local filter = {
+					base_list="mod.class.NPC:data/general/npcs/canine.lua",
+				}
+				local e = game.zone:makeEntity(game.level, "actor", filter, true)
+				e.exp_worth=0
+				game.zone:addEntity(game.level, e, "actor", coords[i][1], coords[i][2])
+			end
+			first=false
 		end
-		return npc_list
+	end,
+	doBefriendMount = function(self, t, mount)
+		return befriendMount(self, mount)
 	end,
 	info = function(self, t)
 		local dam = t.getDam(self, t)
 		local num = t.getNum(self, t)
-		return ([[Your hurl your fury at the wilderness, letting out a luring, primal call and intensifying every one of your senses so that you might close upon a savage ally, a steed to carry you to victory and spoil. Finding a suitable wild mount takes time and effort; you gain the "Challenge the Wilds" status with a counter of %d, and every time you slay an enemy, that counter depletes by 1. As it approaches 0, your chances of happening upon your quarry are increased. The beast that is called will depend on your surroundings: either a wolf, agile and dependable; a spider, ruthless yet versatile; or a rare and mighty drake. You must subdue the beast by blade or bow; it will not come to your side immediately, but after you have asserted your dominance. Care must be taken not to slay it unwittingly. The quality of beast will increase with talent level.
+		return ([[Your hurl your fury at the wilderness, letting out a luring, primal call and intensifying every one of your senses so that you might close upon a savage ally, a steed to carry you to victory and spoil. Finding a suitable wild mount takes time and effort; you gain the "Challenge the Wilds" status with a counter of %d, and every time you slay an enemy, that counter depletes by 1. When it reaches 0, you may activate Challenge the Wilds to call forth a beast worthy of your command. The beast that is called will depend on your surroundings: either a wolf, agile and dependable; a spider, ruthless yet versatile; or a rare and mighty drake. You must subdue the beast by blade or bow; it will not come to your side immediately, but after you have asserted your dominance. Care must be taken not to slay it unwittingly, and beware- it will not arrive alone. The quality of beast will increase with talent level.
 
 			Levelling Bestial Dominion will also increase the physical power of your mount by %d.]])
 		:format(num, dam)

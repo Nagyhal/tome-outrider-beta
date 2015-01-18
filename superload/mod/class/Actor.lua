@@ -157,7 +157,7 @@ function _M:learnPool(t)
 end
 
 function _M:move(x, y, force)
-	local energy, mount = self.energy.value, self.mount
+	local energy, mount = self.energy.value, (self:isMounted() and self.mount)
 	local ox, oy = self.x, self.y
 	local ret = base_move(self, x, y, force)
 	local new_x, new_y = self.x, self.y
