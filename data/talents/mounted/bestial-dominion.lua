@@ -134,7 +134,6 @@ function befriendMount(self, m)
 	m.ai_state.ai_move="move_astar"
 	m.ai_state.ally_compassion=10
 	m.ai_state.talent_in=1
-
 	--Bind rider to mount
 	self.mounts_owned = self.mounts_owned or {}
 	self.mounts_owned[#self.mounts_owned+1] = m
@@ -143,7 +142,10 @@ function befriendMount(self, m)
 	if self:knowTalent(self.T_FERAL_AFFINITY) then
 		m:learnTalent(m.T_FERAL_AFFINITY_MOUNT, true, 1)
 	end
-	m:resetToFull()	
+	m:resetToFull()
+	--Loyalty
+	if not self.base_max_loyalty then self.base_max_loyalty=100 end
+	self.max_loyalty = self.max_loyalty + (m.mount.loyalty-self.base_max_loyalty)
 end
 
 function mountSetupSummon(self, m, x, y, no_control)
@@ -198,7 +200,10 @@ newTalent{
 		end
 	end,
 	callbackOnSummonDeath = function(self, t, summon, src, death_note)
-		if summon == self.outrider_pet then self.outrider_pet = nil end
+		if summon == self.outrider_pet then
+			self.outrider_pet = nil
+			self.max_loyalty = self.max_loyalty + (self.base_max_loyalty-m.mount.loyalty)
+		end
 	end,
 	--Handle sharing of inscriptions here.
 	callbackOnTalentPost = function(self, t, ab, ret, silent)

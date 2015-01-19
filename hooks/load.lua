@@ -168,7 +168,7 @@ class:bindHook("UISet:Minimalist:Resources", function(self, data)
 	local x, y, bx, by = data.x, data.y, data.bx, data.by
 	local orient, scale = data.orient, data.scale
 	local src = player.show_owner_loyalty_pool and player.summoner or player
-	if src:knowTalent(src.T_LOYALTY_POOL) and not src._hide_resource_loyalty then
+	if src:knowTalent(src.T_LOYALTY_POOL) and src.outrider_pet and not src._hide_resource_loyalty then
 		sshat[1]:toScreenFull(x-6, y+8, sshat[6], sshat[7], sshat[2], sshat[3], 1, 1, 1, a)
 		bshat[1]:toScreenFull(x, y, bshat[6], bshat[7], bshat[2], bshat[3], 1, 1, 1, a)
 		if loyalty_sha.shad then loyalty_sha:setUniform("a", a) loyalty_sha.shad:use(true) end
