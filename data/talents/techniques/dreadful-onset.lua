@@ -164,16 +164,19 @@ newTalent{
 	return true
 	end,
 	archery_onhit = function(self, t, target, x, y)
+		--TODO: Clean up this nonsense.
 		dx, dy = target.x - self.x, target.y - self.y
 		if math.max(math.abs(dx), math.abs(dy))>1 then
 			dx, dy = dx / math.max(dx, dy), dy / math.max(dx, dy)
 		end
 		target:knockback(self.x, self.y, t.getKnockbackRange(self, t))
 		--we need to detect if the target hits an obstacle, and the obstacle must be within knockback range
-		if math.floor(core.fov.distance(self.x, self.y, target.x + dx, target.y + dy)) > t.getKnockbackRange(self, t)+1 then return nil end
-		if game.level.map:checkAllEntities(target.x + dx, target.y + dy, "block_move", self) then
+		local tx, ty = target.x + dx, target.y + dy
+		if math.floor(core.fov.distance(self.x, self.y, tx, ty)) > t.getKnockbackRange(self, t)+1 then return nil end
+		local ter = game.level.map(tx, ty, engine.Map.TERRAIN)
+		if ter and ter.does_block_move then
 			if target:canBe("pin") then
-				target:setEffect(target.EFF_PINNED, t.getDuration(self, t), {apply_power=self:combatAttack()})
+				target:setEffect(target.EFF_PINNED_TO_THE_WALL, t.getDuration(self, t), {tile={x=tx, y=ty}, ox=target.x, oy=target.y, apply_power=self:combatAttack()})
 			else
 				game.logSeen(target, "%s resists!", target.name:capitalize())
 			end
@@ -191,26 +194,14 @@ newTalent{
 			local x, y, target = self:getTarget(tg)
 			if not x or not y or not target then return nil end
 			if core.fov.distance(self.x, self.y, x, y) > 1 then return nil end
-			local hit = self:attackTarget(target, nil, t.getDamage(self, t), true)
-			if hit then
-				if target:canBe("pin") then --REM: Need to make an "Impaled" effect
-					target:setEffect(target.EFF_PINNED, t.getDuration(self, t), {apply_power=self:combatAttack()})					
-					local pin = target:hasEffect(target.EFF_PINNED)
-					if pin then
-						self:setEffect(self.EFF_DISARMED, pin.dur, {})
-					end
-				else
-					game.logSeen(target, "%s resists!", target.name:capitalize())
-				end
-			end
-		return true
+			t.archery_onhit(self, t, target, x, y)
+			self:quickSwitchWeapons()
+			return true
 		end
 	end,
 	info = function(self, t)
-		return ([[Take a point-blank shot for %d%% damage, pushing your enemy back up to %d squares and pinning it (for %d turns) against any suitable obstacle, natural or man-made. At level 3 you may perform this manoeuvre with a melee weapon; but using it disarms you for the duration of the pin.]])
-		:format(t.getDamage(self, t) * 100,
-		t.getKnockbackRange(self, t),
-		t.getDuration(self, t))
+		return ([[Take a point-blank shot for %d%% damage, pushing your enemy back up to %d squares and pinning it (for %d turns) against any suitable obstacle, natural or man-made. You may perform this manoeuvre with a melee weapon; but doing so will force you to switch to your secondary weapon set.]]):
+		format(t.getDamage(self, t) * 100, t.getKnockbackRange(self, t), t.getDuration(self, t))
 	end,
 }
 

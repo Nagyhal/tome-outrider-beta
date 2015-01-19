@@ -438,3 +438,34 @@ newEffect{
 	end,
 }
 
+newEffect{
+	name = "PINNED_TO_THE_WALL", image = "effects/pinned.png",
+	desc = "Pinned to the wall",
+	long_desc = function(self, eff) return "The target is pinned to the wall or some other suitable piece of terrain, unable to move. If the terrain is detroyed, the target will be able to move agian." end,
+	type = "physical",
+	subtype = { pin=true },
+	status = "detrimental",
+	parameters = {},
+	on_gain = function(self, err) return "#Target# is pinned to the wall.", "+Pinned" end,
+	on_lose = function(self, err) return "#Target# is no longer pinned.", "-Pinned" end,
+	activate = function(self, eff)
+		if not eff.tile or not eff.tile.x then
+			self:removeEffect(self.EFF_PINNED_TO_THE_WALL, nil, true)
+			error("No terrain tile sent to temporary effect Pinned to the Wall.")
+		end
+		if not eff.ox or not eff.oy then
+			self:removeEffect(self.EFF_PINNED_TO_THE_WALL, nil, true)
+			error("Original position not sent to temporary effect Pinned to the Wall.")
+		end
+		eff.tmpid = self:addTemporaryValue("never_move", 1)
+	end,
+	callbackOnActBase = function(self, eff)
+		local ter = game.level.map(eff.tile.x, eff.tile.y, engine.Map.TERRAIN)
+		if not ter or not ter.does_block_move or self.x~=eff.ox or self.y~=eff.oy then
+			self:removeEffect(self.EFF_PINNED_TO_THE_WALL, nil, true)
+		end	
+	end,
+	deactivate = function(self, eff)
+		self:removeTemporaryValue("never_move", eff.tmpid)
+	end,
+}
