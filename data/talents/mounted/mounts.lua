@@ -4,13 +4,13 @@ newTalent{
 	info = "Allows you to have a Loyalty pool. Loyalty is tied to another party member and allows you to command it.",
 	mode = "passive",
 	hide = "always",
+
 	no_unlearn_last = true,
 }
 
 newTalent{
 	name = "Mount",
 	type = {"mounted/mounted-base", 1},
-	no_energy = "fake",
 	points = 1,
 	message = false,
 	no_break_stealth = true, -- stealth is broken in attackTarget
@@ -60,7 +60,6 @@ newTalent{
 newTalent{
 	name = "Dismount",
 	type = {"mounted/mounted-base", 1},
-	no_energy = "fake",
 	points = 1,
 	no_break_stealth = true, -- stealth is broken in attackTarget
 	tactical = { CLOSEIN = 1, ESCAPE = 1 },

@@ -122,11 +122,10 @@ newTalent{
 newTalent{
 	name = "Impalement",
 	type = {"technique/dreadful-onset", 3},
-	--no_energy = "fake",
 	points = 5,
-	--random_ego = "attack",
 	cooldown = function (self, t) return 21 - self:getTalentLevel(t) end,
 	stamina = 25,
+	random_ego = "attack",
 	require = mnt_cun_req3,
 	getArcheryTargetType = function(self, t)
 		local weapon, ammo = self:hasArcheryWeapon()
@@ -209,7 +208,6 @@ newTalent{
 	name = "Catch!",
 	short_name = "CATCH",
 	type = {"technique/dreadful-onset", 4},
-	no_energy = "fake",
 	points = 5,
 	random_ego = "attack",
 	cooldown = 20,

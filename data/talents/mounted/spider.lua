@@ -168,7 +168,6 @@ newTalent{
 	type = {"spider/stalker-in-the-shadows", 3},
 	require = cuns_req3,
 	points = 5,
-	random_ego = "attack",
 	stamina = 10,
 	no_energy=true,
 	cooldown = function(self, t) return math.max(6, self:combatTalentScale(t, 10, 8)) end,
