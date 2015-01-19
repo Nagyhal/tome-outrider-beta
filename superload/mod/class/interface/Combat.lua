@@ -39,7 +39,12 @@ end
 
 function _M:combatMovementSpeed(x, y)
 	local mount = self.mount
-	if mount then return base_combatMovementSpeed(mount, x, y) / mount.global_speed
+	if mount then
+		local mount_move, self_move = base_combatMovementSpeed(mount, x, y),  base_combatMovementSpeed(self, x, y)
+		local add_bonuses = 1 + mount_move-1 + self_move-1
+		local max_penalty = math.min(mount_move, self_move)
+		local used = add_bonuses>1 and add_bonuses or max_penalty
+		return used / mount.global_speed
 	else return base_combatMovementSpeed(self, x, y)
 	end
 end
