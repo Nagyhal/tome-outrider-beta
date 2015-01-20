@@ -179,41 +179,43 @@ end
 local base_projected = _M.projected
 function  _M:projected(tx, ty, who, t, x, y, damtype, dam, particles)
 	local grids = self.impunity_avoid_grids
-	if grids and not self.impunity_no_recur then
+	local ret = false
+	if grids and not self.impunity_no_recur and rng.percent(self:callTalent(self.T_IMPUNITY_OF_WARLORDS, "getChance")) then
 		self.impunity_no_recur = true
 		local actors_list = {}
 		local t =self:getTalentFromId(self.T_IMPUNITY_OF_WARLORDS)
-		local tg = {type="ball", radius=self:getTalentRange(self, t), talent=t}
-		self:project(tg, x, y, function(px, py)
+		local tg = {type="ball", radius=self:getTalentRange(t), talent=t}
+		self:project(tg, self.x, self.y, function(px, py)
 			--Don't switch with enemies in the danger grids
 			if grids[px] and grids[px][py] then return end
 			local a = game.level.map(px, py, Map.ACTOR)
-			if a and a ~= self and self:reactionToward(a) < 0 then actors_list[a] = true end
+			if a and a ~= self and self:reactionToward(a) < 0 and not (a:attr("never_move") or self:attr("never_move")) and a:canBe("knockback") then actors_list[#actors_list+1] = a; end
 		end)
 		self.impunity_no_recur = false
-		self.impunity_avoid_grids = nil
 		local a = rng.tableRemove(actors_list)
-		if a and not (a:attr("never_move") or self:attr("never_move")) and not a:canBe("knockback") then 
+		if a then 
 			game.level.map:remove(a.x, a.y, engine.Map.ACTOR)
 			local ox, oy = self.x, self.y
 			self:move(a.x, a.y, true)
 			a:move(ox, oy, true)
-			self:startTalentCooldown(t.id)
-			return true
+			self:forceUseTalent(t.id, {ignore_energy=true})
+			ret=true
 		end
 	end
-	return base_projected(self, tx, ty, who, t, x, y, damtype, dam, particles)
+	self.impunity_avoid_grids = nil
+	return base_projected(self, tx, ty, who, t, x, y, damtype, dam, particles) or ret
 end
 
-local base_on_project = _M.on_project
-function _M:on_project(tx, ty, who, t, x, y, damtype, dam, particles)
+local base_on_project_acquire = _M.on_project_acquire
+function _M:on_project_acquire(tx, ty, who, t, x, y, damtype, dam, particles, is_projectile, mods)
 	--Handle Impunity of Warlords
-	if self:isTalentActive(self.T_IMPUNITY_OF_WARLORDS) and self:reactionToward(who)<0 and dam and dam >0   then
-		self.impunity_avoid_grids = self.impunity_avoid_grids or {}
-		self.impunity_avoid_grids[tx] = self.impunity_avoid_grids[tx] or {}
-		self.impunity_avoid_grids[tx][ty] = true
+	if type(dam)=="table" then dam = dam.dam end
+	if self:isTalentActive(self.T_IMPUNITY_OF_WARLORDS) and not self.impunity_no_recur1 and self:reactionToward(who)<0 and dam and dam>0 then 
+		self.impunity_no_recur_pre = true
+		self.impunity_avoid_grids = who:project(t, x, y, function() end)
+		self.impunity_no_recur_pre = false
 	end
-	return base_on_project(self, tx, ty, who, t, x, y, damtype, dam, particles)
+	return base_on_project_acquire(self, tx, ty, who, t, x, y, damtype, dam, particles, is_projectile, mods)
 end
 
 return _M

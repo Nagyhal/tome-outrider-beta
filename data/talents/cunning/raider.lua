@@ -136,6 +136,7 @@ newTalent{
 	require = cuns_req4,
 	points = 5,
 	sustain_stamina = 50,
+	no_energy=true,
 	cooldown = 10,
 	range = function(self, t) return util.bound(self:combatTalentScale(t, .8, 2.2), 1, 3) end,
 	passives = function(self, t, p)
@@ -149,6 +150,7 @@ newTalent{
 		return {}
 	end,
 	deactivate = function(self, t, p)
+		return true
 	end,
 	info = function(self, t)
 		local def = t.getDef(self, t)
@@ -157,14 +159,14 @@ newTalent{
 		local chance = t.getChance(self, t)
 		return ([[Increase your defense by %d (mitigated by your fatigue) and your saves by %d%% of your defense.
 
-			Also, you may sustain to gain positional supremacy on the battlefield. While within range %d of an enemy and have an attack projected against you, have a %d%% chance to switch places with that enemy if it would take you out of the projection area. This effect scales with defense, will check for knockback resistance, and its activation will put Impunity of Warlords on cooldown.]]):
-		format(def, saves_pct, range, chance)
+			Also, you may sustain to gain positional supremacy on the battlefield. When an enemy projects an attack against you, you have a %d%% chance to switch places with another enemy in range %d if it would take you out of the projection area. This puts Impunity of Warlords on cooldown. The effect scales with defense, and will check for pins and knockback resistance.]]):
+		format(def, saves_pct, chance, range)
 	end,
 	getDef = function(self, t) return self:combatTalentScale(t, 6, 18) end,
 	getSavesPct = function(self, t) return self:combatTalentScale(t, 8, 20) end,
 	getChance= function(self, t)
 		local def = self:combatDefense()
-		local tl_factor = self:combatTalentScale(t, .65, 1) 
-		return self:combatStatScale(def, 10, 30) * tl_factor
+		local tl_factor = self:combatTalentScale(t, .55, 1) 
+		return self:combatStatScale(def, 10, 75) * tl_factor
 	end,
 }
