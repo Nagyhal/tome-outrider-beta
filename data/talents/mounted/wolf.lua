@@ -38,7 +38,17 @@ newTalent{
 	targetTry = function(self, t)
 		return {type="ball", radius=self:getTalentRange(t), 0}
 	end,
-	on_pre_use = function(self, t)
+	on_learn = function(self, t)
+		if self.owner then self.owner:learnTalent(self.owner.GO_FOR_THE_THROAT_COMMAND, 1, true) end
+	end,
+	on_unlearn = function(self, t, p)
+		if self.owner then 
+			if not self:knowTalent(t) then 
+				self.owner:unlearnTalent(self.owner.GO_FOR_THE_THROAT_COMMAND)
+			end
+		end
+	end,
+	on_pre_use = function(self, t, silent)
 		local tgs = {}
 		local tg_vulnerable = false
 		self:project(t.targetTry(self, t), self.x, self.y,
@@ -58,7 +68,7 @@ newTalent{
 		end
 		if not tg_vulnerable then 
 			if not silent then 
-				--game.logPlayer(self, "There must be a stunned or pinned enemy within talent range!")
+				game.logPlayer(self, "There must be a stunned or pinned enemy within talent range!")
 			end
 			return false 
 		end
@@ -70,24 +80,25 @@ newTalent{
 		if not x or not y or not target then return nil end
 		if core.fov.distance(self.x, self.y, x, y) > self:getTalentRange(t) then return nil end
 		--rush routine
-		local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", self) end
-		local l = self:lineFOV(x, y, block_actor)
-		--no test for closeness
-		-- if is_corner_blocked or game.level.map:checkAllEntities(lx, ly, "block_move", self) then
-			-- game.logPlayer(self, "You are too close to build up momentum!")
-			-- return
-		-- end
-		if not is_corner_blocked and not game.level.map:checkAllEntities(lx, ly, "block_move", self) then
+		--TODO: Maybe use something more mount-centric than self.rider:isMounted()
+		return t.doAttack(self, t, self, target)
+	end,
+	--Modular action function so can be invoked by either mount or rider
+	doAttack = function(self, t, mover, target)
+		local x, y = target.x, target.y
+		local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", mover) end
+		local l = mover:lineFOV(x, y, block_actor)
+		if not is_corner_blocked and not game.level.map:checkAllEntities(lx, ly, "block_move", mover) then
 			local tx, ty = x, y
 			lx, ly, is_corner_blocked = l:step()
 			while lx and ly do
-				if is_corner_blocked or game.level.map:checkAllEntities(lx, ly, "block_move", self) then break end
+				if is_corner_blocked or game.level.map:checkAllEntities(lx, ly, "block_move", mover) then break end
 				tx, ty = lx, ly
 				lx, ly, is_corner_blocked = l:step()
 			end
 
 			local ox, oy = self.x, self.y
-			self:move(tx, ty)
+			mover:move(tx, ty)
 			if config.settings.tome.smooth_move > 0 then
 				self:resetMoveAnim()
 				self:setMoveAnim(ox, oy, 8, 5)
@@ -111,9 +122,52 @@ newTalent{
 		return true
 	end,
 	info = function(self, t)
-		return ([[The wolf makes a ferocious crippling blow for %d%% damage; if the wolf attacks a stunned, pinned or disabled enemy with Go For the Throat, it is a sure critical strike which also causes bleeding for 60%% of this damage over 5 turns.]]):format(100 * t.getDamage(self, t))
+		return ([[The wolf dashes forward to make a ferocious crippling blow against a stunned, pinned or confused enemy for %d%% damage; if this hits, it also causes bleeding for 60%% of this damage over 5 turns.
+
+			This talent may also be controlled by the wolf's owner.]]):
+		format(100 * t.getDamage(self, t))
 	end
 }
+
+newTalent{
+	name = "Command: Go for the Throat",
+	short_name = "GO_FOR_THE_THROAT_COMMAND",
+	type = {"mounted/mounted-base", 1},
+	points = 1,
+	cooldown = 8,
+	stamina = 12,
+	requires_target = true,
+	tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} },
+	-- tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} }, --TODO: Decide on how summon controls are handled tactically
+	getDamage = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_GO_FOR_THE_THROAT, "getDamage") end,
+	range = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_GO_FOR_THE_THROAT, "range") end,
+	targetTry = function(self, t)
+		return {type="ball", radius=self:getTalentRange(t), 0}
+	end,
+	on_pre_use = function(self, t)
+		local mount = self.outrider_pet
+		return mount and mount:callTalent(mount.T_GO_FOR_THE_THROAT, "on_pre_use") or false
+	end,
+	action = function(self, t)
+		local mount = self.outrider_pet
+		local t2 = mount:getTalentFromId(mount.T_GO_FOR_THE_THROAT)
+
+		local tg = {type="hit", range=self:getTalentRange(t2)}
+		local x, y, target = self:getTarget(tg)
+		if not x or not y or not target then return nil end
+		if core.fov.distance(self.x, self.y, x, y) > self:getTalentRange(t2) then return nil end
+		--rush routine
+		--TODO: Maybe use something more mount-centric than self.rider:isMounted()
+		return mount:callTalent(mount.T_GO_FOR_THE_THROAT, "doAttack", self, target)
+	end,
+	info = function(self, t)
+		if not self.outrider_pet then return [[Without a wolf, you cannot use Command: Go For The Throat.]]
+		else return ([[The wolf dashes forward to make a ferocious crippling blow against a stunned, pinned or disabled enemy for %d%% damage; if this hits, it also causes bleeding for 60%% of this damage over 5 turns.]]):
+			format(100 * t.getDamage(self, t))
+		end
+	end
+}
+
 
 newTalent{
 	name = "Uncanny Tenacity",
