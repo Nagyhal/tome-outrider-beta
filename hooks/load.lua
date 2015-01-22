@@ -6,6 +6,7 @@ local ActorInventory = require "engine.interface.ActorInventory"
 local ActorResource = require "engine.interface.ActorResource"
 local ActorAI = require "engine.interface.ActorAI"
 local DamageType = require "engine.DamageType" 
+local Chat = require "engine.Chat"
 
 class:bindHook("ToME:load", function(self, data)
 	ActorTalents:loadDefinition("/data-outrider/talents/mounted/mounted.lua")

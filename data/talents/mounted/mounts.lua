@@ -101,3 +101,26 @@ newTalent{
 		format(self:getTalentRange(t))
 	end,
 }
+
+newTalent{
+	name = "Interact with your mount", short_name = "INTERACT_MOUNT",
+	type = {"mounted/mounted-base", 1},
+	points = 1,
+	no_energy = true,
+	no_npc_use = true,
+	no_unlearn_last = true,
+	on_pre_use = function(self, t, silent)
+		return preCheckHasMountPresent(self, t, silent)
+	end,
+	action = function(self, t)
+		local Chat = require "engine.Chat"
+		local mount = self:hasMount()
+		local chat = Chat.new("outrider+interact-mount", mount, self, {mount=mount, player=self})
+		chat:invoke()
+		return true
+	end,
+	info = function(self, t)
+		return ([[Interact with your mount to level its talents or change its name. You can also do that whenever you have direct control over your mount.]]):
+			format()
+	end,
+}

@@ -52,7 +52,8 @@ local mounts_list = {
 		mount_data = {
 			loyalty = 100,
 			share_damage = 0.4
-		}
+		},
+		max_inscriptions =1
 	},
 	spider = {	
 		base = "BASE_NPC_SPIDER",
@@ -87,7 +88,7 @@ local mounts_list = {
 		unused_talents = 0,
 		unused_generics = 0,
 		unused_talents_types = 0,
-		mount = {
+		mount_data = {
 			loyalty = 90,
 			share_damage = 0.5
 		},
@@ -145,7 +146,7 @@ function befriendMount(self, m)
 	m:resetToFull()
 	--Loyalty
 	if not self.base_max_loyalty then self.base_max_loyalty=100 end
-	self.max_loyalty = self.max_loyalty + (m.mount.loyalty-self.base_max_loyalty)
+	self.max_loyalty = self.max_loyalty + (m.mount_data.base_loyalty-self.base_max_loyalty)
 end
 
 function mountSetupSummon(self, m, x, y, no_control)
@@ -180,6 +181,7 @@ end
 newTalent{
 	name = "Challenge the Wilds",
 	type = {("mounted/bestial-dominion"), 1},
+	autolearn_talent = "T_INTERACT_MOUNT",
 	require =  {
 		stat = { str=function(level) return 12 + (level-1) * 8 end },
 		level = function(level) return 0 + (level-1)*5  end,
@@ -202,7 +204,7 @@ newTalent{
 	callbackOnSummonDeath = function(self, t, summon, src, death_note)
 		if summon == self.outrider_pet then
 			self.outrider_pet = nil
-			self.max_loyalty = self.max_loyalty + (self.base_max_loyalty-m.mount.loyalty)
+			self.max_loyalty = self.max_loyalty + (self.base_max_loyalty-summon.mount_data.base_loyalty)
 		end
 	end,
 	--Handle sharing of inscriptions here.
