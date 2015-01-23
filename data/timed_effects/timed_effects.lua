@@ -417,3 +417,55 @@ newEffect{
 		self:removeTemporaryValue("never_move", eff.tmpid)
 	end,
 }
+
+newEffect{
+	name = "UNCANNY_TENACITY", image = "talents/thaloren_wrath.png",
+	desc = "Uncanny Tenacity",
+	long_desc = function(self, eff) return ("The wolf gains a %d bonus to saves and a %d%% bonus to resist all, so long as it starts its turn next to an enemy at less than %d%% of its max health."):format(eff.saves, eff.res, eff.threshold) end,
+	type = "physical",
+	subtype = { tactic=true },
+	status = "beneficial",
+	parameters = { saves=10, res=5, threshold=25 },
+	on_gain = function(self, err) return "#Target#'s tenacity is unleashed!." end,
+	on_lose = function(self, err) return "#Target# has become less tenacious." end,
+	activate = function(self, eff)
+		self:effectTemporaryValue(eff, "combat_physresist", eff.saves)
+		self:effectTemporaryValue(eff, "combat_spellresist", eff.saves)
+		self:effectTemporaryValue(eff, "combat_mindresist", eff.saves)
+		self:effectTemporaryValue(eff, "resists", {all=eff.power})
+	end,
+}
+
+newEffect{
+	name = "PREDATORY_FLANKING",
+	desc = "Predatory Flanking", image = "talents/precise_strikes.png",
+	long_desc = function(self, eff) return ("Flanked by the wolf and its allies, the target suffers %d%% increased damage from the source and %d%% from its flanking allies.") end,
+	type = "physical",
+	subtype = { tactic=true },
+	status = "detrimental",
+	parameters = {src_pct=15, allies_pct = 5},
+	on_gain = function(self, err) return nil, "+Flanked" end,
+	on_lose = function(self, err) return nil, "-Flanked" end,
+	activate = function(self, eff)
+		if not eff.src then
+			self:removeEffect(self.EFF_PREDATORY_FLANKING, nil, true)
+			error("No source sent to temporary effect Predatory Flanking.")
+		end
+		if not eff.allies then
+			self:removeEffect(self.EFF_MOUNT, nil, true)
+			error("No allies list sent to temporary effect Predatory Flanking.")
+		end
+	end,
+	callbackOnActBase = function(self, eff)
+		local src = eff.src
+		if core.fov.distance(self.x, self.y, src.x, src.y) ~= 1 then self:removeEffect(eff.effect_id) end
+		local count = 0 
+		for _, ally in ipairs(eff.allies) do
+			--Checks to see if adjacent ally is not also adjacent to wolf,
+			if core.fov.distance(self.x, self.y, ally.x, ally.y) == 1 and core.fov.distance(src.x, src.y, ally.x, ally.y) > 1 then
+				count = count+1
+			end
+		end
+		if count < 1 then self:removeEffect(eff.effect_id) end
+	end,
+}

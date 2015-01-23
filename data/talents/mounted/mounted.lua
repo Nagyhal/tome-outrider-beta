@@ -236,6 +236,20 @@ function preCheckHasMountInRange(self, t, silent, range)
 end
 
 
+function shareTalentWithOwner(self, t)
+	if not t.shared_talent then error(("No shared talent for talent %s"):format(t.id))end
+	if self.owner then self.owner:learnTalent(t.shared_talent, true, 1) else error(("No owner to share with for talent %s"):format(t.id)) end
+end
+
+function unshareTalentWithOwner(self, t)
+	if not t.shared_talent then error(("No shared talent for talent %s"):format(t.id)) end
+	if self.owner then 
+		if not self:knowTalent(t) then 
+			self.owner:unlearnTalent(t.shared_talent)
+		end
+	end
+end
+
 load("/data-outrider/talents/mounted/mounts.lua")
 load("/data-outrider/talents/mounted/wolf.lua")
 load("/data-outrider/talents/mounted/spider.lua")

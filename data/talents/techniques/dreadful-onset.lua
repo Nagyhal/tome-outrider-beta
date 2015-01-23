@@ -60,6 +60,7 @@ newTalent{
 	stamina = 30,
 	tactical = { ATTACK = 2, DISABLE = 2, DEFEND = 2 },
 	requires_target = true,
+	getDef = function(self, t) return self:combatTalentScale(t, 5, 15) end,
 	getDuration = function(self, t) return 2 + math.floor(self:getTalentLevel(t)) end,
 	getPower = function(self, t) return self:combatTalentPhysicalDamage(t, 5, 25) end,
 	getTransferChance =  function(self, t) return 30 + self:getTalentLevel(t) * 5 end,

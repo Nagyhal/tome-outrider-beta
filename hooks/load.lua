@@ -52,55 +52,35 @@ class:bindHook("Actor:move", function(self, data)
 		-- game.level:removeEntity(self.mount)
 		-- self.mount.x, self.mount.y = self.x, self.y
 	end	
-	--Dragging code
-
-	if self:hasEffect(self.EFF_DRAGGING) then
-		local eff_id = "EFF_DRAGGING"
-		if self:hasEffect(self.EFF_FETCH) or self:hasEffect(self.EFF_LIVING_SHIELD) then
-			if self:hasEffect(self.EFF_FETCH) then eff_id="EFF_FETCH" end
-			if self:hasEffect(self.EFF_LIVING_SHIELD) then eff_id="EFF_LIVING_SHIELD" end
-		end
-		local drag_eff = self:hasEffect(self.EFF_DRAGGING)
-		local eff = self:hasEffect(eff_id)
-		local tg_eff = eff.trgt:hasEffect(eff.trgt.EFF_DRAGGED)
-		if not tg_eff or tg_eff.src ~= self or drag_eff.trgt.dead or not game.level:hasEntity(eff.trgt) then
-			self:removeEffect(self.EFF_DRAGGED)
-		end
-		local can_move = nil
-		if not data.moved then
-			--game.level.map:remove(self.x, self.y, Map.ACTOR)
-			can_move = drag_eff.target.src:move(data.ox, data.oy, true)
-			--game.level.map(self.x, self.y, Map.ACTOR, self)
-			if not can_move then 
-				game.logPlayer(self, "You cannot drag the target!")
-			end
-		--Confirm
-		elseif core.fov.distance(self.x, self.y, drag_eff.trgt.x, drag_eff.trgt.y) > 1 then 
-			--self:removeEffect(self.EFF_DRAGGED)
-			data.moved = false
-		end
-	end
 end)	
 
-
---class:bindHook{"Actor:actBase:Effects", function(self, data)}
-	
-	
--- class:bindHook("Actor:takeHit", function(self, data)
--- 	if self:hasEffect(self.EFF_DIPLOMATIC_IMMUNITY) then data.value = 0 return true end
--- end)
-
 class:bindHook("DamageProjector:base", function(self, data)
+	local ret = false
 	local eff = self:hasEffect(self.EFF_SPRING_ATTACK) 
 	if eff then
 		local dist = core.fov.distance(self.x, self.y, data.x, data.y)
 		if dist >= 2 then
 			dist = util.bound(dist, 2, 5)
 			local pct = 100 + self:combatScale(dist, eff.min_pct, 2, eff.max_pct, 5)
-			data.dam = data.dam * pct/100 return true
+			data.dam = data.dam * pct/100
+			ret = true
 		end
 	end
-	return false
+
+	local a = game.level.map(data.x, data.y, engine.Map.ACTOR)
+	if a then
+		local eff = a:hasEffect(a.EFF_PREDATORY_FLANKING)
+		if eff then
+			if eff.src==self then
+				data.dam = data.dam * eff.src_pct/100
+				ret=true
+			elseif table.reverse(eff.allies)[self] then
+				data.dam = data.dam * eff.allies_pct/100
+				ret=true
+			end
+		end
+	end
+	return ret
 end)
 
 class:bindHook("Actor:postUseTalent", function(self, data)

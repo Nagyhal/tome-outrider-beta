@@ -128,6 +128,7 @@ function befriendMount(self, m)
 	end
 	--Mount used for Mounted Combat abilities, TODO: Consider making this more modular for multiple mounts owned
 	self.outrider_pet = m
+	m.owner = self
 	-- Summons never flee
 	m.ai_tactic.escape = 0
 	m.ai_state = m.ai_state or {}
