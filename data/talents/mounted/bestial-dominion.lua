@@ -28,7 +28,6 @@ local mounts_list = {
 		life_rating = 12,
 		rank = 1,
 		size_category = 2,
-		autolevel = "warrior",
 		ai = "tactical", 
 		ai_state = { talent_in=2, ally_compassion=0},
 		ai_tactic = resolvers.tactic("melee"),
@@ -44,7 +43,6 @@ local mounts_list = {
 			["wolf/tenacity"] = true,
 			["wolf/pack-hunter"] = true,
 		},
-		gainExp = function() end,
 		unused_stats = 0,
 		unused_talents = 0,
 		unused_generics = 0,
@@ -69,7 +67,6 @@ local mounts_list = {
 		body = { INVEN = 10},
 		rank = 1,
 		size_category = 3,
-		autolevel = "rogue",
 		ai = "tactical", 
 		ai_state = { talent_in=1, ai_move="move_complex"},
 		ai_tactic = resolvers.tactic("melee"),
@@ -129,6 +126,8 @@ function befriendMount(self, m)
 	--Mount used for Mounted Combat abilities, TODO: Consider making this more modular for multiple mounts owned
 	self.outrider_pet = m
 	m.owner = self
+	m.summoner= self
+	m.summoner_gain_exp = true
 	-- Summons never flee
 	m.ai_tactic.escape = 0
 	m.ai_state = m.ai_state or {}
@@ -172,9 +171,15 @@ function mountSetupSummon(self, m, x, y, no_control)
 	m:attr("pin_immune", self:attr("pin_immune"))
 	m:attr("confusion_immune", self:attr("confusion_immune"))
 	m:attr("numbed", self:attr("numbed"))
-
-	m:forceLevelup(self.level)
+	m.gainExp = function() end
+	m.forceLevelup = function(self) if self.summoner then return mod.class.Actor.forceLevelup(self, self.summoner.level) end end
+	m.no_points_on_levelup = function(self)
+		self.unused_stats = self.unused_stats + 2
+		if self.level >= 2 and (self.level % 3 == 0 or self.level % 5 == 0) then self.unused_talents = self.unused_talents + 1 end
+	end
+	mod.class.Actor.forceLevelup(m, self.level)	
 	m:resolve() m:resolve(nil, true)
+	m:forceLevelup(self.level)
 	game.zone:addEntity(game.level, m, "actor", x, y)
 	game.level.map:particleEmitter(x, y, 1, "summon")
 end
@@ -203,10 +208,17 @@ newTalent{
 		end
 	end,
 	callbackOnSummonDeath = function(self, t, summon, src, death_note)
-		if summon == self.outrider_pet then
-			self.outrider_pet = nil
-			self.max_loyalty = self.max_loyalty + (self.base_max_loyalty-summon.mount_data.base_loyalty)
+		if summon ~= self.outrider_pet then return end
+		for tid, nb in pairs(summon.talents) do
+			local t2 = summon:getTalentFromId(tid)
+			if t2.shared_talent then
+				game.log("DEBUG: trying to unlearn %s", t2.shared_talent)
+				self:unlearnTalentFull(t2.shared_talent)
+			end
 		end
+		--Unset pet
+		self.outrider_pet = nil
+		self.max_loyalty = self.max_loyalty + (self.base_max_loyalty-summon.mount_data.base_loyalty)
 	end,
 	--Handle sharing of inscriptions here.
 	callbackOnTalentPost = function(self, t, ab, ret, silent)
