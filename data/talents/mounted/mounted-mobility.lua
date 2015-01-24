@@ -29,7 +29,10 @@ newTalent{
 	range = function(self, t) return math.floor(self:getTalentLevel(t) + 2) end,
 	getDamageMultiplier = function(self, t) return self:combatTalentScale(t, 1.5, 2.25) end,
 	getMaxAttackCount = function(self, t) return 10 end,	
-	tactical = { ATTACK = { weapon = 2 }, CLOSEIN = 3 },	
+	tactical = { ATTACK = { weapon = 2 }, CLOSEIN = 3 },
+	on_pre_use = function(self, t, silent)
+		return preCheckIsMounted(self, t, silent)
+	end,
 	action = function(self, t)
 		-- if not self:IsMounted() then game.logPlayer(self, "You cannot use Overrun without riding a mount!") return nil end
 		-- local tg = self.getTalentTarget(t)
@@ -38,7 +41,6 @@ newTalent{
 		-- if core.fov.distance(self.x, self.y, x, y) > self:getTalentRange(t) then return nil end
 		-- local _ _, x, y = self:canProject(tg, x, y)
 		-- self.mount:project(tg, x, y, DamageType.TEMPORALSTUN, dam)
-		if not self:isMounted() then game.logPlayer(self, "You cannot use Overrun without riding a mount!") return nil end
 		local tg = {type="beam", range=self:getTalentRange(t), nolock=true, talent =t}
 		local tx, ty, target = self:getTarget(tg)
 		if not tx or not ty or game.level.map(tx, ty, engine.Map.ACTOR) then return nil end
@@ -169,39 +171,25 @@ newTalent{
 		return preCheckHasMountPresent(self, t, silent)
 	end,
 	action = function(self, t)
-		local mount = self:hasMount()	
 		--TODO: Make rider also follow when the mount is moved
+		local mount = self:hasMount()	
 		local mover = self:isMounted() and self or mount
-
-		local tg = {type="hit", range=self:getTalentRange(t), start_x=mount.x, start_y=mount.y}
-
+		local tg = {type="hit", range=self:getTalentRange(t), start_x=mount.x, start_y=mount.y, friendlyfire=false, selffire=false}
 		local x, y, target = self:getTarget(tg)
 		if not x or not y then return nil end
-		if core.fov.distance(mount.x, mount.y, x, y) > self:getTalentRange(t) then return nil end
 
-		local block_actor = function(_, bx, by) return game.level.map:checkAllEntities(bx, by, "block_move", mount) end
-		local l = mount:lineFOV(x, y, block_actor)
-		local lx, ly, is_corner_blocked = l:step()
-		local tx, ty, _ = mount.x, mount.y
-		local ox, oy = tx, ty
-		while lx and ly do
-			if is_corner_blocked or block_actor(_, lx, ly) then break end
-			ox, oy = tx, ty
-			tx, ty = lx, ly
-			lx, ly, is_corner_blocked = l:step()
-		end
-		-- Find space
-		-- if block_actor(_, ox, oy) and (tx~=a.x and ty~=a.y) then return nil end
-		if block_actor(_, tx, ty) then
-			local fx, fy = util.findFreeGrid(lx, ly, 1, true, {[Map.ACTOR]=true})
+		if target then
+			local fx, fy = util.findFreeGrid(x, y, 1, true, {[engine.Map.ACTOR]=true})
 			if not fx then
-				return
+				return nil
 			end
 			mover:move(fx, fy, true)
-		else mover:move(tx, ty, true) end
-		local target = game.level.map(lx, ly, Map.ACTOR)
+		else 
+			local feat = game.level.map(x, y, engine.Map.TERRAIN); if feat and feat:check(block_move) then return nil end
+			mover:move(x, y, true)
+		end
 		if target then
-			if core.fov.distance(mount.x, mount.y, tx, ty) > 1 then return true end
+			if core.fov.distance(mount.x, mount.y, x, y) > 1 then return true end
 			mount:attackTarget(target, nil, t.getDamage(self, t), true)
 			target:setEffect(target.EFF_PINNED, t.getPinDuration(self, t), {apply_power=mount:combatPhysicalpower(),  apply_save="combatPhysicalResist"})
 		end
