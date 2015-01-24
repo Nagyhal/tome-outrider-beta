@@ -31,7 +31,7 @@ newTalent{
 		local perception = t.getPerception(self, t)
 		return ([[The wolf gains a %d bonus to Dexterity and Cunning, a %d bonus to defense and a %d bonus to physical and spell saves.
 
-			A wolf levelling Sly Senses also serves an aid to perception for its owner; its owner gains a bonus of %d to checks to see through stealth and invisibility.]]):
+			A wolf levelled in Sly Senses serves as an aid to perception for its owner, granting a bonus of %d to checks to see through stealth and invisibility.]]):
 			format(stat, def, saves, perception)
 	end,
 }
@@ -205,7 +205,7 @@ newTalent{
 		local actors_list = {}
 		self:project(tg, self.x, self.y, function(px, py)
 			local a = game.level.map(px, py, Map.ACTOR)
-			if a and self:reactionToward(a) < 0 and a.life < a.max_life*t.getThreshold(self, f)/100 then
+			if a and self:reactionToward(a) < 0 and a.life < a.max_life*t.getThreshold(self, t)/100 then
 				okay = true
 			end
 		end)
@@ -281,12 +281,12 @@ newTalent{
 	getStatBoost = function(self, t) return self:getTalentLevelRaw(t) * 2 end,
 	getRegen = function(self, t) return math.round(self:combatTalentScale(t, .5, 3.5, .35), .5)  end,
 	getSaves = function(self, t) return self:getTalentLevelRaw(t) * 3 end,
-	on_learn = function(self, t)
+	passives = function(self, t, p)
 		self:talentTemporaryValue(p, "inc_stats",  {[self.STAT_WIL] = t.getStatBoost(self, t)})
 		self:talentTemporaryValue(p, "inc_stats",  {[self.STAT_CUN] = t.getStatBoost(self, t)})
 		self:onStatChange(self.STAT_WIL,  t.getStatBoost(self, t))
 		self:onStatChange(self.STAT_CUN,  t.getStatBoost(self, t))
-		self.combat_mentalresist = self.combat_mentalresist + t.getSavesInc(self, t)
+		self:talentTemporaryValue(p, "combat_mentalresist", t.getSaves(self, t))
 	end,
 	shared_talent = "T_LOYAL_TO_THE_PACK_SHARED",
 	on_learn = function(self, t)
@@ -330,7 +330,7 @@ newTalent{
 	short_name = "TOGETHER_FOREVER",
 	type = {"wolf/pack-hunter", 1},
 	points = 5,
-	require = mnt_cun_req1,
+	require = mnt_cun_req2,
 	mode = "passive",
 	cooldown = 8,
 	range = function(self, t) return 5 + self:getTalentLevelRaw(t) end,
@@ -341,48 +341,48 @@ newTalent{
 	callbackOnAct = function(self, t)
 		if self:isTalentCoolingDown(t.id) then return end
 		local owner = self.owner
-		if not owner then return end
-		if owner.life / owner.max_life <= t.getThreshold(self, t)/100 then
-			local tg = {type="ball", start_x=owner.x, start_y=owner.y, radius=1, talent=t}
-			local foes_list = {}
-			self:project(tg, owner.x, owner.y, function(px, py)
-				local a = game.level.map(px, py, Map.ACTOR)
-				if a and self:reactionToward(a) < 0 and self:hasLOS(a) then foes_list[a] = true end
-			end)
-			local other_grids = {}
-			self:project(tg, owner.x, owner.y, function(px, py)
-				if not game.level.map:checkAllEntities(px, py, "block_move", self) then other_grids[{x=px, y=py}] = true end
-			end)
-			local target = rng.table(foes_list)
-			local grid = rng.table(other_grids)
-			if target then
-				--Rush the target if we find one
-				local linestep = self:lineFOV(target.x, target.y, block_actor)
-				local tx, ty, lx, ly, is_corner_blocked 
-				repeat  -- make sure each tile is passable
-					tx, ty = lx, ly
-					lx, ly, is_corner_blocked = linestep:step()
-				until is_corner_blocked or not lx or not ly or game.level.map:checkAllEntities(lx, ly, "block_move", self)
-				if not tx or not ty then return end
-				if core.fov.distance(self.x, self.y, tx, ty) == 1 then
-					if self:attackTarget(target, nil, t.getDam(self, t), true) and target:canBe("stun") then
-					target:setEffect(target.EFF_DAZED, 3, {})
-					end
+		if not (owner and (owner.life / owner.max_life <= t.getThreshold(self, t)/100) and (core.fov.distance(self.x, self.y, owner.x, owner.y)>1)) then return end
+		local tg = {type="ball", start_x=owner.x, start_y=owner.y, radius=1, talent=t}
+		local foes_list = {}
+		self:project(tg, owner.x, owner.y, function(px, py)
+			local a = game.level.map(px, py, Map.ACTOR)
+			if a and self:reactionToward(a) < 0 and self:hasLOS(a) then foes_list[#foes_list+1] = a end
+		end)
+		local other_grids = {}
+		self:project(tg, owner.x, owner.y, function(px, py)
+			if not game.level.map:checkAllEntities(px, py, "block_move", self) and self:hasLOS(px, py) then other_grids[#other_grids+1]={x=px, y=py} end
+		end)
+		local target = rng.table(foes_list)
+		local grid = rng.table(other_grids)
+		if target then
+			--Rush the target if we find one
+			local linestep = self:lineFOV(target.x, target.y, block_actor)
+			local tx, ty, lx, ly, is_corner_blocked 
+			repeat  -- make sure each tile is passable
+				tx, ty = lx, ly
+				lx, ly, is_corner_blocked = linestep:step()
+			until is_corner_blocked or not lx or not ly or game.level.map:checkAllEntities(lx, ly, "block_move", self)
+			if not tx or not ty then return end
+			if core.fov.distance(self.x, self.y, tx, ty) == 1 then
+				if self:attackTarget(target, nil, t.getDam(self, t), true) and target:canBe("stun") then
+				target:setEffect(target.EFF_DAZED, 3, {})
 				end
-			elseif grid then
-				--Run directly toward a free square adjacent to the owner.
-				local linestep = self:lineFOV(grid.x, grid.y, block_actor)
-				local tx, ty, lx, ly, is_corner_blocked 
-				repeat  -- make sure each tile is passable
-					tx, ty = lx, ly
-					lx, ly, is_corner_blocked = linestep:step()
-				until is_corner_blocked or not lx or not ly or game.level.map:checkAllEntities(lx, ly, "block_move", self)
-				if not tx or not ty then return end
-			else return
 			end
+		elseif grid then
+			--Run directly toward a free square adjacent to the owner.
+			local line = self:lineFOV(grid.x, grid.y, block_actor)
+			local tx, ty, lx, ly, is_corner_blocked 
+			repeat  -- make sure each tile is passable
+				tx, ty = lx, ly
+				lx, ly, is_corner_blocked = line:step()
+			until is_corner_blocked or not lx or not ly or game.level.map:checkAllEntities(lx, ly, "block_move", self)
+			if not tx or not ty then return end
+			self:move(tx, ty)
+		else return
 		end
+		self:logCombat(target, "#Source# uses Together, Forever!")
 		--Expend energy and start the cooldown, provided we pass the many fail checks.
-		self:useEnergy(game.energy_to_act)
+		-- if not game.player==self then self:useEnergy(game.energy_to_act) end
 		self:startTalentCooldown(t.id)
 	end,
 	info = function(self, t) 
@@ -401,7 +401,7 @@ newTalent{
 	name = "Predatory Flanking",
 	type = {"wolf/pack-hunter", 2},
 	points = 5,
-	require = mnt_cun_req1,
+	require = mnt_cun_req3,
 	mode = "passive",
 	getPct = function(self, t) return 15 + (self:getTalentLevel(t) + self:getTalentLevelRaw(t))/2 * 10 end,
 	getSecondaryPct = function(self, t)
@@ -444,7 +444,7 @@ newTalent{
 	name = "Howl to the Moon",
 	type = {"wolf/pack-hunter", 1},
 	points = 5,
-	require = mnt_cun_req1,
+	require = mnt_cun_req4,
 	cooldown = 50,
 	requires_target = true,
 	tactical = { ATTACK = { PHYSICAL = 2 }, BUFF = 1, DEFEND = 2},
