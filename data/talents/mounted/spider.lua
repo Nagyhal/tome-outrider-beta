@@ -213,6 +213,16 @@ newTalent{
 		if p.shadow and not p.shadow.dead then p.shadow:die() end
 		return true
 	end,
+ 	on_learn = function(self, t)
+		if not self:knowTalent(self.T_ONE_WITH_SHADOWS) then
+			self:learnTalent(self.T_ONE_WITH_SHADOWS, true, 1)
+ 		end
+	end,
+ 	on_unlearn = function(self, t)
+		if not self:knowTalent(self.T_SHADOW_WALK) then
+			self:unlearnTalent(self.T_ONE_WITH_SHADOWS)
+ 		end
+ 	end,
 	createShadow = function(self, t)
 		local p = self:isTalentActive(self.T_SHADOW_WALK); if not p then return end --This can happen!
 		if (p.shadow and not p.shadow.dead and game.level:hasEntity(p.shadow)) or game.zone.wilderness then return end
@@ -286,7 +296,6 @@ newTalent{
 		end
 		game:playSoundNear(self, "talents/spell_generic2")
 		m:removeSustainsFilter(function(t) if not self:knowTalent(t.id) then
-			game.log("DEBUG: should be removing %s", t.id)
 			return true end end)
 		p.shadow = m
 
@@ -346,6 +355,53 @@ newTalent{
 	getDam = function(self, t) return self:combatLimit(self:combatTalentSpellDamage(t, 10, 500), 1.6, 0.4, 0, 0.761 , 361) end, -- Limit to <160% Nerf?
 	getTime = function(self, t) return math.max(3, self:combatTalentScale(t, 5, 4, .35)) end,
 }
+
+newTalent{
+	name = "One with Shadows",
+	type = {"mounted/mounted-base", 1},
+	points = 1,
+	cooldown = 15,
+	tactical = { ESCAPE = 2 },
+	stamina= 30,
+	is_teleport = true,
+	on_pre_use = function(self, t)
+		local eff = self:isTalentActive(self.T_SHADOW_WALK)
+		if not eff then
+			if not silent then 
+				game.logPlayer(self, "You must have Shadow Walk active!")
+			end
+			return false 
+		end
+		if not eff.shadow or not game.level:hasEntity(eff.shadow) then
+			if not silent then 
+				game.logPlayer(self, "Your shadow is not currently active!")
+			end
+			return false 
+		end
+		return true
+	end,
+	action = function(self, t)
+		local eff = self:isTalentActive(self.T_SHADOW_WALK)
+		local x, y = eff.shadow.x, eff.shadow.y
+		eff.shadow:die()
+
+		game.level.map:particleEmitter(self.x, self.y, 1, "teleport")
+		self:teleportRandom(x, y, 0)
+		game.level.map:particleEmitter(x, y, 1, "teleport")
+
+		game:playSoundNear(self, "talents/teleport")
+		return true
+	end,
+	info = function(self, t)
+		local radius = t.getRadius(self, t)
+		local range = t.getRange(self, t)
+		return ([[Teleports you randomly within a small range of up to %d grids.
+		At level 4, it allows you to specify which creature to teleport.
+		At level 5, it allows you to choose the target area (radius %d). If the target area is not in line of sight, there is a chance the spell will fizzle.
+		The range will increase with your Spellpower.]]):format(range, radius)
+	end,
+}
+
 
 newTalent{
 	name = "Web Ambush",
