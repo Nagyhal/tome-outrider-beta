@@ -91,12 +91,22 @@ class:bindHook("Actor:postUseTalent", function(self, data)
 			if ab.sustain_loyalty then
 				trigger = true; self:incMaxLoyalty(-util.getval(ab.sustain_loyalty, self, ab))
 			end
+		elseif ab.sustain_loyalty then
+			self:incMaxLoyalty(util.getval(ab.sustain_loyalty, self, ab))
 		end
-	elseif ab.sustain_loyalty then
-		self:incMaxLoyalty(util.getval(ab.sustain_loyalty, self, ab))
 	elseif not self:attr("force_talent_ignore_ressources") and not ab.fake_ressource then
 		if ab.loyalty and not self:attr("zero_resource_cost") then
-			trigger = true; self:incLoyalty(-util.getval(ab.loyalty, self, ab) * (100 + self:combatFatigue()) / 100)
+			local fatigue_factor = self:isMounted() and self:combatFatigue()*2 or 0
+			trigger = true; self:incLoyalty(-util.getval(ab.loyalty, self, ab) * (100 + fatigue_factor) / 100)
+		end
+	end
+	--Regen Loyalty on inscription usage if applicable
+	local owner = self.owner
+	if owner and owner.loyalty and string.find(ab.type[1],  "inscriptions") then
+		local name = string.sub(ab.id, 3)
+		local inscription_data = self.__inscription_data_fake or self.inscriptions_data[name]
+		if inscription_data.heal then
+			owner:incLoyalty(5)
 		end
 	end
 	data.ab, data.trigger = ab, trigger
@@ -105,7 +115,8 @@ end)
 class:bindHook("Actor:getTalentFullDescription:ressources", function(self, data)
 	local d, t = data.str, data.t
 	if not config.ignore_ressources then
-		if t.loyalty then d:add({"color",0x6f,0xff,0x83}, "Loyalty cost: ", {"color",0xff,0xe4,0xb5}, ""..math.round(util.getval(t.loyalty, self, t) * (100 + self:combatFatigue()) / 100, 0.1), true) 
+		local fatigue_factor = (t.requires_mounted or self:isMounted()) and self:combatFatigue() or 0
+		if t.loyalty then d:add({"color",0x6f,0xff,0x83}, "Loyalty cost: ", {"color",0xff,0xe4,0xb5}, ""..math.round(util.getval(t.loyalty, self, t) * (100 + fatigue_factor) / 100, 0.1), true) 
 		end
 		if t.sustain_loyalty then d:add({"color",0x6f,0xff,0x83}, "Sustain loyalty cost: ", {"color",0xFF, 0xFF, 0x00}, ""..(util.getval(t.sustain_loyalty, self, t)), true)
 		end
