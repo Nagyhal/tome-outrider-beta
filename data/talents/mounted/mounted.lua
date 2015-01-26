@@ -21,6 +21,7 @@
 setfenv(1, Talents.main_env)
 
 newTalentType{ allow_random=true, type="mounted/mounted-base", name = "mounted - base", description = "Basic mount abilities"}
+newTalentType{ allow_random=true, type="mounted/disobedience", name = "disobedience", description = "Commanding wild beasts requires a strong will and a steady hand; without these, you look just as much like prey as any enemy."}
 newTalentType{ allow_random=true, type="mounted/bestial-dominion", name = "bestial dominion", description = "Exercise your dominion over the wild beasts of Maj'Eyal."}
 newTalentType{ allow_random=true, type="mounted/mounted-mobility", name = "mounted mobility", generic = true, description = "Wresting mastery over your fleet pawed steed, you leave slower foes bleeding in the dust."}
 newTalentType{ allow_random=true, type="mounted/teamwork", name = "teamwork", description = "Wresting mastery over your fleet pawed steed, you dance the last dance with those not quick enough to match you."}
@@ -251,6 +252,7 @@ function unshareTalentWithOwner(self, t)
 end
 
 load("/data-outrider/talents/mounted/mounts.lua")
+load("/data-outrider/talents/mounted/disobedience.lua")
 load("/data-outrider/talents/mounted/wolf.lua")
 load("/data-outrider/talents/mounted/spider.lua")
 --load("/data-outrider/talents/mounted/drake.lua")

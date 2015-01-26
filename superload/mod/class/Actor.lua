@@ -219,4 +219,57 @@ function _M:on_project_acquire(tx, ty, who, t, x, y, damtype, dam, particles, is
 	return base_on_project_acquire(self, tx, ty, who, t, x, y, damtype, dam, particles, is_projectile, mods)
 end
 
+function _M:disobedienceChance()
+	local src = self.outrider_pet
+	if not src then return 0 end
+	local factor = math.pow(1 - util.bound(self.loyalty/50, 0, 1), 2)
+	local chance = factor*10
+	return chance, chance -- return this twice so we're compatable with older UIs
+end
+
+-- Check if our mount (perhaps used also for other types of ally?) rebels against the owner.
+-- Paradox has an "Anomaly Type", used to force an anomaly type for the talent, generally set to ab.anomaly_type. Perhaps Loyalty could do that?
+function _M:loyaltyCheck(pet, silent)
+	local forced = false
+	local chance = self:disobedienceChance()
+	if chance == "forced" then
+		forced = true
+	end
+
+	-- See if we create an anomaly
+	if not forced and self.turn_procs.loyalty_checked then return false end  -- This is so players can't chain cancel out of targeting to trigger anomalies on purpose, we clear it out in postUse
+	-- if not forced then self.turn_procs.loyalty_checked = true end
+	-- return true if we roll an anomly
+	if rng.percent(chance) then
+		local disobedience_type = "minor"
+		if self:getLoyalty() < self.max_loyalty*.25 then
+			disobedience_type = "major"
+		end
+
+		-- Now pick anomalies filtered by type
+		local ts = {}
+		for id, t in pairs(pet.talents_def) do
+			if disobedience_type == "major" and t.disobedience_type and t.disobedience_type == "major" then
+				if t.type[1] == "mounted/disobedience" and not pet:isTalentCoolingDown(t) then ts[#ts+1] = id end
+			else
+				if t.type[1] == "mounted/disobedience" and not pet:isTalentCoolingDown(t) then ts[#ts+1] = id end
+			end
+		end
+
+		-- Did we find disobedience options?
+		if ts[1] then
+			-- Do we have a target?  If not we pass to anomaly targeting
+			-- The ignore energy calls here allow anomalies to be cast even when it's not the players turn
+			if target then
+				pet:attr("anomaly_forced_target", 1)
+				pet:forceUseTalent(rng.table(ts), {ignore_energy=true, force_target=target})
+				pet:attr("anomaly_forced_target", -1)
+			else
+				pet:forceUseTalent(rng.table(ts), {ignore_energy=true})
+			end
+		end
+		return true
+	end
+end
+
 return _M
