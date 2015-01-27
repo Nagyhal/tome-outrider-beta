@@ -124,6 +124,30 @@ class:bindHook("Actor:getTalentFullDescription:ressources", function(self, data)
 	data.d = d
 end)
 
+class:bindHook("Actor:takeHit", function(self, data)
+	local owner = self.owner
+	if owner and owner.loyalty then
+		local coeff = data.mount_data and data.mount_data.loyalty_loss_coeff or 1
+		if coeff then
+			local pct = data.value / self.max_life * 100
+			local loyalty_loss = pct / 3 * coeff
+			if self:hasEffect(self.EFF_UNBRIDLED_FEROCITY) then
+				--Increase rather than decrease
+				owner:incLoyalty(loyalty_loss)
+			else
+				owner:incLoyalty(-loyalty_loss)
+			end
+		end
+	end
+	local eff = self:hasEffect(self.EFF_RIDDEN) or self:hasEffect(self.EFF_MOUNT	)
+	rider = (eff and eff.rider) or ((eff and eff.mount) and self)
+	if rider and data.value / self.max_life > .1 then
+		--Maybe do a getDismountChance() so Loyalty can be factored in?
+		local pct = self:combatScale(data.value, 10, self.max_life*1, 50, self.max_life*.25)
+		if rng.percent(100) then rider:dismountTarget(self) end
+	end
+end)
+
 class:bindHook("UISet:Classic:Resources", function(self, data)
 	local src = data.player.show_owner_loyalty_pool and data.player.summoner or data.player
 	if src:knowTalent(data.player.T_LOYALTY_POOL) then

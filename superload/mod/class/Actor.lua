@@ -38,7 +38,7 @@ function _M:onTakeHit(value, src)
 		local m = self:hasMount()
 		if rng.percent(m.mount_data.share_damage) then
 			m:takeHit(value, src)
-			game.logSeen(self, "%s takes %d damage in %s's stead!", self.mount.name:capitalize(), value, self.name)
+			game.logSeen(self, "%s takes %d damage in %s's stead!", m.name:capitalize(), value, self.name)
 			value = 0
 		end
 	end
@@ -112,6 +112,7 @@ function _M:mountTarget(target)
 	else return false end
 end
 
+--Should be just a _M:dismount
 function _M:dismountTarget(target, x, y)
 	if not self:isMounted() then game.logPlayer(self, "You're not mounted!") return false end
 	if target ~= self.mount then game.logPlayer(self, "That is not your mount!") return false end
@@ -217,6 +218,18 @@ function _M:on_project_acquire(tx, ty, who, t, x, y, damtype, dam, particles, is
 		self.impunity_no_recur_pre = false
 	end
 	return base_on_project_acquire(self, tx, ty, who, t, x, y, damtype, dam, particles, is_projectile, mods)
+end
+
+local base_knockback = _M.knockback
+function _M:knockback(srcx, srcy, dist, recursive, on_terrain)
+	local ox, oy = self.x, self.y
+	base_knockback(self, srcx, srcy, dist, recursive, on_terrain)
+	if self:isMounted() and self.x~=ox or self.y~=oy then
+		if rng.percent(25) then
+			local mount = self:hasMount()	
+			self:dismountTarget(mount)
+		end
+	end
 end
 
 function _M:disobedienceChance()
