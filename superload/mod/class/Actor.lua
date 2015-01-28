@@ -158,7 +158,36 @@ function _M:learnPool(t)
 	base_learnPool(self,t)
 end
 
+function _M:moveDragged(x, y, force)
+	if self.x and self.y then
+		local dx, dy = x-self.x, y-self.y
+		local sequence = {}
+		for e, _ in pairs(self.dragged_entities or {}) do
+			local blocking = game.level.map:checkAllEntitiesLayersNoStop(e.x+dx, e.y+dy, "block_move", e)
+			for t, v in pairs(blocking) do
+				local ee =t[2]
+				if not self.dragged_entities[ee] and ee~=self then return false end
+			end
+			local order = 0
+			if dy~=0 then order=order+(e.y-self.y)*dy end
+			if dx~=0 then order=order+(e.x-self.x)*dx end
+			sequence[#sequence+1] = {e, order}
+		end
+		table.sort(sequence, function(a, b) return a[2]<b[2] end)
+		for _, t in ipairs(sequence) do
+			local e = t[1]
+			e:move(e.x+dx, e.y+dy, true)
+		end
+	end
+
+	return true
+end
+
 function _M:move(x, y, force)
+	--Currently, if you push a dragged enemy into a wall then you can't bump-attack it even when it obviously can no longer be dragged. You'll just have to select the "attack" command instead.
+	--TODO: Improve this
+	if not self:moveDragged(x, y, force) then return false end
+
 	local energy, mount = self.energy.value, (self:isMounted() and self.mount)
 	local ox, oy = self.x, self.y
 	local ret = base_move(self, x, y, force)
@@ -210,6 +239,13 @@ end
 
 local base_on_project_acquire = _M.on_project_acquire
 function _M:on_project_acquire(tx, ty, who, t, x, y, damtype, dam, particles, is_projectile, mods)
+	--Living Shield
+	local eff = self:hasEffect(self.EFF_LIVING_SHIELDED); if eff and is_projectile and rng.percent(eff.chance) then 
+		eff.trgt:logCombat(who, "#Source# becomes the target of #target#'s' projectile!")
+		mods.x = eff.trgt.x-self.x
+		mods.y = eff.trgt.x-self.x
+	end
+
 	--Handle Impunity of Warlords
 	if type(dam)=="table" then dam = dam.dam end
 	if self:isTalentActive(self.T_IMPUNITY_OF_WARLORDS) and not self.impunity_no_recur1 and self:reactionToward(who)<0 and dam and dam>0 then 

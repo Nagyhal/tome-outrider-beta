@@ -89,34 +89,24 @@ newTalent{
 		end
 		-- start the grapple; this will automatically hit and reapply the grapple if we're already grappling the target
 		local hit = self:startGrapple(target)
+		local eff = target:hasEffect(target.EFF_GRAPPLED)
 
 		local duration = t.getDuration(self, t)
 
-		if hit then
-			target:setEffect(target.EFF_LIVING_SHIELD, duration, {src=self, chance=t.getTransferChance(self, t)})
+		if hit and eff then
+			eff.dur=duration
+			target:setEffect(target.EFF_LIVING_SHIELD, duration, {src=self, chance=t.getTransferChance(self, t), def=t.getDef(self, t)})
 			self:setEffect(target.EFF_LIVING_SHIELDED, duration, {trgt=target, chance=t.getTransferChance(self, t)})
-			self:setEffect(target.EFF_DRAGGING, duration, {trgt=target})
-			target:setEffect(target.EFF_DRAGGED, duration, {src=self})
-		
-		-- -- do crushing hold or strangle if we're already grappling the target
-		-- if hit and self:knowTalent(self.T_CRUSHING_HOLD) then
-			-- local t = self:getTalentFromId(self.T_CRUSHING_HOLD)
-			-- if grappled and not target.no_breath and not target.undead and target:canBe("silence") then
-				-- target:setEffect(target.EFF_STRANGLE_HOLD, duration, {src=self, power=t.getDamage(self, t) * 1.5})
-			-- else
-				-- target:setEffect(target.EFF_CRUSHING_HOLD, duration, {src=self, power=t.getDamage(self, t)})
-			-- end
-		-- end	
 			return true
 		end
 	end,
 	info = function(self, t)
+		local def = t.getDef(self, t)
 		local duration = t.getDuration(self, t)
-		-- local power = t.getPower(self, t)
 		local chance = t.getTransferChance(self, t)
-		return ([[Grapple an adjacent enemy up to one size category larger than you for %d turns; all ranged and melee attacks now have a %d%% chance to hit this enemy instead of you. You may move to drag the enemy with you. 
+		return ([[Grapple an adjacent enemy up to one size category larger than you for %d turns; it suffers a %d penalty to defense and all ranged and melee attacks now have a %d%% chance to hit this enemy instead of you. You may move to drag the enemy with you. 
 		At talent level 5, you have mastered the art of cruel redirection, gaining the Block talent for a 100%% chance to reduce up to 100 damage, switching squares upon an impact.]])
-		:format(duration, chance)
+		:format(def, duration, chance)
 	end,
 }
 

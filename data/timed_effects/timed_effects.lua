@@ -60,20 +60,23 @@ newEffect{
 newEffect{
 	name = "LIVING_SHIELD",
 	desc = "Used as a Living Shield",
-	long_desc = function(self, eff) return ("The target is being used as a living shield! %d%% chance to displace damage onto the target's manhandler."):format(eff.pct) end,
+	long_desc = function(self, eff) return ("The target is being used as a living shield, reducing defense by %d. The target's manhandler will have a %d%% chance to redirect attacks onto it!"):format(eff.def, eff.pct) end,
 	type = "physical",
 	subtype = { grapple=true },
 	status = "detrimental",
-	parameters = { pct = 25, src},
+	parameters = { pct = 25, def=5, src},
 	on_gain = function(self, err) return "#Target# is being used as a living shield!", "+Living Shield" end,
 	on_lose = function(self, err) return "#Target# is no longer a living shield", "-Living Shield" end,
 	activate = function(self, eff)
+		self:effectTemporaryValue(eff, "combat_def", -eff.def)
 		if not eff.src then
-			self:removeEffect(self.EFF_MOUNT, nil, true)
-			error("No mount sent to temporary effect Mounted.")
+			self:removeEffect(self.EFF_LIVING_SHIELD)
+			error("No source sent to temporary effect Used as a Living Shield.")
 		end
 	end,
-	deactivate = function(self, eff) end,
+	deactivate = function(self, eff)
+		eff.src:removeEffect(eff.src.EFF_LIVING_SHIELDED)
+	 end,
 	do_onTakeHit = function(self, eff, dam) end,
 	on_timeout = function(self, eff) end,
 }
@@ -82,11 +85,11 @@ newEffect{
 	name = "LIVING_SHIELDED",
 	desc = "Living Shield",
 	display_desc = function(self, eff) return ("Living Shield: %s"):format(string.bookCapitalize(eff.trgt.name)) end,
-	long_desc = function(self, eff) return ("The target grips its victim and enjoys a %d%% chance to displace damage onto it."):format(eff.pct) end,
+	long_desc = function(self, eff) return ("The target grips its victim and enjoys a %d%% chance to displace damage onto it."):format(eff.chance) end,
 	type = "physical",
 	subtype = { grapple=true },
 	status = "beneficial",
-	parameters = { pct = 25, trgt = nil},
+	parameters = { chance=25, trgt},
 	on_gain = function(self, err) return "#Target# is defended by the living shield!", "+Shielded" end,
 	on_lose = function(self, err) return "#Target# no longer has a living shield", "-Shielded" end,
 	activate = function(self, eff)
@@ -94,10 +97,21 @@ newEffect{
 			self:removeEffect(self.EFF_LIVING_SHIELDED, nil, true)
 			error("No target sent to temporary effect Shield: Living Shield.")
 		end
+		if not self.dragged_entities then self.dragged_entities = {} end
+		local t, e = self.dragged_entities, eff.trgt
+		t[e] = t[e] and t[e]+1 or 1
 	end,
-	deactivate = function(self, eff) end,
-	do_onTakeHit = function(self, eff, dam) end,
-	on_timeout = function(self, eff) end,
+	deactivate = function(self, eff)
+		self.dragged_entities[eff.trgt] = self.dragged_entities[eff.trgt]-1
+		if self.dragged_entities[eff.trgt] == 0 then self.dragged_entities[eff.trgt] = nil end
+		eff.trgt:removeEffect(eff.trgt.EFF_LIVING_SHIELD)
+	end,
+	on_timeout = function(self, eff)
+		local p = eff.trgt:hasEffect(eff.trgt.EFF_GRAPPLED)
+		if not p or p.src ~= self or core.fov.distance(self.x, self.y, eff.trgt.x, eff.trgt.y) > 1 or eff.trgt.dead or not game.level:hasEntity(eff.trgt) then
+			self:removeEffect(self.EFF_LIVING_SHIELDED)
+		end
+	end,
 }
 
 newEffect{
@@ -115,57 +129,6 @@ newEffect{
 	end,
 	do_onTakeHit = function(self, eff, dam) end,
 	on_timeout = function(self, eff) end,
-}
-
-newEffect{
-	name = "DRAGGED",
-	desc = "Dragged",
-	long_desc = function(self, eff) return ("The target is engaged in a mobile grapple, and may be moved by its assaulter.") end,
-	type = "physical",
-	subtype = { grapple=true, src=nil },
-	status = "detrimental",
-	parameters = {},
-	on_gain = function(self, err) return "#Target# is being dragged!", "+Dragged" end,
-	on_lose = function(self, err) return "#Target# is no longer dragged", "Dragged" end,
-	activate = function(self, eff)
-		if not eff.src then
-			self:removeEffect(self.EFF_DRAGGED, nil, true)
-			error("No source sent to temporary effect Dragged.")
-		end
-	end,
-	deactivate = function(self, eff) end,
-	do_onTakeHit = function(self, eff, dam) end,
-	on_timeout = function(self, eff) 
-		if core.fov.distance(self.x, self.y, eff.src.x, eff.src.y) > 1 or eff.src.dead or not game.level:hasEntity(eff.src) then
-			self:removeEffect(self.EFF_DRAGGED)
-		end
-	end,
-}
-
-newEffect{
-	name = "DRAGGING",
-	desc = "Dragging",
-	long_desc = function(self, eff) return ("The target is engaged in a mobile grapple, leading its helpless defender whereever it wills.") end,
-	type = "physical",
-	subtype = { grapple=true },
-	status = "beneficial",
-	parameters = {trgt=nil},
-	on_gain = function(self, err) return "#Target# drags its victim!", "+Dragged" end,
-	on_lose = function(self, err) return "#Target# can no longer drag its victim", "Dragged" end,
-	activate = function(self, eff)end,
-	deactivate = function(self, eff)
-		if eff.dur <= 0 then
-			local p = eff.trgt:hasEffect(eff.trgt.EFF_DRAGGED)
-			if p then eff.tgrt:removeEffect(eff.trgt.EFF_DRAGGED) end
-		end
-	end,
-	do_onTakeHit = function(self, eff, dam) end,
-	on_timeout = function(self, eff)
-		local p = eff.trgt:hasEffect(eff.trgt.EFF_DRAGGED)
-		if not p or p.src ~= self or core.fov.distance(self.x, self.y, eff.trgt.x, eff.trgt.y) > 1 or eff.trgt.dead or not game.level:hasEntity(eff.trgt) then
-			self:removeEffect(self.EFF_DRAGGING)
-		end
-	end,
 }
 
 newEffect{

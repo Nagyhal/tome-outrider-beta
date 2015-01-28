@@ -19,30 +19,6 @@ class:bindHook("ToME:load", function(self, data)
 	ActorAI:loadDefinition("/data-outrider/ai/")
 end)
 
-class:bindHook("Actor:takeHit", function(self, data)
-	--1.1.6 will be able to do this in a callback
-	if self:hasEffect(self.EFF_REGAIN_POISE) then
-		local eff = self:hasEffect(self.EFF_REGAIN_POISE)
-		if data.value > 1 then self.tempeffect_def[self.EFF_REGAIN_POISE].do_onTakeHit(self, eff, data.value) end
-	end
-
-	--another way to do this would be superloading on_project
-	--probably more fun to do it this way as the full effect and full combat log assertions will be transferred to the new target.
-	if self:hasEffect(self.EFF_LIVING_SHIELDED) and data.src ~= self.tmp[self.EFF_LIVING_SHIELDED].trgt then 
-		if rng.percent(self.tmp["EFF_LIVING_SHIELDED"].pct) then
-			game.logSeen(self, "The living shield takes the damage!")
-			self.tmp["EFF_LIVING_SHIELDED"].trgt:onTakeHit(data.value, data.src)
-			
-			--data.value = data.value / 2
-			data.value = 0
-			-- data.trgt
-		end
-	end
-	return true
-end)
-	
---	self:triggerHook{"Actor:move", moved=moved, force=force, ox=ox, oy=oy}
-
 class:bindHook("Actor:move", function(self, data)
 	if self.mount then
 		if not game.level.map(data.x, data.y, engine.Map.ACTOR) then
