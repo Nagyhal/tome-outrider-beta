@@ -120,15 +120,18 @@ function _M:dismountTarget(target, x, y)
 		x, y = util.findFreeGrid(self.x, self.y, 10, true, {[engine.Map.ACTOR]=true})
 	end
 	if x then
+		game.zone:addEntity(game.level, target, "actor", target.x, target.y)
+		local ox, oy = self.x, self.y
+		local ok = self:move(x, y, true)
+		game.zone:addEntity(game.level, self, "actor", self.x, self.y)
+		if not ok then return end
+
 		game.logSeen(self, "%s dismounts from %s", self.name:capitalize(), target.name:capitalize())
 		--game.level:addEntity(target)
 		target.rider= nil
 		self.mount = nil
 		self:removeEffect(self.EFF_MOUNT, false, true)
 		target:removeEffect(self.EFF_RIDDEN, false, true)
-		ox, oy = self.x, self.y
-		self:move(x, y, true)
-		game.zone:addEntity(game.level, target, "actor", target.x, target.y)
 		target:added()
 		target:move(ox, oy, true)
 		target.changed = true
