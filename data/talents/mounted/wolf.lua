@@ -457,6 +457,40 @@ newTalent{
 	passives = function(self, t, p)
 		self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower(self, t))
 	end,
+	on_learn = function(self, t)
+		self.seen_wolves = {}
+	end,
+	callbackOnActBase = function(self, t)
+		if not game.party.members[self] then return end
+		local grids = core.fov.circle_grids(self.x, self.y, self.sight, true)		
+			for x, ys in pairs(grids) do for y, _ in pairs(ys) do
+				local a = game.level.map(x, y, engine.Map.ACTOR)
+				if a and a.subtype=="canine" and game.engine.Faction:factionReaction(self.faction, a.faction)<0 and not self.seen_wolves[a.iud] and self:hasLOS(a.x, a.y) then
+					if rng.percent(t.getConvertChance(self, t)) then
+						a.faction = self.faction
+						a.summoner=self.rider or self
+						a.summon_time=20
+						game.party:addMember(a, {
+							control="no",
+							type="summon",
+							title="Wolf Ally",
+							orders = {target=true},
+						})
+						a:setTarget()
+						a.remove_from_party_on_death=true
+						a.summoner_gain_exp=true
+						a.ai = "party_member"
+						a.ai_state.ally_compassion=10
+						a.ai_state.tactic_leash=10
+						-- a.ai_state.ai_move="move_astar"
+						a.ai_tactic = resolvers.tactic"melee"
+						a.ai_tactic.escape = 0
+					end
+					self.seen_wolves[a.uid] = true
+				end
+			end
+		end
+	end,
 	action = function(self, t)
 		local coords = {}
 		local block = function(_, lx, ly) return game.level.map:checkAllEntities(lx, ly, "block_move") end
