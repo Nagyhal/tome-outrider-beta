@@ -305,7 +305,7 @@ newTalent{
 	info = function(self, t)
 		local restore = t.getRestore(self, t)
 		local max_loyalty = t.getMaxLoyalty(self, t)
-		return ([[With a mighty effort, you rein in your mount's feral tendencies, increasing its Loyalty by %d%% of its maximum. Also grants a passive increase of %d to maximum Loyalty with all mounts.
+		return ([[With a mighty effort, you rein in your mount's feral tendencies, recovering Loyalty equal to %d%% of its maximum. Also grants a passive increase of %d to maximum Loyalty with all mounts.
 
 			As you master the domestication of wild riding beasts, you are able to still their fury long enough to inscribe them with infusions. You gain an infusion slot for your mount, and may gain others for each Bestial Dominion talent you raise to 5/5 (up to 3 slots).]]):
 		format(restore, max_loyalty, max_dist)

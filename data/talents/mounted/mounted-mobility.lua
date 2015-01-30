@@ -77,7 +77,7 @@ newTalent{
 							-- if core.fov.distance(currentY, currentX, x, y) > 1
 									-- and game.level.map:isBound(x, y)
 									-- and not game.level.map:checkAllEntities(x, y, "block_move", self) then
-								-- blockingTarget:move(x, y, true)
+
 								-- game.logSeen(self, "%s knocks back %s!", self.name:capitalize(), blockingTarget.name)
 								-- blocked = false
 								-- break

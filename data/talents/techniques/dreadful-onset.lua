@@ -127,9 +127,8 @@ newTalent{
 		return t.getArcheryRange(self, t)
 	end,
 	getFinalRange = function(self, t)
-		if self:hasArcheryWeapon("bow") then return t.getArcheryRange(self, t) end
-		if self:hasTwoHandedWeapon().subtype == "trident" then return 2
-		else return 1 end --REM: Should this be some kind of "melee" marker?
+		if self:hasArcheryWeapon("bow") then return t.getArcheryRange(self, t)
+		else return 1 end
 	end,
 	getKnockbackRange = function (self, t)
 		return math.floor ((self:getTalentLevel(t) / 2) + 2)
