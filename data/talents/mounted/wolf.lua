@@ -64,7 +64,7 @@ newTalent{
 	require = mnt_dex_req2,
 	points = 5,
 	cooldown = 8,
-	--stamina = 12,
+	stamina = 12,
 	requires_target = true,
 	tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} },
 	getDamage = function (self, t) return self:combatTalentWeaponDamage(t, 0.9, 1.4) end,
@@ -74,7 +74,7 @@ newTalent{
 		shareTalentWithOwner(self, t)
 	end,
 	on_unlearn = function(self, t, p)
-		unshareTalentWithOwen(self, t)
+		unshareTalentWithOwner(self, t)
 	end,
 	on_pre_use = function(self, t, silent)
 		local tg = {type="ball", radius=self:getTalentRange(t), 0}
@@ -109,7 +109,10 @@ newTalent{
 		if not x or not y or not target then return nil end
 		if core.fov.distance(self.x, self.y, x, y) > self:getTalentRange(t) then return nil end
 		--TODO: Maybe use something more mount-centric than self.rider:isMounted()
-		return t.doAttack(self, t, self, target)
+		local ret = t.doAttack(self, t, target)
+		local owner = self.owner
+		if ret and owner then owner:startTalentCooldown(owner.T_GO_FOR_THE_THROAT_COMMAND) end
+		return ret
 	end,
 	--Modular action function so can be invoked by either mount or rider
 	doAttack = function(self, t, mover, target)
@@ -117,7 +120,7 @@ newTalent{
 		local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", mover) end
 		local l = mover:lineFOV(x, y, block_actor)
 		if not is_corner_blocked and not game.level.map:checkAllEntities(lx, ly, "block_move", mover) then
-			local tx, ty = x, y
+			local tx, ty = self.x, self.y
 			lx, ly, is_corner_blocked = l:step()
 			while lx and ly do
 				if is_corner_blocked or game.level.map:checkAllEntities(lx, ly, "block_move", mover) then break end
@@ -134,7 +137,7 @@ newTalent{
 		end
 		--rush end
 		local bonus_multipler = nil
-		if core.fov.distance(self.x, self.y, x, y) > 1 then return nil end
+		if core.fov.distance(self.x, self.y, x, y) > 1 then return true end
 		local speed, hit = self:attackTarget(target, nil, t.getDamage(self, t), true)
 		if hit then 
 			if target:canBe("cut") then target:setEffect(target.EFF_CUT, 5, {power=t.getDamage(self, t)*12, src=self}) end
@@ -155,7 +158,6 @@ newTalent{
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	cooldown = 8,
-	stamina = 12,
 	requires_target = true,
 	base_talent = "T_GO_FOR_THE_THROAT",
 	tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} },
@@ -173,14 +175,16 @@ newTalent{
 		local mount = self.outrider_pet
 		local t2 = mount:getTalentFromId(mount.T_GO_FOR_THE_THROAT)
 
-		local tg = {type="hit", start_x=mount.x, start_y=mount.y, range=self:getTalentRange(t2)}
+		local tg = {type="hit", start_x=mount.x, start_y=mount.y, range=mount:getTalentRange(t2)}
 		local x, y, target = self:getTarget(tg)
 		if not x or not y or not target then return nil end
-		if core.fov.distance(self.x, self.y, x, y) > self:getTalentRange(t2) then return nil end
+		if core.fov.distance(mount.x, mount.y, x, y) > self:getTalentRange(t2) then return nil end
 
 		local mover
 		if self:isMounted() then mover = self else mover = mount end
-		return mount:callTalent(mount.T_GO_FOR_THE_THROAT, "doAttack", mover, target)
+		local ret = mount:callTalent(mount.T_GO_FOR_THE_THROAT, "doAttack", target)
+		if ret then mount:startTalentCooldown(mount.T_GO_FOR_THE_THROAT) end
+		return ret
 	end,
 	info = function(self, t)
 		if not self.outrider_pet then return [[Without a wolf, you cannot use Command: Go For The Throat.]]
@@ -232,44 +236,128 @@ newTalent{
 	type = {"wolf/tenacity", 4},
 	points = 5,
 	require = mnt_dex_req4,
-	--stamina = 50,
 	cooldown = 30,
 	requires_target = true,
 	tactical = { ATTACK = { PHYSICAL = 2 } },
-	getDamage = function (self, t) return self:combatTalentWeaponDamage(t, .6, 1.2) end,
-	getReduction = function (self, t) return 3 + math.floor(self:getTalentLevel(t) *1.8) end,
-	getFetchDistance = function (self, t) return math.floor(self:getTalentLevel(t) + 1) end,
-	getDuration = function(self, t) return 3 + math.floor(self:getTalentLevel(t) / 2) end,
-	on_pre_use= function(self, t) return false end,
+	range = function(self, t) return self:combatTalentScale(t, 2, 4) end,
+	getDam = function (self, t) return self:combatTalentPhysicalDamage(t, 15, 35) end,
+	getBonusDam = function (self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
+	getReduction = function (self, t) return self:combatTalentScale(t, 5, 12) end,
+	getDur = function(self, t) return self:combatTalentScale(t, 4, 7) end,
+	on_pre_use= function(self, t, silent)
+		-- if self~=game.player then
+		-- 	if not silent  then 
+		-- 		game.logPlayer(self, "Your owner has to command you, for you to use Fetch!") 
+		-- 	end  
+		-- 	return false
+		-- end
+		return false
+	end,
+	shared_talent = "T_FETCH_COMMAND",
+	on_learn = function(self, t)
+		shareTalentWithOwner(self, t)
+	end,
+	on_unlearn = function(self, t, p)
+		unshareTalentWithOwner(self, t)
+	end,
 	action = function(self, t)
 		local tg = {type="hit", range=self:getTalentRange(t)}
 		local x, y, target = self:getTarget(tg)
 		if not x or not y or not target then return nil end
-		if core.fov.distance(self.x, self.y, x, y) > 1 then return nil end
-		local grappled = false
-		if target:isGrappled(self) then
-			grappled = true
-		else
-			self:breakGrapples()
+		if core.fov.distance(self.x, self.y, x, y) > self:getTalentRange(t) then return nil end
+		--TODO: Maybe use something more mount-centric than self.rider:isMounted()
+		local ret = t.doAttack(self, t, target)
+		local owner = self.owner
+		if ret and owner then owner:startTalentCooldown(t.shared_talent) end
+		return ret
+	end,
+	--Modular action function so can be invoked by either mount or rider
+	doAttack = function(self, t, target)
+		local x, y = target.x, target.y
+		local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", self) end
+		local linestep = self:lineFOV(x, y, block_actor)
+		
+		local tx, ty, lx, ly, is_corner_blocked 
+		repeat  -- make sure each tile is passable
+			tx, ty = lx or self.x, ly or self.y
+			lx, ly, is_corner_blocked = linestep:step()
+		until is_corner_blocked or not lx or not ly or game.level.map:checkAllEntities(lx, ly, "block_move", self)
+		if not tx or core.fov.distance(x, y, tx, ty) > 1 then return nil end
+
+		local ox, oy = self.x, self.y
+		self:move(tx, ty, true)
+		if config.settings.tome.smooth_move > 0 then
+			self:resetMoveAnim()
+			self:setMoveAnim(ox, oy, 8, 5)
 		end
-		if self:grappleSizeCheck(target) then
-			return true
-		end
+
+		if core.fov.distance(self.x, self.y, x, y) ~= 1 then return true end
 		local hit = self:startGrapple(target)
-		local duration = t.getDuration(self, t)
-		if hit then
-			self:setEffect(target.FETCH, t.getDuration(self, t), t.getDamage(self, t))
-		return true
+		local duration = t.getDur(self, t)
+		local eff = target:hasEffect(target.EFF_GRAPPLED)
+		if eff then
+			eff.power = t.getDam(self, t)
+			eff.dur = t.getDur(self, t)
+			self:setEffect(self.EFF_FETCH, t.getDur(self, t), {target=target})
 		end
+		return true
 	end,
 	info = function(self, t)
-		return ([[The wolf attempts to grab an enemy, ravaging it within its jaws for %d damage each turn and reducing its attack and defense by %d. If it succeeds, it will bring it to you within range %d while you are dismounted.
+		local dam = t.getDam(self, t)
+		local dur = t.getDur(self, t)
+		local reduction = t.getReduction(self, t)*100
+		local bonus_dam = t.getBonusDam(self, t)*100
+		return ([[The wolf attempts to grab an enemy of up to 1 size category larger than itself, ravaging it within its jaws for %d damage, and reducing its attack and defense by %d. If it succeeds, it will drag its target to its owner over a period of %d turns, granting a %d%% increase in damage when the owner first attacks it within melee range.
 
-			The wolf will only use this ability at the command of its owner.
-
-			#GOLD##BOLD#Currently disabled while dragging is reimplemented.]]):
-		format(t.getDamage(self, t)*100, t.getReduction(self, t), t.getFetchDistance(self, t))
+			The wolf will only use this ability at the command of its owner, and only then when not mounted.]]):
+		format(dam, reduction, dur, bonus_dam)
 	end,
+}
+
+newTalent{
+	name = "Command: Fetch!",
+	short_name = "FETCH_COMMAND",
+	type = {"mounted/mounted-base", 1},
+	points = 1,
+	cooldown = 30,
+	requires_target = true,
+	base_talent = "T_FETCH",
+	tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} },
+	-- tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} }, --TODO: Decide on how summon controls are handled tactically
+	getDamage = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_FETCH, "getDamage") end,
+	range = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_FETCH, "range") end,
+	on_pre_use = function(self, t)
+		local pet = self.outrider_pet
+		return pet and not pet:isTalentCoolingDown(pet.T_FETCH) or false
+	end,
+	action = function(self, t)
+		local pet = self.outrider_pet
+		local t2 = pet:getTalentFromId(pet.T_FETCH)
+
+		local tg = {type="hit", start_x=pet.x, start_y=pet.y, range=pet:getTalentRange(t2)}
+		local x, y, target = self:getTarget(tg)
+		if not x or not y or not target then return nil end
+		if core.fov.distance(pet.x, pet.y, x, y) > pet:getTalentRange(t2) then return nil end
+
+		local ret = pet:callTalent(pet.T_FETCH, "doAttack", target)
+		if ret then pet:startTalentCooldown(pet.T_FETCH) end
+		return ret
+	end,
+	info = function(self, t)
+		local pet = self.outrider_pet
+		if not pet then return [[Without a wolf, you cannot use Command: Fetch!]]
+		else
+			local t2=self:getTalentFromId(pet.T_FETCH)
+			local dam = t2.getDam(pet, t2)
+			local dur = t2.getDur(pet, t2)
+			local reduction = t2.getReduction(pet, t2)*100
+			local bonus_dam = t2.getBonusDam(pet, t2)*100
+			return ([[The wolf attempts to grab an enemy of up to 1 size category larger than itself, ravaging it within its jaws for %d damage, and reducing its attack and defense by %d. If it succeeds, it will drag its target to its owner over a period of %d turns, granting a %d%% increase in damage when the owner first attacks it within melee range.
+
+			The wolf will only use this ability at the command of its owner, and only then when not mounted.]]):
+			format(dam, reduction, dur, bonus_dam)
+		end
+	end
 }
 
 newTalent{

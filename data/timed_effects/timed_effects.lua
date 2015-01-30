@@ -1,3 +1,11 @@
+function checkEffectHasParameter(self, eff, name)
+	if not eff[name] then
+		local id = eff.effect_id
+		self:removeEffect(id, nil, true)
+		error("No parameter %s sent to temporary effect %s."):format(name, id)
+	end
+end
+
 --Effects for basic mount functionality
 newEffect{
 	name = "MOUNT",
@@ -342,7 +350,7 @@ newEffect{
 	on_lose = function(self, err) return "#Target#' has been subdued!" end,
 	activate = function(self, eff)
 		assert(eff.src, "No source sent to Wild Challenger.")
-		self:addShaderAura("wild_challenger", "awesomeaura", {time_factor=4000, alpha=0.6,  flame_scale=2}, "particles_images/naturewings.png")
+		self:addShaderAura("wild_challenger", "awesomeaura", {time_factor=4000, alpha=0.4,  flame_scale=2}, "particles_images/naturewings.png")
 	end,
 	deactivate = function(self, eff)
 		self:removeShaderAura("wild_challenger")
@@ -430,5 +438,76 @@ newEffect{
 			end
 		end
 		if count < 1 then self:removeEffect(eff.effect_id) end
+	end,
+}
+
+newEffect{
+	name = "FETCH",
+	desc = "Fetch!",
+	long_desc = function(self, eff) return ("The wolf, each turn, will drag its grappled target towards its master."):format(eff.chance) end,
+	type = "physical",
+	subtype = { grapple=true },
+	status = "beneficial",
+	parameters = {target},
+	on_gain = function(self, err) return "#Target# will fetch the target!", "+Fetch" end,
+	on_lose = function(self, err) return "#Target# finishes fetching the target", "-Fetch" end,
+	callbackOnAct= function(self, eff)
+		while self:enoughEnergy() do
+			if eff.target.dead then return true end
+
+			-- apply periodic timer instead of random chance
+			local owner = self.owner
+			local cur_dist = core.fov.distance(eff.target.x, eff.target.y, owner.x, owner.y) 
+			if not owner or cur_dist <=1 then return end
+			if not self:attr("never_move") then
+				local targetX, targetY = owner.x, owner.y
+
+				local bestX, bestY
+				local bestDistance = cur_dist
+				local start = rng.range(0, 8)
+				for i = start, start + 8 do
+					local dx = (i % 3) - 1
+					local dy = math.floor((i % 9) / 3) - 1
+					local x, y = self.x+dx, self.y+dy
+					if x ~= self.x or y ~= self.y then
+						local tx, ty = eff.target.x+dx, eff.target.y+dy
+						local distance = core.fov.distance(tx, ty, targetX, targetY)
+						local a = game.level.map(x, y, engine.Map.ACTOR)
+						local can_drag = (not game.level.map:checkAllEntities(tx, ty, "block_move", self)) or (tx==self.x and ty==self.y)
+						if distance < bestDistance
+								and game.level.map:isBound(x, y) --TODO: In theory, you could drag enemies off the map. However, because the player isn't ever likely to be n that direction, this may not happen. Still, it could be cleaner.
+								and ((not game.level.map:checkAllEntities(x, y, "block_move", self) and not a) or (a and a==eff.target and can_drag)) then
+							bestDistance = distance
+							bestX = x
+							bestY = y
+							game.log("DEBUG: Moving with dx %d and dy %d, distance=%d; cur_dist=%d", dx, dy, distance, cur_dist)
+						end
+					end
+				end
+
+				if bestX then
+					--TODO: Reset player to Outrider if player is controlling wolf - otherwise this will consume 1,000,000,000 turns
+					--TODO: We don't allow the player to use this, but THEN we could.
+					game.logPlayer(self, "#F53CBE#You fetch your target toward %s.", owner.name)
+					self:move(bestX, bestY, false)
+				end
+			end
+		end
+	end,
+	activate = function(self, eff)
+		checkEffectHasParameter(self, eff, "target")
+		if not self.dragged_entities then self.dragged_entities = {} end
+		local t, e = self.dragged_entities, eff.target
+		t[e] = t[e] and t[e]+1 or 1
+	end,
+	deactivate = function(self, eff)
+		self.dragged_entities[eff.target] = self.dragged_entities[eff.target]-1
+		if self.dragged_entities[eff.target] == 0 then self.dragged_entities[eff.target] = nil end
+	end,
+	on_timeout = function(self, eff)
+		local p = eff.target:hasEffect(eff.target.EFF_GRAPPLED)
+		if not p or p.src ~= self or core.fov.distance(self.x, self.y, eff.target.x, eff.target.y) > 1 or eff.target.dead or not game.level:hasEntity(eff.target) then
+			self:removeEffect(self.EFF_FETCH)
+		end
 	end,
 }
