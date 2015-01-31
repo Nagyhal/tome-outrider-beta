@@ -264,6 +264,7 @@ newTalent{
 				mountSetupSummon(self, mount, coords[i][1], coords[i][2], false)
 				mount:setEffect(mount.EFF_WILD_CHALLENGER, 2, {src=self})
 			else
+				if not coords[i] then return end
 				local filter = {
 					base_list="mod.class.NPC:data/general/npcs/canine.lua",
 				}
