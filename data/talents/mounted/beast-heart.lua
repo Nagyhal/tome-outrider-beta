@@ -85,3 +85,81 @@ newTalent{
 	getLoyalty = function(self, t) return self:combatTalentScale(t, 15, 35) end,
 	getHeal = function(self, t) return self:combatTalentLimit(t, .05, .1, 35) end
 }
+
+newTalent{
+	name = "Twin Threat",
+	type = {"mounted/beast-heart", 3},
+	require = mnt_wil_req3,
+	mode = "sustained",
+	points = 5,
+	sustain_stamina = 100,
+	cooldown = 10,
+	activate = function(self, t)
+		return {}
+	end,
+	deactivate = function(self, t, p)
+		t.removeAllEffects(self, t)
+		return true
+	end,
+	removeAllEffects= function(self, t, exlcude)
+		for _, eff_id in pairs(t.effects) do
+			if not exlude[eff_id] then
+				self:removeEffect(eff_id, nil, true)
+			end
+		end
+	end,
+	callbackOnAct = function(self, t)
+		local mount = self:hasMount()
+		if not mount then self:forceUseTalent(t.id, {no_energy=true}) end
+		local dist = core.fov.distance(self.x, self.y, mount.x, mount.y)
+		-- if dist == 0 then
+		-- 	if not self:hasEffect(t.effects.mounted) then
+		-- 		self:setEffect(t.effects.mounted, 2, {crit=t.getCrit(self, t)})
+		-- 	end
+		-- elseif dist == 1 then
+		-- 	if not self:hasEffect(t.effects.adjacent) then
+		-- 		self:setEffect(t.effects.adjacent, 2, {heal_mod=t.getHealMod(self, t), regen=t.getRegen(self, t)})
+		-- 	end
+		-- elseif dist <= 5 then
+		-- 	if not self:hasEffect(t.effects.mid) then
+		-- 		self:setEffect(t.effects.mid, 2, {move=t.getMove(self, t), cooldown=t.getCooldownPct(self, t)})
+		-- 	end
+		-- elseif dist > 5 then
+		-- 	if not self:hasEffect(t.effects.long) then
+		-- 		self:setEffect(t.effects.long, 2, {regen=t.getRegenOnShot(self, t), life_total=t.getLifeTotal(self, t)})
+		-- 	end
+		-- end
+	end,
+	effects = {mounted="EFF_TWIN_THREAT_MOUNTED",
+		adjacent="EFF_TWIN_THREAT_ADJACENT",
+		mid="EFF_TWIN_THREAT_MID",
+		long="EFF_TWIN_THREAT_LONG"
+	},
+	info = function(self, t)
+		local crit = t.getCrit(self, t)
+		--
+		local heal_mod = t.getHealMod(self, t)
+		local regen = t.getRegen(self, t)
+		--
+		local move = t.getMove(self, t)
+		local cooldown_pct = t.getCooldownPct(self, t)
+		--
+		local regen_on_shot = t.getRegenOnShot(self, t)
+		local life_total = t.getLifeTotal(self, t)
+		return ([[When you and your beast ride together, your physical critical hits grant a %d%% chance for your beast to attack again.
+
+			When you and your beast fight adjacent to one another, increase your healing modifiers by %d%%, and regain Stamina and Loyalty at a rate of %.1f per turn.
+
+			When you and your beast fight at mid range (up to 5 squares apart from one another) you are ready to exploit any opening, gaining %d%% movement speed and %d%% reduced cooldowns in any techniques talent tree.
+
+			When you and your beast fight at long range (up to 10 squares apart) you pay close attention to one anothers' stratagems. All attacks that hit enemies within range 1 of your beast will regenerate its loyalty by %d, Teamwork talents and Set-Up Shot will recharge twice as fast, and when your beast falls to %d%% of its total life, you may hasten to its side using a desperate dash.]]):
+			format(crit, heal_mod, regen, move, cooldown_pct, regen_on_shot, life_total)
+	end,
+	getCrit = function(self, t) return self:combatTalentScale(t, 15, 35) end,
+	getHealMod = function(self, t) return self:combatTalentScale(t, 10, 30) end,
+	getRegen = function(self, t) return self:combatTalentScale(t, 1, 3) end,
+	getMove = function(self, t) return self:combatTalentScale(t, 20, 45) end,
+	getCooldownPct = function(self, t) return self:combatTalentScale(t, 7, 20) end,
+	getRegenOnShot = function(self, t) return self:combatTalentScale(t, 1.5, 3.5) end,
+	getLifeTotal = function(self, t) return self:combatTalentLimit(t, 50, 10, 35) end,
+}
