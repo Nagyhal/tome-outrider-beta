@@ -101,9 +101,9 @@ newTalent{
 		t.removeAllEffects(self, t)
 		return true
 	end,
-	removeAllEffects= function(self, t, exlcude)
+	removeAllEffects= function(self, t, exclude)
 		for _, eff_id in pairs(t.effects) do
-			if not exlude[eff_id] then
+			if not exclude[eff_id] then
 				self:removeEffect(eff_id, nil, true)
 			end
 		end
@@ -112,23 +112,23 @@ newTalent{
 		local mount = self:hasMount()
 		if not mount then self:forceUseTalent(t.id, {no_energy=true}) end
 		local dist = core.fov.distance(self.x, self.y, mount.x, mount.y)
-		-- if dist == 0 then
-		-- 	if not self:hasEffect(t.effects.mounted) then
-		-- 		self:setEffect(t.effects.mounted, 2, {crit=t.getCrit(self, t)})
-		-- 	end
-		-- elseif dist == 1 then
-		-- 	if not self:hasEffect(t.effects.adjacent) then
-		-- 		self:setEffect(t.effects.adjacent, 2, {heal_mod=t.getHealMod(self, t), regen=t.getRegen(self, t)})
-		-- 	end
-		-- elseif dist <= 5 then
-		-- 	if not self:hasEffect(t.effects.mid) then
-		-- 		self:setEffect(t.effects.mid, 2, {move=t.getMove(self, t), cooldown=t.getCooldownPct(self, t)})
-		-- 	end
-		-- elseif dist > 5 then
-		-- 	if not self:hasEffect(t.effects.long) then
-		-- 		self:setEffect(t.effects.long, 2, {regen=t.getRegenOnShot(self, t), life_total=t.getLifeTotal(self, t)})
-		-- 	end
-		-- end
+		if dist == 0 then
+			if not self:hasEffect(t.effects.mounted) then
+				self:setEffect(t.effects.mounted, 2, {chance=t.getChance(self, t)})
+			end
+		elseif dist == 1 then
+			if not self:hasEffect(t.effects.adjacent) then
+				self:setEffect(t.effects.adjacent, 2, {heal_mod=t.getHealMod(self, t), regen=t.getRegen(self, t)})
+			end
+		elseif dist <= 5 then
+			if not self:hasEffect(t.effects.mid) then
+				self:setEffect(t.effects.mid, 2, {move=t.getMove(self, t), cooldown=t.getCooldownPct(self, t)})
+			end
+		elseif dist > 5 then
+			if not self:hasEffect(t.effects.long) then
+				self:setEffect(t.effects.long, 2, {regen=t.getRegenOnShot(self, t), life_total=t.getLifeTotal(self, t)})
+			end
+		end
 	end,
 	effects = {mounted="EFF_TWIN_THREAT_MOUNTED",
 		adjacent="EFF_TWIN_THREAT_ADJACENT",
@@ -136,7 +136,7 @@ newTalent{
 		long="EFF_TWIN_THREAT_LONG"
 	},
 	info = function(self, t)
-		local crit = t.getCrit(self, t)
+		local chance = t.getChance(self, t)
 		--
 		local heal_mod = t.getHealMod(self, t)
 		local regen = t.getRegen(self, t)
@@ -153,9 +153,9 @@ newTalent{
 			When you and your beast fight at mid range (up to 5 squares apart from one another) you are ready to exploit any opening, gaining %d%% movement speed and %d%% reduced cooldowns in any techniques talent tree.
 
 			When you and your beast fight at long range (up to 10 squares apart) you pay close attention to one anothers' stratagems. All attacks that hit enemies within range 1 of your beast will regenerate its loyalty by %d, Teamwork talents and Set-Up Shot will recharge twice as fast, and when your beast falls to %d%% of its total life, you may hasten to its side using a desperate dash.]]):
-			format(crit, heal_mod, regen, move, cooldown_pct, regen_on_shot, life_total)
+			format(chance, heal_mod, regen, move, cooldown_pct, regen_on_shot, life_total)
 	end,
-	getCrit = function(self, t) return self:combatTalentScale(t, 15, 35) end,
+	getChance = function(self, t) return self:combatTalentScale(t, 15, 35) end,
 	getHealMod = function(self, t) return self:combatTalentScale(t, 10, 30) end,
 	getRegen = function(self, t) return self:combatTalentScale(t, 1, 3) end,
 	getMove = function(self, t) return self:combatTalentScale(t, 20, 45) end,

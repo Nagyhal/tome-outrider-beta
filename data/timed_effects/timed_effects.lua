@@ -511,3 +511,112 @@ newEffect{
 		end
 	end,
 }
+
+newEffect{
+	name = "EFF_TWIN_THREAT_MOUNTED",
+	desc = "Twin Threat: Mounted", image = "talents/together_forever.png",
+	long_desc = function(self, eff) return ("Mount and rider .") end,
+	type = "other",
+	subtype = { tactic=true },
+	status = "beneficial",
+	parameters = {src_pct=15, allies_pct = 5},
+	on_gain = function(self, err) return nil, "+Flanked" end,
+	on_lose = function(self, err) return nil, "-Flanked" end,
+	activate = function(self, eff)
+		removeTwinThreatEffects(self)
+	end,
+	callbackOnCrit = function(self, eff, type, dam, chance, target)
+		if type=="physical" and self:isMounted() and rng.percent(eff.chance) then
+			local mount = self:hasMount()
+
+		end
+	end,
+}
+
+local function removeOtherTwinThreatEffects(self)
+	self:callTalent(self.T_TWIN_THREAT, "removeAllEffects")
+end
+
+newEffect{
+	name = "EFF_TWIN_THREAT_MOUNTED",
+	desc = "Twin Threat: Mounted", image = "talents/together_forever.png",
+	long_desc = function(self, eff) return ("Beast and master act in concert, the beast standing a %d%% chance to gain a free instant attack on each of the rider's physical critical hits."):format(eff.chance) end,
+	type = "other",
+	decrease = 0, no_remove = true,
+	subtype = { tactic=true },
+	status = "beneficial",
+	parameters = {chance=15},
+	activate = function(self, eff)
+		removeOtherTwinThreatEffects(self)
+	end,
+	callbackOnCrit = function(self, eff, type, dam, chance, target)
+		if type=="physical" and self:isMounted() and rng.percent(eff.chance) then
+			local mount = self:hasMount()
+			local tgts={}
+			local grids = core.fov.circle_grids(mount.x, mount.y, 1, true)
+			for x, yy in pairs(grids) do for y, _ in pairs(grids[x]) do
+				local a = game.level.map(x, y, Map.ACTOR)
+				if a and self:reactionToward(a) < 0 then
+					tgts[#tgts+1] = a
+				end
+			end end
+			local target = rng.table(tgts)
+			mount:attackTarget(target, nil, 1)
+		end
+	end,
+}
+
+newEffect{
+	name = "EFF_TWIN_THREAT_ADJACENT",
+	desc = "Twin Threat: Adjacent", image = "talents/together_forever.png",
+	long_desc = function(self, eff) return ("Beast and master act in concert, each gaining a %d%% increase to healing modifer and a %d bonus to stamina and loyalty regen.") end,
+	type = "other",
+	decrease = 0, no_remove = true,
+	subtype = { tactic=true },
+	status = "beneficial",
+	parameters = {heal=15, regen = 1},
+	activate = function(self, eff)
+		removeOtherTwinThreatEffects(self)
+		self:effectTemporaryValue(eff, "healing_factor", eff.heal)
+		self:effectTemporaryValue(eff, "regen_stamina", eff.regen)
+		if not self.rider then self:effectTemporaryValue(eff, "regen_loyalty", eff.regen) end
+		local mount = self:hasMount()
+		if mount then mount:setEffect(mount.EFF_TWIN_THREAT_ADJACENT, 2, {heal=eff.heal}) end
+	end,
+	deactive = function(self, eff)
+		local mount = self:hasMount()
+		if mount then mount:removeEffect(mount.EFF_TWIN_THREAT_ADJACENT, true) end
+	end,
+}
+
+newEffect{
+	name = "EFF_TWIN_THREAT_MID",
+	desc = "Twin Threat: Mid Range", image = "talents/together_forever.png",
+	long_desc = function(self, eff) return ("Mount and rider .") end,
+	type = "other",
+	decrease = 0, no_remove = true,
+	subtype = { tactic=true },
+	status = "beneficial",
+	parameters = {move=15, allies_pct = 5},
+	activate = function(self, eff)
+		removeOtherTwinThreatEffects(self)
+		self:effectTemporaryValue(eff, "movement_speed", eff.move)
+		self:effectTemporaryValue(eff, "regen_loyalty", eff.regen)
+		local mount = self:hasMount()
+		mount:setEffect(mount.EFF_TWIN_THREAT_ADJACENT, 2, {heal=eff.heal})
+	end,
+}
+
+newEffect{
+	name = "EFF_TWIN_THREAT_LONG",
+	desc = "Twin Threat: Long Range", image = "talents/together_forever.png",
+	long_desc = function(self, eff) return ("Mount and rider .") end,
+	type = "other",
+	decrease = 0, no_remove = true,
+	subtype = { tactic=true },
+	status = "beneficial",
+	parameters = {heal=15, allies_pct = 5},
+	activate = function(self, eff)
+		removeOtherTwinThreatEffects(self)
+	end,
+}
