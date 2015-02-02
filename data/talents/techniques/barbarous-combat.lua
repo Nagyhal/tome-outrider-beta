@@ -78,7 +78,7 @@ newTalent{
 newTalent{
 	name = "Master of Brutality",
 	type = {"technique/barbarous-combat", 2},
-	require = mnt_strcun_req3,
+	require = mnt_strcun_req2,
 	points = 5,
 	mode = "sustained",
 	cooldown = 30,
@@ -177,5 +177,26 @@ newTalent{
 
 			If you fail to slay your foe, however, then it continues to bleed for %d damage over 5 turns as it struggles to recover from your wicked wound.]]):
 			format(dam, dur, radius, bleed)
+	end,
+}
+
+newTalent{
+	name = "Suggest this Talent!",
+	short_name = "T_UNNAMED_OUTRIDER_TALENT",
+	type = {"technique/barbarous-combat", 4},
+	mode = "passive",
+	require = function(self, t)
+		local ret = mnt_strcun_req4
+		ret.special = {fct = function(self, t) return false end,
+			desc="I'll need an awesome suggeston to unlock this talent!"}
+		return ret
+	end,
+	points = 5,
+	info = function(self, t)
+		return ([[Outrider is a class in the very early phases of implementation and testing!
+
+			Throughout its development, many changes have been made to the base idea. Because of talents moving out of the original trees, we have many new trees (either playable now or in the works!)
+
+			But this does mean certain talent categories have lost their original progression. What should I place here? You help decide! Send me your ideas, and I fall in love with any of them, they'll go in! Until then, don't try and put any points into this placeholder talent!]])
 	end,
 }
