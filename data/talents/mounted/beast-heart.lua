@@ -102,6 +102,7 @@ newTalent{
 		return true
 	end,
 	removeAllEffects= function(self, t, exclude)
+		if not exclude then exclude = {} end
 		for _, eff_id in pairs(t.effects) do
 			if not exclude[eff_id] then
 				self:removeEffect(eff_id, nil, true)
@@ -110,7 +111,7 @@ newTalent{
 	end,
 	callbackOnAct = function(self, t)
 		local mount = self:hasMount()
-		if not mount then self:forceUseTalent(t.id, {no_energy=true}) end
+		if not mount then self:forceUseTalent(t.id, {no_energy=true}) return nil end
 		local dist = core.fov.distance(self.x, self.y, mount.x, mount.y)
 		if dist == 0 then
 			if not self:hasEffect(t.effects.mounted) then
@@ -152,7 +153,7 @@ newTalent{
 
 			When you and your beast fight at mid range (up to 5 squares apart from one another) you are ready to exploit any opening, gaining %d%% movement speed and %d%% reduced cooldowns in any techniques talent tree.
 
-			When you and your beast fight at long range (up to 10 squares apart) you pay close attention to one anothers' stratagems. All attacks that hit enemies within range 1 of your beast will regenerate its loyalty by %d, Teamwork talents and Set-Up Shot will recharge twice as fast, and when your beast falls to %d%% of its total life, you may hasten to its side using a desperate dash.]]):
+			When you and your beast fight at long range (up to 10 squares apart) you pay close attention to one anothers' stratagems. All attacks that hit enemies within range 1 of your beast will regenerate its Loyalty by %d, and when your beast falls to %d%% of its total life, you may hasten to its side using a desperate dash.]]):
 			format(chance, heal_mod, regen, move, cooldown_pct, regen_on_shot, life_total)
 	end,
 	getChance = function(self, t) return self:combatTalentScale(t, 15, 35) end,
