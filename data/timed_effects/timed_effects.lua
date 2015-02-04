@@ -628,3 +628,45 @@ newEffect{
 		if pet then pet:removeEffect(pet.EFF_TWIN_THREAT_LONG, true) end
 	end,
 }
+
+newEffect{
+	name = "BEASTMASTER_MARK",
+	desc = "Beastmaster's Mark",
+	long_desc = function(self, eff) return ("The beast is filled with a thirst for blood, gaining a %d%% bonus to movement and attack speed, but losing %d%% loyalty each turn it does not move toward or attack %s"):format(eff.target.name) end,
+	type = "mental",
+	subtype = { tactic=true },
+	status = "beneficial",
+	parameters = { target, speed=1.2, loyalty=5 },
+	activate = function(self, eff)
+		checkEffectHasParameter(self, eff, "target")
+		self:setTarget(eff.target)
+		if not self.owner then self:removeEffect(self.EFF_BEASTMASTER_MARK, true) end
+		self:effectTemporaryValue(eff, "movement_speed", eff.speed)
+		self:effectTemporaryValue(eff, "combat_physspeed", eff.speed)
+	end,
+	callbackOnAct = function(self, eff)
+		if not eff.target or eff.target.dead or game.level.map:hasEntity(eff.target) then
+			self:removeEffect(self.EFF_BEASTMASTER_MARK, true)
+		end
+		self:setTarget(eff.target)
+		self.turn_procs.beastmaster_mark_loyalty_loss = true
+		game:onTickEnd(function()
+			if self.turn_procs.beastmaster_mark_loyalty_loss and self.owner then
+				self.owner:incLoyalty(-eff.loyalty)
+				self:logCombat(self.owner, "#Source#'s loyalty to #target# decreases as it is held back from its target!")
+			end
+		end)
+	end,
+	callbackOnMeleeAttack = function(self, eff, target, hitted, crit, weapon, damtype, mult, dam)
+		if target == eff.target then self.turn_procs.beastmaster_mark_loyalty_loss = false end
+	end,
+	callbackOnMove = function(self, eff, moved, force, ox, oy, x, y)
+		if moved then
+			local old_dist = core.fov.distance(ox, oy, target.x, target.y)
+			local dist = core.fov.distance(self.x, self.y, target.x, target.y)
+			if dist < old_dist then 
+				self.turn_procs.beastmaster_mark_loyalty_loss = false
+			end
+		end
+	end,
+}
