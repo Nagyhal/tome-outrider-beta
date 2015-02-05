@@ -613,7 +613,7 @@ newEffect{
 		removeOtherTwinThreatEffects(self, eff)	
 		local mount = self:hasMount()
 		if mount then 
-			-- self:learnTalent(self.T_TWIN_THREAT_DASH)
+			self:learnTalent(self.T_TWIN_THREAT_DASH, true, 1)
 			mount:setEffect(mount.EFF_TWIN_THREAT_LONG, 2, {move=eff.move, cooldown=eff.cooldown}) end
 	end,
 	callbackOnArcheryAttack = function(self, eff, target, hitted, crit, weapon, ammo, damtype, mult, dam)
@@ -623,7 +623,7 @@ newEffect{
 		end
 	end,
 	deactivate = function(self, eff)
-		-- self:unlearnTalent(self.TWIN_THREAT_DASH)
+		self:unlearnTalent(self.T_TWIN_THREAT_DASH)
 		local pet = self:hasMount()
 		if pet then pet:removeEffect(pet.EFF_TWIN_THREAT_LONG, true) end
 	end,

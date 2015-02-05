@@ -164,3 +164,70 @@ newTalent{
 	getRegenOnShot = function(self, t) return self:combatTalentScale(t, 1.5, 3.5) end,
 	getLifeTotal = function(self, t) return self:combatTalentLimit(t, 50, 10, 35) end,
 }
+
+newTalent{
+	name = "Twin Hearts",
+	short_name = "TWIN_THREAT_DASH",
+	type = {"mounted/mounted-base", 1},
+	points = 1,
+	cooldown = 6,
+	range = 10,
+	no_energy=true,
+	getHealMod = function(self, t) return math.round(self:combatTalentScale(t, 5, 20), 5) end,
+	getDam = function(self, t) return self:combatTalentScale(1, 1.2, 1.75) end,
+	getRegen = function(self, t) return 1 + self:getTalentLevel(t) end,
+	getThreshold = function(self,t) return 10 + self:getTalentLevel(t) * 2.5 end,
+	on_pre_use = function(self, t, silent)
+		local ret = preCheckHasMountPresent(self, t, silent)
+		if ret then 
+			local t2 = self:getTalentFromId(self.T_TWIN_THREAT)
+			local mount = self:hasMount()
+			if mount.life > mount.max_life*t2.getLifeTotal(self, t)/100 then
+				if not silent then 
+					game.logPlayer(self, "Your mount must be close to death before you can use Twin Hearts!")
+				end
+				return false
+			end
+		end
+		return ret
+	end,
+	action = function(self, t)
+		local pet = self:hasMount()
+		--TODO: This will be improved once target filtering is properly sorted out.
+		--(What's up with that anyway? I just want to restrict targeting to a radius 1-ball of squares some distance from the user)
+		local tg = {type="hit", range=10}
+		local x, y, target = self:getTarget(tg)
+		if not x or not y or target then return nil end
+		if core.fov.distance(self.x, self.y, x, y) > self:getTalentRange(t) then return nil end
+		if core.fov.distance(pet.x, pet.y, x, y) > 1 then return nil end
+
+		local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", self) end
+		local linestep = self:lineFOV(x, y, block_actor)
+		
+		local tx, ty, lx, ly, is_corner_blocked 
+		repeat  -- make sure each tile is passable
+			tx, ty = lx, ly
+			lx, ly, is_corner_blocked = linestep:step()
+		until is_corner_blocked or not lx or not ly or game.level.map:checkAllEntities(lx, ly, "block_move", self)
+		if not tx or core.fov.distance(self.x, self.y, tx, ty) < 1 then
+			game.logPlayer(self, "You are too close to build up momentum!")
+			return
+		end
+		if not tx or not ty or core.fov.distance(x, y, tx, ty) > 1 then return nil end
+
+		local ox, oy = self.x, self.y
+		self:move(tx, ty, true)
+		if config.settings.tome.smooth_move > 0 then
+			self:resetMoveAnim()
+			self:setMoveAnim(ox, oy, 8, 5)
+		end
+
+		return true
+	end,
+	info = function(self, t)
+		local t2 = self:getTalentFromId(self.T_TWIN_THREAT)
+		local life_total = t2.getLifeTotal(self, t)
+		return ([[Fighting at long range, your Twin Threat allows you to dash into a space adjacent to your mount as an instant action, but only when it is at less than %d%% of its max health!]]):
+		format(life_total)
+	end
+}
