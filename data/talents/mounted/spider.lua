@@ -460,3 +460,48 @@ newTalent{
 	getPinChance = function(self,t) return self:combatTalentLimit(t, 100, 25, 10) end,
 	-- getDur = function(self, t) return math.floor(self:combatTalentScale(t, 2, 6)) end,
 }
+
+newTalent{
+	name = "Vestigial Magicks",
+	type = {"spider/weaver-of-woes", 2},
+	points = 2,
+	mode = "passive",
+	radius = function(self, t) return self:combatTalentLimit(5, 1, 3) end,
+	passives = function(self, t, p)
+		local Stats = require "engine.interface.ActorStats"
+		self:talentTemporaryValue(p, "inc_stats",  {[Stats.STAT_STR]=t.getMag(self, t)})
+		self:talentTemporaryValue(p, "combat_spellresist", t.getSave(self, t))
+		self:talentTemporaryValue(p, "resists", {
+			blight=t.getRes(self, t),
+			arcane=t.getRes(self, t)
+			})
+	end,
+	doDamage = function(self, t, target)
+		DamageType:get(DamageType.ARCANE).projector(self, target.x, target.y, DamageType.ARCANE, t.getDam(self, t))
+	end,
+	callbackOnMeleeHit = function(self, t, src, dam)
+		t.doDamage(self, t, src)
+	end,
+	callbackOnMeleeMiss = function(self, t, src, dam)
+		t.doDamage(self, t, src)
+	end,
+	info = function(self, t)
+		local mag = t.getMag(self, t)
+		local save = t.getSpellSave(self, t)
+		local res = t.getRes(self, t)
+		local dam = t2.getPerception(mount, t2)
+		return ([[Increase your Magic by %d, spell save by %d, and arcane, temporal blight and darkness resistance by %d%%.
+
+			Using runes will grant a single-turn aura that deals %d arcane and darkness damage to attackers within a %d radius, scaling with your spellpower as well as your owner's spellpower.]]):
+		format(mag, save, res)
+	end,
+	getMag = function(self, t) return self:combatTalentScale(t, 3, 15) end,
+	getSave = function(self, t) return self:combatTalentScale(t, 5, 25) end,
+	getRes = function(self, t) return self:combatTalentScale(t, 5, 25) end,
+	getDam = function(self, t) 
+		local spell_factor = self:combatSpellpower()
+		local owner = self.owner
+		if owner then spell_factor = spell_factor + owner:combatSpellpower() end
+		return self:combatTalentSpellDamage(t, 30, 120, spell_factor/2) --The last argument overrides our spellpower.
+	end,
+}

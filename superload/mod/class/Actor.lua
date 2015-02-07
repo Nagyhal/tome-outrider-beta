@@ -237,6 +237,18 @@ function  _M:projected(tx, ty, who, t, x, y, damtype, dam, particles)
 		end
 	end
 	self.impunity_avoid_grids = nil
+	--Handle Vestigial Magicks
+	local cur_t = who.__talent_running
+	if cur_t and dam > 0 and self:hasEffect(self.EFF_VESTIGIAL_MAGICKS) then
+		if not self.turn_procs.vestigial_magicks_targets then
+			self.turn_procs.vestigial_magicks_targets = {}
+		end
+		local uids = self.turn_procs.vestigial_magicks_targets 
+		uids[target.uid] = uids[target.uid] or {}
+		if not uids[target.uid][cur] then
+			self:callTalent(self.T_VESTIGIAL_MAGICKS, "doDamage", src)
+		end
+	end
 	return base_projected(self, tx, ty, who, t, x, y, damtype, dam, particles) or ret
 end
 

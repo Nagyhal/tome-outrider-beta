@@ -670,3 +670,23 @@ newEffect{
 		end
 	end,
 }
+
+newEffect{
+	name = "VESTIGIAL_MAGICKS",
+	desc = "Vestigial Magicks",
+	long_desc = function(self, eff) return ("The spider's residual magic energies have been awoken. Attackers will suffer %d arcane damage."):format(eff.power) end,
+	type = "spell",
+	subtype = { arcane=true },
+	status = "beneficial",
+	parameters = { power=20 },
+	on_gain = function(self, err) return "The vestigial magicks of #Target# have awoken!", "+Vestigial Magicks" end,
+	on_lose = function(self, err) return "#Target#'s vestigial magic energies have subsided", "-Vestigial Magicks" end,
+	activate = function(self, eff)
+	end,
+	callbackOnMeleeHit = function(self, eff, src, dam)
+		self:callTalent(self.T_VESTIGIAL_MAGICKS, "doDamage", src)
+	end,
+	callbackOnMeleeMiss = function(self, eff, src, dam)
+		self:callTalent(self.T_VESTIGIAL_MAGICKS, "doDamage", src)
+	end,
+}
