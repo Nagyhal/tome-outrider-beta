@@ -405,7 +405,7 @@ newTalent{
 
 newTalent{
 	name = "Web Ambush",
-	type = {"spider/weaver-of-woes", 2},
+	type = {"spider/weaver-of-woes", 1},
 	require = cuns_req1,
 	points = 5,
 	cooldown = function(self, t) return self:combatTalentLimit(t, 8, 10, 12) end,
@@ -464,7 +464,7 @@ newTalent{
 newTalent{
 	name = "Vestigial Magicks",
 	type = {"spider/weaver-of-woes", 2},
-	points = 2,
+	points = 5,
 	mode = "passive",
 	radius = function(self, t) return self:combatTalentLimit(5, 1, 3) end,
 	passives = function(self, t, p)
@@ -478,12 +478,6 @@ newTalent{
 	end,
 	doDamage = function(self, t, target)
 		DamageType:get(DamageType.ARCANE).projector(self, target.x, target.y, DamageType.ARCANE, t.getDam(self, t))
-	end,
-	callbackOnMeleeHit = function(self, t, src, dam)
-		t.doDamage(self, t, src)
-	end,
-	callbackOnMeleeMiss = function(self, t, src, dam)
-		t.doDamage(self, t, src)
 	end,
 	info = function(self, t)
 		local mag = t.getMag(self, t)
@@ -504,4 +498,45 @@ newTalent{
 		if owner then spell_factor = spell_factor + owner:combatSpellpower() end
 		return self:combatTalentSpellDamage(t, 30, 120, spell_factor/2) --The last argument overrides our spellpower.
 	end,
+}
+
+newTalent{
+	name = "Cobweb",
+	type = {"spider/weaver-of-woes",3},
+	require = spells_req3,
+	points = 5,
+	random_ego = "attack",
+	cooldown = 30,
+	tactical = { DISABLE = {slow=2, pin=1} },
+	target = function(self, t)
+		return {type="ball", range=0, radius=self:getTalentRadius(t)}
+	end,
+	radius = function(self, t) return self:combatTalentScale(t, 2, 3) end,
+	action = function(self, t)
+		local eff = game.level.map:addEffect(self,
+			self.x, self.y, t.getDuration(self, t),
+			DamageType.COBWEB, {slow_power=t.getSlowPower(self, t), chance=t.getPinChance(self, t)},
+			self:getTalentRadius(t),
+			5, nil,
+			{type="ice_vapour"},
+			nil, self:spellFriendlyFire()
+		)
+		local x, y = util.findFreeGridsWithin(eff.grids, nil, nil, true, engine.Map.ACTOR)
+		if self:canMove(x, y) then self:move(x, y, true) end
+		game:playSoundNear(self, "talents/cloud")
+		return true
+	end,
+	info = function(self, t)
+		local radius = self:getTalentRadius(self, t)
+		local slow_power =  t.getSlowPower(self, t)
+		local chance = t.getPinChance(self, t)
+		return ([[Weave a great web that spans a radius %d area around you.
+
+			Enemies entering the web will be slowed by %d%%. Furthermore, any enemy attacking you from within the web suffers a %d%% chance to pinned.
+
+			Completing your web will move you to a random square within the radius.]]):
+		format(radius, slow_power, chance)
+	end,
+	getSlowPower = function(self, t) return self:combatTalentIntervalDamage(t, "cun", 30, 75) end,
+	getPinChance = function(self, t) return self:combatTalentIntervalDamage(t, "cun", 30, 50) end,
 }
