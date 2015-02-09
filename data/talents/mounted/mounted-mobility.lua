@@ -124,8 +124,6 @@ newTalent{
 		return ([[Riding your mount, you charge to a vacant point up to %d squares away, trampling over enemies brutally as you do so, your mount dealing %d%% damage to all who those who dare obstruct you.]]):format(self:getTalentRange(t), t.getDamageMultiplier(self, t)*100) end,
 }
 
--- Goad/ 25 LOY, cooldown 16
--- For 3+2*TL turns, your mount's movement speed is increased by 50 +TL*10 %. You may be riding or adjacent to your mount to achieve this effect.
 newTalent{
 	name = "Goad",
 	type = {"mounted/mounted-mobility", 2},
@@ -137,13 +135,10 @@ newTalent{
 	getGoadSpeed = function (self, t) return self:combatTalentScale(t, 0.2, 0.65, 0.85) end,
 	tactical = { BUFF = 2, CLOSEIN = 2, ESCAPE = 2 },
 	on_pre_use = function(self, t, silent)
-		return preCheckHasMountInRange(self, t, silent, 1)
+		local ret = preCheckHasMountInRange(self, t, silent, 1)
+		return ret
 	end,
 	action = function(self, t)
-		--TODO: Create hasMount method
-		if not self:isMounted() then game.logPlayer(self, "You cannot use Goad without a mount!") return nil end
-		local mount = self:getMount()
-		if not self:isMounted() and math.floor(core.fov.distance(self.x, self.y, mount.x, mount.y)) > 1 then game.logPlayer(self, "You cannot Goad your mount from here.") return nil end
 		self.mount:setEffect(self.EFF_SPEED, 5, {power=t.getGoadSpeed(self, t)})
 		return true
 	end,
@@ -163,7 +158,6 @@ newTalent{
 	direct_hit = true,
 	getDamage = function(self, t) return self:combatTalentWeaponDamage(t, 0.9, 1.4) end,
 	getDamageMultiplier = function(self, t) return self:combatTalentScale(t, 1.25, 1.75) end,
-	-- getDuration = function(self, t) return math.floor(self:combatTalentScale(t, 4, 8)) end,
 	getPinDuration = function(self, t) return math.floor(3 + 0.5*self:getTalentLevel(t)) end, 
 	range = function(self, t) return math.floor(2.5 + 0.7*self:getTalentLevel(t)) end,
 	requires_target = true,
@@ -178,6 +172,7 @@ newTalent{
 		local x, y, target = self:getTarget(tg)
 		if not x or not y then return nil end
 
+		local ox, oy = self.x, self.y
 		if target then
 			local fx, fy = util.findFreeGrid(x, y, 1, true, {[engine.Map.ACTOR]=true})
 			if not fx then
@@ -188,10 +183,14 @@ newTalent{
 			local feat = game.level.map(x, y, engine.Map.TERRAIN); if feat and feat:check(block_move) then return nil end
 			mover:move(x, y, true)
 		end
+		self:resetMoveAnim()
+		self:setMoveAnim(ox, oy, 8, 5, 8, 3)
 		if target then
 			if core.fov.distance(mount.x, mount.y, x, y) > 1 then return true end
-			mount:attackTarget(target, nil, t.getDamage(self, t), true)
-			target:setEffect(target.EFF_PINNED, t.getPinDuration(self, t), {apply_power=mount:combatPhysicalpower(),  apply_save="combatPhysicalResist"})
+			local hit = mount:attackTarget(target, nil, t.getDamage(self, t), true)
+			if hit and target:canBe("pin")then
+				target:setEffect(target.EFF_PINNED, t.getPinDuration(self, t), {apply_power=mount:combatPhysicalpower(),  apply_save="combatPhysicalResist"})
+			end
 		end
 		return true
 	end,

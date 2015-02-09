@@ -58,7 +58,7 @@ function _M:tickLevel(level)
 						e.energyBase = e.energyBase + self.energy_per_tick
 					end
 					if e.energyBase >= self.energy_to_act then
-						if e.rider then e:mountActBase(self) else e:actBase(self) end
+						if e.rider and e.mountActBase then e:mountActBase(self) else e:actBase(self) end
 					end
 				end
 
@@ -68,7 +68,7 @@ function _M:tickLevel(level)
 				end
 				if e.energy.value >= self.energy_to_act then
 					e.energy.used = false
-					if e.rider then e:mountAct(self) else e:act(self) end
+					if e.rider and e.mountAct then e:mountAct(self) else e:act(self) end
 				end
 	--			print(">ENERGY", e.name, e.uid, "::", e.energy.value, self.paused, "::", e.player)
 			end
