@@ -120,10 +120,12 @@ function _M:dismountTarget(target, x, y)
 		x, y = util.findFreeGrid(self.x, self.y, 10, true, {[engine.Map.ACTOR]=true})
 	end
 	if x then
-		game.zone:addEntity(game.level, target, "actor", target.x, target.y)
+		game.level:addEntity(target)
+		-- game.zone:addEntity(game.level, target, "actor", target.x, target.y)
 		local ox, oy = self.x, self.y
 		local ok = self:move(x, y, true)
-		game.zone:addEntity(game.level, self, "actor", self.x, self.y)
+		game.level:addEntity(self)
+		-- game.zone:addEntity(game.level, self, "actor", self.x, self.y)
 		if not ok then return end
 
 		game.logSeen(self, "%s dismounts from %s", self.name:capitalize(), target.name:capitalize())
