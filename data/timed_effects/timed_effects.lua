@@ -690,3 +690,17 @@ newEffect{
 		self:callTalent(self.T_VESTIGIAL_MAGICKS, "doDamage", src)
 	end,
 }
+
+newEffect{
+	name = "CATCH",
+	desc = "Catch: Readied!",
+	long_desc = function(self, eff) return "The target, having recently slain an adjacent enemy with a critical hit, is ready to hurl its severed remnants back at its foes." end,
+	type = "spell",
+	subtype = { tactic=true },
+	status = "beneficial",
+	parameters = {},
+	on_gain = function(self, err) return "#Target# is ready to use Catch!", "+Catch! (readied)" end,
+	on_lose = function(self, err) return "#Target# is ready to use Catch!", "+Catch! (readied)" end,
+	activate = function(self, eff)
+	end,
+}

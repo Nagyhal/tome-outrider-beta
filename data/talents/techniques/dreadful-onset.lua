@@ -205,25 +205,103 @@ newTalent{
 	require = mnt_cun_req4,
 	tactical = { DISABLE = { fear = 4 } },
 	range = function (self, t) return math.floor(self:getTalentLevel(t) +4)  end,
-	getDuration = function(self, t) return 3 + math.ceil(self:getTalentLevel(t)) end,
-	getUsageWindow = function(self, t) return 2 + math.floor(self:getTalentLevel(t)) end,
 	requires_target = true,
 	target = function(self, t)
 		return {type="ball", radius=1, range=self:getTalentRange(t)}
+	end,
+	on_learn = function(self, t)
+		if not self:knowTalent(self.T_CATCH_PASSIVE) then self:learnTalent(self.T_CATCH_PASSIVE, true) end
+	end,
+	on_unlearn = function(self, t)
+		if self:getTalentLevel(t) == 0 and self:knowTalent(self.T_CATCH_PASSIVE) then self:unlearnTalentFull(self.T_CATCH_PASSIVE) end
+	end,
+	on_pre_use = function(self, t, silent)
+		if not self:hasEffect(self.EFF_CATCH) then
+			if not silent then
+				game.logPlayer(self, "You must have recently slain an aenemy wih a critical hit to use Catch!")
+			end
+			return false
+		end
+		return true
+	end,
+	callbackOnKill = function(self, t, target, death_note)
+		if not self.turn_procs and self.turn_procs.is_crit then return end
+		if core.fov.distance(target.x, target.y, self.x, self.y)>1 then return end
+		self:setEffect(self.EFF_CATCH, t.getUsageWindow(self, t), {})
 	end,
 	action = function(self, t)
 		local tg = {type="hit", range=self:getTalentRange(t)}
 		local x, y, target = self:getTarget(tg)
 		if not x or not y or not target then return nil end
 			if target:canBe("confusion") then
-				target:setEffect(target.EFF_CONFUSED, t.getDuration(self, t), {power=30 + self:getCun(70), apply_power=self:combatAttack()})
+				target:setEffect(target.EFF_CONFUSED, t.getDur(self, t), {power=30 + self:getCun(70), apply_power=self:combatAttack()})
 			else
 				game.logSeen(target, "%s resists the terror!", target.name:capitalize())
 			end
 		return true
 	end,
 	info = function(self, t)
-		return ([[Hurl the severed head of your enemies' comrade back at them, causing them to gape in terror and flee for %d turns. You may use this talent only after killing an adjacent enemy (up to %d turns afterward), and then only with a critical hit.]]):
-		format(t.getDuration(self, t), t.getUsageWindow(self, t))
+		local dur = t.getDur(self, t)
+		local window = t.getUsageWindow(self, t)
+		local passive_cooldown = t.getPassiveCooldown(self, t)
+		local life_pct = t.getLifePct(self, t)
+		local crit_bonus = t.getCritBonus(self, t)
+		return ([[Hurl the severed head of your enemies' comrade back at them, causing them to gape in terror and flee for %d turns. You may use this talent only after killing an adjacent enemy (up to %d turns afterward), and then only with a critical hit.
+
+			Levelling Catch also gives you a passive chance to perform a swift execution strike when adjacent to an enemy with less than %d%% health (cooldown %d). You must use a 1-handed weapon for this, but if one is in your off-slot, you will use that instead of your currently equipped weaponry. This strike will have a critical chance bonus of %d%%.]]):
+		format(dur, window, life_pct, passive_cooldown, crit_bonus)
 	end,
+	getDur = function(self, t) return self:combatTalentScale(t, 4,  7) end,
+	getUsageWindow = function(self, t) return self:combatTalentLimit(t, 5, 2, 3.5) end,
+	getPassiveCooldown = function(self, t) return self:combatTalentLimit(t, 6, 12, 8) end,
+	getLifePct = function(self, t) return self:combatTalentLimit(t, 30, 10, 20) end,
+	getCritBonus = function(self, t) return self:combatTalentScale(t, 15, 30) end,
+}
+
+newTalent{
+	name = "Catch! (Passive)",
+	short_name = "CATCH_PASSIVE",
+	type = {"technique/other", 1},
+	hide = "always",
+	points = 1,
+	cooldown = function(self, t) return self:callTalent(self.T_CATCH, "getPassiveCooldown")end,
+	callbackOnAct = function(self, t)
+		if self:isTalentCoolingDown(t.id) then return false end
+		--I'm only doing it as callbackOnAct so I can use this lazy methodology :P
+		--(fov.actors_dist will not work if it isn't the user's turn.)
+		local foes = {}
+		for i = 1, #self.fov.actors_dist do
+			act = self.fov.actors_dist[i]
+			-- Possible bug with this formula
+			if act and game.level:hasEntity(act) and self:reactionToward(act) < 0 and self:canSee(act) and act["__sqdist"] == 1 and act.life <= act.max_life*t.getLifePct(self, t)/100 then
+				foes[#foes+1] = act
+			end
+		end
+		if #foes>=1 then
+			local offhand, choice
+			local mh1 = self.inven[self.INVEN_MAINHAND] and self.inven[self.INVEN_MAINHAND][1]
+			local oh1 = self.inven[self.INVEN_OFFHAND] and self.inven[self.INVEN_OFFHAND][1]
+			local mh2 = self.inven[self.INVEN_QS_MAINHAND] and self.inven[self.INVEN_QS_MAINHAND][1]
+			local oh2 = self.inven[self.INVEN_QS_OFFHAND] and self.inven[self.INVEN_QS_OFFHAND][1]
+			for _, weap in ipairs({mh1, mh2, oh1, oh2}) do
+				if weap and not weapon.twohanded and not weapon.archery then
+					choice = weap
+					-- if weap == oh1 or 
+				end
+			end
+			local target = rng.table(foes)
+			local crit_bonus = t.getCritBonus(self, t)
+			-- if offhand then
+			-- 	self:quickSwitchWeapons(true, false)
+			-- end
+			self.combat_physcrit = self.combat_physcrit+crit_bonus
+			self:attackTargetWith(target, weap)
+			self.combat_physcrit = self.combat_physcrit-crit_bonus
+			-- if offhand then
+			-- 	self:quickSwitchWeapons(true, false)
+			-- end
+			self:startTalentCooldown(t.id)
+		end
+	end,
+	info = function(self, t) return [[Handles passive ability of Catch!]] end,
 }
