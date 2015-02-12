@@ -74,11 +74,6 @@ local mounts_list = {
 		resolvers.nice_tile{image="invis.png", color=colors.UMBER, image="npc/spiderkin_spider_giant_spider.png"},
 		level_range = {1, nil}, exp_worth = 0,
 		talents_types = {
-			["wolf/tenacity"] = true,
-			["wolf/pack-hunter"] = true,
-		},
-		gainExp = function() end,
-		talents_types = {
 			["spider/stalker-in-the-shadows"] = true,
 		},
 		unused_stats = 0,
@@ -89,6 +84,42 @@ local mounts_list = {
 			loyalty = 90,
 			share_damage = 0.5
 		},
+	},
+	cold_drake = {
+		base = "BASE_NPC_COLD_DRAKE",
+		type="dragon", subtype="cold",
+		name = "cold drake",
+		display="D", color=colors.SLATE,  image = "npc/dragon_cold_cold_drake.png",
+		desc = [[A mature cold drake, armed with deadly breath and nasty claws.]],
+		rank = 1,
+		size_category = 2,
+		ai = "tactical", 
+		ai_state = { talent_in=2, ally_compassion=0,  ai_move="move_complex"},
+		ai_tactic = resolvers.tactic("melee"),
+		life_rating = 11,
+		max_life = 105,
+		combat_armor = 12, combat_def = 0,
+		combat = { dam=resolvers.levelup(resolvers.rngavg(25,70), 1, 1.2), atk=resolvers.rngavg(25,70), apr=25, dammod={str=1.1}, sound={"creatures/cold_drake/attack%d",1,2, vol=1} },
+		on_melee_hit = {[DamageType.COLD]=resolvers.mbonus(15, 10)},
+		lite = 1,
+		level_range = {1, nil}, exp_worth = 1,
+
+		sound_moam = {"creatures/cold_drake/on_hit%d", 1, 2, vol=1},
+		sound_die = {"creatures/cold_drake/death%d", 1, 1, vol=1},
+
+		talents_types = {
+			["drake/dragonflight"] = true,
+			["wild-gift/cold-drake"] = true,
+		},
+		unused_stats = 0,
+		unused_talents = 0,
+		unused_generics = 0,
+		unused_talents_types = 0,
+		mount_data = {
+			loyalty = 100,
+			share_damage = 0.4
+		},
+		max_inscriptions =1
 	}
 }
 
@@ -101,7 +132,7 @@ local function makeBestialMount(self, lev)
 	local tot = 0
 	local list = {}
 	for k, e in pairs(chances) do for i = 1, e do list[#list+1] = k end tot = tot + e end
-	local m = require "mod.class.NPC".new(mounts_list.wolf)
+	local m = require "mod.class.NPC".new(mounts_list.cold_drake)
 	return m
 end
 
@@ -264,14 +295,20 @@ newTalent{
 				mountSetupSummon(self, mount, coords[i][1], coords[i][2], false)
 				mount:setEffect(mount.EFF_WILD_CHALLENGER, 2, {src=self})
 			else
+				game.log(tostring(resolvers.current_level))
 				if not coords[i] then return end
-				local filter = {
-					base_list="mod.class.NPC:data/general/npcs/canine.lua",
+				local base_list=require("mod.class.NPC"):loadList("data/general/npcs/cold-drake.lua")
+				base_list[3] = nil
+				base_list[4] = nil
+				local filter = {base_list=base_list
 				}
-				local e = game.zone:makeEntity(game.level, "actor", filter, true)
+
+				local e = game.zone:makeEntity(game.level, "actor", filter)
+				e.make_escort = nil
 				e.exp_worth=0
 				game.zone:addEntity(game.level, e, "actor", coords[i][1], coords[i][2])
 			end
+
 			first=false
 		end
 	end,
@@ -312,7 +349,6 @@ newTalent{
 		format(restore, max_loyalty, max_dist)
 	end,
 }
-
 
 newTalent{
 	name = "Feral Affinity",
