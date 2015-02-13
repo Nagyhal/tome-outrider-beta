@@ -700,7 +700,24 @@ newEffect{
 	status = "beneficial",
 	parameters = {},
 	on_gain = function(self, err) return "#Target# is ready to use Catch!", "+Catch! (readied)" end,
-	on_lose = function(self, err) return "#Target# is ready to use Catch!", "+Catch! (readied)" end,
+	on_lose = function(self, err) return "#Target# is no longer ready to use Catch!", "+Catch! (readied)" end,
 	activate = function(self, eff)
 	end,
+}
+
+newEffect{
+	name = "AERIAL_SUPREMACY",
+	desc = "Aerial Supremacy",
+	long_desc = function(self, eff) return ("The drake gains a bonus of %d to attack, defense, and physical save."):format(eff.buff) end,
+	type = "physical",
+	subtype = { charge=true, tactic=true },
+	status = "beneficial",
+	parameters = { buff=7},
+	on_gain = function(self, eff) return "#Target# soars aloft!!", "+Aerial Supremacy" end,
+	on_lose = function(self, eff) return "#Target# returns to the ground.", "-Aerial Supremacy" end,
+	activate = function(self, eff, p)
+		self:effectTemporaryValue(eff, "combat_atk", eff.buff)
+		self:effectTemporaryValue(eff, "combat_def", eff.buff)
+		self:effectTemporaryValue(eff, "combat_physresist", eff.buff)
+	end
 }
