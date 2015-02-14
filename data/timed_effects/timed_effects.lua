@@ -721,3 +721,53 @@ newEffect{
 		self:effectTemporaryValue(eff, "combat_physresist", eff.buff)
 	end
 }
+
+newEffect{
+	name = "LOOSE_IN_THE_SADDLE",
+	desc = "Loose in the Saddle",
+	long_desc = function(self, eff) return ("The rider moves with an additional %d%% movement speed, but any action other than moving, mounting or dismounting will break the effect."):format(eff.speed*100) end,
+	type = "physical",
+	subtype = { speed=true, tactic=true },
+	status = "beneficial",
+	parameters = { speed=4},
+	on_gain = function(self, eff) return "#Target# shows 'em how to ride loose in the saddle!!", "+Loose In The Saddle" end,
+	on_lose = function(self, eff) return "#Target# moves normally", "-Loose In The Saddle" end,
+	activate = function(self, eff)
+		self:effectTemporaryValue(eff, "movement_speed", eff.speed)
+	end,
+	callbackOnTalentPost = function(self, t, ab, ret, silent)
+		if ab.id == "T_DISMOUNT" or ab.id == "T_MOUNT" then return end
+		if self:hasEffect(self.EFF_LOOSE_IN_THE_SADDLE) then
+			self:removeEffect(self.EFF_LOOSE_IN_THE_SADDLE)
+		end
+	end,
+	callbackOnMeleeAttack = function(self, t, target, hitted, crit, weapon, damtype, mult, dam)
+		if self:hasEffect(self.EFF_LOOSE_IN_THE_SADDLE) then
+			self:removeEffect(self.EFF_LOOSE_IN_THE_SADDLE)
+		end
+	end,
+}
+
+newEffect{
+	name = "LOOSE_IN_THE_SADDLE_SHARED",
+	desc = "Loose in the Saddle",
+	long_desc = function(self, eff) return ("The rider moves with an additional %d%% movement speed, but any action other than moving, mounting or dismounting will break the effect."):format(eff.speed) end,
+	type = "other",
+	no_remove = true,
+	decrease = 0,
+	subtype = { tactic=true },
+	status = "beneficial",
+	parameters = { reduction=.35},
+	activate = function(self, eff)
+	end,
+	callbackOnTakeDamage = function(self, eff, src, x, y, type, dam, state)
+		local rider = self.rider; if not rider then return end
+		local p = rider:isTalentActive(rider.T_LOOSE_IN_THE_SADDLE); if not p then return end
+		if dam>self.max_life*.15 then
+			local t2 = rider:getTalentFromId(rider.T_LOOSE_IN_THE_SADDLE)
+			dam = dam - dam*p.reduction
+			rider:setEffect(rider.EFF_LOOSE_IN_THE_SADDLE, 2, {speed=t2.getSpeed(self, t)/100})
+			rider:forceUseTalent(rider.T_LOOSE_IN_THE_SADDLE, {ignore_energy=true})
+		end
+		return {dam=dam}
+	end,}
