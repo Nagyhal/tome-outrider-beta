@@ -241,7 +241,8 @@ function  _M:projected(tx, ty, who, t, x, y, damtype, dam, particles)
 	self.impunity_avoid_grids = nil
 	--Handle Vestigial Magicks
 	local cur_t = who.__talent_running
-	if cur_t and dam and dam > 0 and self:hasEffect(self.EFF_VESTIGIAL_MAGICKS) then
+	local true_dam = (type(dam)=="table" and dam.dam) or (type(dam)=="number" and dam or 0)
+	if cur_t and true_dam>0 and self:hasEffect(self.EFF_VESTIGIAL_MAGICKS) then
 		if not self.turn_procs.vestigial_magicks_targets then
 			self.turn_procs.vestigial_magicks_targets = {}
 		end

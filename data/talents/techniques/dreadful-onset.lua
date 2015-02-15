@@ -225,7 +225,7 @@ newTalent{
 		return true
 	end,
 	callbackOnKill = function(self, t, target, death_note)
-		if not self.turn_procs and self.turn_procs.is_crit then return end
+		if not (self.turn_procs and self.turn_procs.is_crit) then return end
 		if core.fov.distance(target.x, target.y, self.x, self.y)>1 then return end
 		self:setEffect(self.EFF_CATCH, t.getUsageWindow(self, t), {})
 	end,
@@ -267,13 +267,14 @@ newTalent{
 	cooldown = function(self, t) return self:callTalent(self.T_CATCH, "getPassiveCooldown")end,
 	callbackOnAct = function(self, t)
 		if self:isTalentCoolingDown(t.id) then return false end
+		local t2 = self:getTalentFromId(self.T_CATCH)
 		--I'm only doing it as callbackOnAct so I can use this lazy methodology :P
 		--(fov.actors_dist will not work if it isn't the user's turn.)
 		local foes = {}
 		for i = 1, #self.fov.actors_dist do
 			act = self.fov.actors_dist[i]
 			-- Possible bug with this formula
-			if act and game.level:hasEntity(act) and self:reactionToward(act) < 0 and self:canSee(act) and act["__sqdist"] == 1 and act.life <= act.max_life*t.getLifePct(self, t)/100 then
+			if act and game.level:hasEntity(act) and self:reactionToward(act) < 0 and self:canSee(act) and act["__sqdist"] == 1 and act.life <= act.max_life*t2.getLifePct(self, t)/100 then
 				foes[#foes+1] = act
 			end
 		end
@@ -284,17 +285,18 @@ newTalent{
 			local mh2 = self.inven[self.INVEN_QS_MAINHAND] and self.inven[self.INVEN_QS_MAINHAND][1]
 			local oh2 = self.inven[self.INVEN_QS_OFFHAND] and self.inven[self.INVEN_QS_OFFHAND][1]
 			for _, weap in ipairs({mh1, mh2, oh1, oh2}) do
-				if weap and not weapon.twohanded and not weapon.archery then
+				if weap and not weap.twohanded and not weap.archery then
 					choice = weap
 					-- if weap == oh1 or 
 				end
 			end
 			local target = rng.table(foes)
-			local crit_bonus = t.getCritBonus(self, t)
+			local crit_bonus = t2.getCritBonus(self, t)
 			-- if offhand then
 			-- 	self:quickSwitchWeapons(true, false)
 			-- end
 			self.combat_physcrit = self.combat_physcrit+crit_bonus
+			self:logCombat(target, "#Source# attempts an executioner's strike against #target#!")
 			self:attackTargetWith(target, weap)
 			self.combat_physcrit = self.combat_physcrit-crit_bonus
 			-- if offhand then
