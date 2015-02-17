@@ -18,64 +18,101 @@
 -- darkgod@te4.org
 
 newTalent{
-	name = "Challenge the Wilds",
-	type = {("mounted/bestial-dominion"), 1},
-	require = mnt_str_req1,
+	name = "Charge",
+	type = {"mounted/shock-tactics", 1},
+	message = "@Source@ charges!",
+	require = techs_strdex_req1,
 	points = 5,
-	cooldown = 500,
-	stamina = 50,
-	no_npc_use = true,
---	action = function (self, t)
---		if not self.mount and if not **CHALLENGE** then
-
+	random_ego = "attack",
+	stamina = function(self, t) return 20 end,
+	loyalty = function(self, t) return 10 end,
+	cooldown = function(self, t) return math.ceil(self:combatTalentLimit(t, 0, 36, 20)) end, --Limit to >0
+	tactical = { ATTACK = { weapon = 1, stun = 1 }, CLOSEIN = 3 },
+	requires_target = true,
+	is_melee = true,
+	target = function(self, t) return {type="hit", range=self:getTalentRange(t)} end,
+	range = function(self, t) return math.floor(self:combatTalentScale(t, 6, 10)) end,
+	on_pre_use = function(self, t)
+		if self:attr("never_move") then return false
+		else return preCheckIsMounted(self, t, silent) end
+	end,
 	action = function(self, t)
-		local tg = {type="bolt", nowarning=true, range=self:getTalentRange(t), nolock=true, talent=t}
-		local tx, ty, target = self:getTarget(tg)
-		if not tx or not ty then return nil end
-		local _ _, tx, ty = self:canProject(tg, tx, ty)
-		target = game.level.map(tx, ty, Map.ACTOR)
-		if target == self then target = nil end
+		local tg = self:getTalentTarget(t)
+		local x, y, target = self:getTarget(tg)
+		if not target or not self:canProject(tg, x, y) then return nil end
 
-		-- Find space
-		local x, y = util.findFreeGrid(tx, ty, 5, true, {[Map.ACTOR]=true})
-		if not x then
-			game.logPlayer(self, "Not enough space to summon!")
+		local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", self) end
+		local linestep = self:lineFOV(x, y, block_actor)
+
+		local tx, ty, lx, ly, is_corner_blocked
+		repeat  -- make sure each tile is passable
+			tx, ty = lx, ly
+			lx, ly, is_corner_blocked = linestep:step()
+		until is_corner_blocked or not lx or not ly or game.level.map:checkAllEntities(lx, ly, "block_move", self)
+		if not tx or core.fov.distance(self.x, self.y, tx, ty) < 1 then
+			game.logPlayer(self, "You are too close to build up momentum!")
 			return
 		end
+		if not tx or not ty or core.fov.distance(x, y, tx, ty) > 1 then return nil end
 
-		local NPC = require "mod.class.NPC"
-		local m = NPC.new{
-			type = "animal", subtype = "canine",
-			display = "C", color=colors.LIGHT_DARK, image = "npc/summoner_wardog.png",
-			name = "doggy", faction = self.faction,
-			desc = [[]],
-			autolevel = "none",
-			ai = "summoned", ai_real = "dumb_talented_simple", ai_state = { talent_in=5, },
-			stats = {str=0, dex=0, con=0, cun=0, wil=0, mag=0},
-			inc_stats = { str=15 + (self:getCun(130, true) * self:getTalentLevel(t) / 5) + (self:getTalentLevel(t) * 2), dex=10 + self:getTalentLevel(t) * 2, mag=5, con=15},
-			level_range = {self.level, self.level}, exp_worth = 0,
-			global_speed = 1.2,
+		local ox, oy = self.x, self.y
+		self:move(tx, ty, true)
+		--Required for knockback function
+		local recursive = function(target)
+			if self:checkHit(self:combatPhysicalpower(), target:combatPhysicalResist(), 0, 95) and target:canBe("knockback") then 
+				return true
+			else
+				game.logSeen(target, "%s resists the knockback!", target.name:capitalize())
+			end
+		end
+		--Get permissible knockback directions
+		local poss_coords = {}
+		for _, coord in ipairs(util.adjacentCoorsds(target.x, target.y)) do
+			local cx, cy = coord[1], coord[2]
+			if not game.level.map:checkEntity(cx, cy, engine.Map.TERRAIN, "block_move", target) then
+				poss_coords[#poss_coords+1] = coord
+			end
+		end
+		-- Attack ?
+		if self:attackTarget(target, nil, 1.2, true) and target:canBe("stun") then
+			--First, the stun component
+			local tg = {type="ball", x, y, radius=dam.radius, friendlyfire=dam.friendlyfire}
+			local stun_dur = t.getStunDur(self, t)
+			self:project(tg, self.x, self.y, function(px, py, tg, self)
+				local a = game.level.map(px, py, Map.ACTOR)
+				if self:reactionToward(a) < 0 and a:canBe("stun") then
+					a:setEffect(a.EFF_STUNNED, stun_dur, {apply_power=self:combatPhysicalpower(), src=self}) 
+				end
+			end)
+			--Next, the knockback component
+			local coord = rng.table(poss_coords)
+			if coord and target:canBe("knockback") then
+				if coord.x==self.x and coord.y==self.y then
+					self:move(target.x, target.y, true)
+					target:move(tx, ty, true)
+				else
+					local otx, oty = target.x, target.y
+					target:knockback(self.x, self.y, 1, recursive)
+					if target.x ~= otx and target.y ~= oty then
+						self:move(otx, oty, true)
+					end
+				end
+			end
+		end
 
-			max_life = resolvers.rngavg(25,50),
-			life_rating = 6,
-			infravision = 10,
-
-			combat_armor = 2, combat_def = 4,
-			combat = { dam=self:getTalentLevel(t) * 10 + rng.avg(12,25), atk=10, apr=10, dammod={str=0.8} },
-
-			summoner = self, summoner_gain_exp=true, wild_gift_summon=false,
-			summon_time = math.ceil(self:getTalentLevel(t)*5) + 5,
-			ai_target = {actor=target}
-		}		
-
-		setupSummon(self, m, x, y)
-
-		game:playSoundNear(self, "talents/spell_generic")
+		if config.settings.tome.smooth_move > 0 then
+			self:resetMoveAnim()
+			self:setMoveAnim(ox, oy, 8, 5)
+		end
 		return true
 	end,
-	
 	info = function(self, t)
-		return ([[Your hurl your fury at the wilderness, letting out a luring, primal call and intensifying every one of your senses so that you might close upon a savage ally, a steed to carry you to victory and spoil. Finding a suitable wild mount takes time and effort; you gain the "Challenge the Wilds" status with a counter of %d, and every time you slay an enemy, that counter depletes by 1. As it approaches 0, your chances of happening upon your quarry are increased. The beast that is called will depend on your surroundings: either a wolf, agile and dependable; a spider, ruthless yet versatile; or a rare and mighty drake. You must subdue the beast by blade or bow; it will not come to your side immediately, but after you have asserted your dominance. Care must be taken not to slay it unwittingly. The quality of beast will increase with talent level.]])
-		:format(math.ceil(self:getTalentLevel(t)*5) + 10)
+		local dam = t.getDam(self, t)*100
+		local stun_dur = t.getStunDur(self, t)
+		local radius = self:getTalentRadius(t)
+		return ([[Mounted, you perform a devastating charge against an enemy within range, striking it for %d%% damage. A successful hit will stun it and any other enemies near you for %d turns. You will also attempt to move into the target's square, pushing it back one square in a random direction.]]):
+		format(dam, stun_dur, radius)
 	end,
+	getStunDur = function(self, t) return self:combatTalentScale(t, 2, 5) end,
+	getDam = function(self, t) return self:combatTalentScale(t, 1.15, 1.3) end,
 }
