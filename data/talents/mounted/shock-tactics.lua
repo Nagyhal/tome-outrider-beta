@@ -74,6 +74,9 @@ newTalent{
 			end
 		end
 		-- Attack ?
+		if self:knowTalent(self.T_SHOCK_AND_AWE) then
+			self:callTalent(self.T_SHOCK_AND_AWE, "doEffect")
+		end
 		if self:attackTarget(target, nil, 1.2, true) and target:canBe("stun") then
 			--First, the stun component
 			local tg = {type="ball", x, y, radius=dam.radius, friendlyfire=dam.friendlyfire}
@@ -115,4 +118,80 @@ newTalent{
 	end,
 	getStunDur = function(self, t) return self:combatTalentScale(t, 2, 5) end,
 	getDam = function(self, t) return self:combatTalentScale(t, 1.15, 1.3) end,
+}
+
+newTalent{
+	name = "Shock and Awe",
+	type = {"mounted/shock-tactics", 2},
+	require = techs_strdex_req2,
+	points = 5,
+	mode = "passive",
+	doEffect = function(self, t)
+		self:setEffect(self.EFF_SHOCK_ATTACK, t.getDur(self, t), {})
+	end,
+	info = function(self, t)
+		local dur = t.getDur(self, t)
+		local range = t.getChargeRange(self, t)
+		local dam = t.getDam(self, t)*100
+		return ([[After performing a successful mounted charge, you gain the Shock Attack status effect for %d turns, during which the surprise and momentum of your attacks gives you an incredible advantage. 
+
+			All basic attacks you make while mounted will knock back foes 1 square as you move into their position. You also access  a free, secondary Charge attack as long as the effect lasts, rushing down a foe up to %d squares away for %d%% damage.]]):
+		format(dur, range, dam)
+	end,
+	getDur = function(self, t) return self:combatTalentScale(t, 2, 5) end,
+	getChargeRange = function(self, t) return self:combatTalentScale(t, 3, 5) end,
+	getDam = function(self, t) return self:combatTalentScale(t, 1.1, 1.5) end,
+}
+
+newTalent{
+	name = "Shock Attack: Charge",
+	short_name = "SHOCK_ATTACK_CHARGE",
+	type = {"mounted/mounted-base", 1},
+	message = "@Source@ charges again!",
+	points = 1,
+	cooldown = function(self, t) return self:callTalent(self.T_SHOCK_AND_AWE, "getDur") end, --Limit to >0
+	tactical = { ATTACK = { weapon = 1, stun = 1 }, CLOSEIN = 3 },
+	requires_target = true,
+	is_melee = true,
+	target = function(self, t) return {type="hit", range=self:getTalentRange(t)} end,
+	range = function(self, t) return self:callTalent(self.T_SHOCK_AND_AWE, "getChargeRange") end,
+	on_pre_use = function(self, t)
+		if self:attr("never_move") then return false end
+		return preCheckIsMounted(self)
+	end,
+	action = function(self, t)
+		local tg = self:getTalentTarget(t)
+		local x, y, target = self:getTarget(tg)
+		if not target or not self:canProject(tg, x, y) then return nil end
+
+		local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", self) end
+		local linestep = self:lineFOV(x, y, block_actor)
+
+		local tx, ty, lx, ly, is_corner_blocked
+		repeat  -- make sure each tile is passable
+			tx, ty = lx, ly
+			lx, ly, is_corner_blocked = linestep:step()
+		until is_corner_blocked or not lx or not ly or game.level.map:checkAllEntities(lx, ly, "block_move", self)
+		if not tx or core.fov.distance(self.x, self.y, tx, ty) < 1 then
+			game.logPlayer(self, "You are too close to build up momentum!")
+			return
+		end
+		if not tx or not ty or core.fov.distance(x, y, tx, ty) > 1 then return nil end
+
+		local ox, oy = self.x, self.y
+		self:move(tx, ty, true)
+		if config.settings.tome.smooth_move > 0 then
+			self:resetMoveAnim()
+			self:setMoveAnim(ox, oy, 8, 5)
+		end
+		-- Attack ?
+		local dam = self:callTalent(self.T_SHOCK_AND_AWE, "getDam")
+		self:attackTarget(target, nil, dam, true)
+		return true
+	end,
+	info = function(self, t)
+		return ([[Rushes toward your target with incredible speed. If the target is reached, you get a free attack doing 120% weapon damage.
+		If the attack hits, the target is dazed for 3 turns.
+		You must rush from at least 2 tiles away.]])
+	end,
 }

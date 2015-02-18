@@ -770,4 +770,33 @@ newEffect{
 			rider:forceUseTalent(rider.T_LOOSE_IN_THE_SADDLE, {ignore_energy=true})
 		end
 		return {dam=dam}
-	end,}
+	end,
+}
+
+newEffect{
+	name = "SHOCK_ATTACK",
+	desc = "Shock Attack",
+	long_desc = function(self, eff) return ("The rider will knock back 1 square any enemy it targets with a melee attack."):format() end,
+	type = "physical",
+	subtype = { tactic=true },
+	status = "beneficial",
+	parameters = {},
+	activate = function(self, eff)
+		self:learnTalent(self.T_SHOCK_ATTACK_CHARGE, true, 1)
+		self.talents_cd[self.T_SHOCK_ATTACK_CHARGE] = nil
+	end,
+	deactivate = function(self, eff)
+		self:unlearnTalent(self.T_SHOCK_ATTACK_CHARGE)
+	end,
+	callbackOnMeleeAttack = function(self, eff, target, hitted, crit, weapon, damtype, mult, dam)
+		if not self:isMounted() then return end
+		if hitted then
+			game:onTickEnd(function()
+				local ox, oy = target.x, target.y
+				target:knockback(self.x, self.y, 1)
+				if target.x==ox and target.y==oy then return end
+				if self:canMove(ox, oy) then self:move(ox, oy, true) end
+			end)
+		end
+	end,
+}
