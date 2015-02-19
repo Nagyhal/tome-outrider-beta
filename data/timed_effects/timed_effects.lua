@@ -780,8 +780,10 @@ newEffect{
 	type = "physical",
 	subtype = { tactic=true },
 	status = "beneficial",
-	parameters = {},
+	parameters = {speed=0, parry_chance=0},
 	activate = function(self, eff)
+		self:effectTemporaryValue(eff, "movement_speed", eff.speed)
+		self:effectTemporaryValue(eff, "combat_physspeed", eff.speed)
 		self:learnTalent(self.T_SHOCK_ATTACK_CHARGE, true, 1)
 		self.talents_cd[self.T_SHOCK_ATTACK_CHARGE] = nil
 	end,

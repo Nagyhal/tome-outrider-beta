@@ -127,7 +127,12 @@ newTalent{
 	points = 5,
 	mode = "passive",
 	doEffect = function(self, t)
-		self:setEffect(self.EFF_SHOCK_ATTACK, t.getDur(self, t), {})
+		local params = {}
+		if self:knowTalent(self.T_WHIRR_OF_BLADES) then
+			params.speed = self:callTalent(self.T_WHIRR_OF_BLADES, "getSpeed")
+			params.parry_chance = self:callTalent(self.T_WHIRR_OF_BLADES, "getParryChance")
+		end
+		self:setEffect(self.EFF_SHOCK_ATTACK, t.getDur(self, t), params)
 	end,
 	info = function(self, t)
 		local dur = t.getDur(self, t)
@@ -194,4 +199,22 @@ newTalent{
 		If the attack hits, the target is dazed for 3 turns.
 		You must rush from at least 2 tiles away.]])
 	end,
+}
+
+newTalent{
+	name = "Whirr of Blades",
+	type = {"mounted/shock-tactics", 3},
+	points = 5,
+	require = techs_strdex_req3,
+	mode = "passive",
+	info = function(self, t)
+		local speed = t.getSpeed(self, t)*100
+		local parry_chance = t.getParryChance(self, t)
+		return ([[During your charge, the battlefield seems to become a slow blur, atop which you crest in an indomitable parade of knightly glory.
+
+			During your Shock Attack, gain an attack and move speed increase of %d%%. You also gain a %d%% chance to parry up to one enemy attack per turn.]]):
+		format(speed, parry_chance)
+	end,
+	getSpeed = function(self, t) return self:combatTalentScale(t, .15, .4) end,
+	getParryChance = function(self, t) return self:combatTalentLimit(t, 50, 8, 25) end,
 }
