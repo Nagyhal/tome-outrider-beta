@@ -37,7 +37,7 @@ newTalent{
 		return ([[Taking either specially notched arrows from your quiver, or sought-after feathers which you affix to your melee weaponry, you let loose horridly screeching missiles or hack at your foes with howling strikes. For %d turns, attacks you make with your current weaponry have a %d%% chance to confuse their target (power %d, duration %d). At level 5, the cacophony created is enough to drown out the chants of spellcasters, applying an additional silence chance of %d%%.]])
 		:format(dur, chance, power, confuse_dur, silence_chance)
 	end,
-	getDur = function(self, t) return self:combatTalentScale(t, 2.75, 6, .35) end,
+	getDur = function(self, t) return self:combatTalentLimit(t, 8, 2.75, 5.5, .35) end,
 	getConfuseDur = function(self, t) return self:combatTalentScale(t, 2.75, 4, .35) end,
 	getConfusePower = function(self, t) return self:combatTalentLimit(t, 70, 25, 50) end,
 	getConfuseChance = function(self, t)
@@ -45,7 +45,10 @@ newTalent{
 		return self:combatLimit(base, 100, 10, 10, 75, 75)
 	end,
 	getSilenceChance = function(self, t)
+		local old_level = self.talents[t.id]
+		self.talents[t.id] =math.max(self.talents[t.id], 5)
 		local base = self:combatStatTalentIntervalDamage(t, "combatMindpower", 5, 20)
+		self.talents[t.id] = old_level
 		return self:combatLimit(base, 50, 5, 5, 25,25)
 	end
 }

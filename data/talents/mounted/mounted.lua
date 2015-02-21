@@ -27,7 +27,10 @@ newTalentType{ allow_random=true, type="mounted/mounted-mobility", name = "mount
 newTalentType{ allow_random=true, type="mounted/teamwork", name = "teamwork", description = "Wresting mastery over your fleet pawed steed, you dance the last dance with those not quick enough to match you."}
 newTalentType{ allow_random=true, type="mounted/skirmish-tactics", name = "skirmish tactics", description = "Beside your beast, not even the winds can outpace you; atop it, not even the sky can outreach your aim."}
 newTalentType{ allow_random=true, type="mounted/shock-tactics", name = "shock tactics", description = "Shattering your foes' ranks with devastating charge attacks, your shock tactics represent the pinnacle of mounted martial domination and the ultimate unison of steel and steed."}
-newTalentType{ allow_random=true, type="mounted/beast-heart", name = "beast heart", description = "Become no longer beast-rider, but beastkind."}
+newTalentType{ allow_random=true, type="mounted/beast-heart", name = "beast heart", description = "Become no longer beast-rider, but beast-kind."}
+newTalentType{ allow_random=true, type="race/traits", name = "bestial traits", description = "Every beast, when handled with wisdom, can reveal hidden traits that make it appear prodigious, when compared to its natural kin."}
+
+
 
 --Mount talents
 --Wolf, the basic mount, and its subtypes
@@ -208,6 +211,14 @@ mnt_dexwil_req4 = {
 	level = function(level) return 12 + (level-1)  end,
 }
 
+function learnTraits(self)
+	if not self.bestial_traits then return nil end
+	self.__show_special_talents = self.__show_special_talents or {}
+	for i, tid in ipairs(self.bestial_traits) do
+		self.__show_special_talents[tid] = true
+	end
+end
+
 --These pre-check functions are used by on_pre_use
 function preCheckIsMounted(self, t, silent)
 	if self:isMounted() then return true
@@ -297,13 +308,14 @@ load("/data-outrider/talents/mounted/mounts.lua")
 load("/data-outrider/talents/mounted/disobedience.lua")
 load("/data-outrider/talents/mounted/wolf.lua")
 load("/data-outrider/talents/mounted/spider.lua")
---load("/data-outrider/talents/mounted/drake.lua")
+load("/data-outrider/talents/mounted/drake.lua")
 load("/data-outrider/talents/mounted/bestial-dominion.lua")
 load("/data-outrider/talents/mounted/mounted-mobility.lua")
---load("/data-outrider/talents/mounted/teamwork.lua")
---load("/data-outrider/talents/mounted/skirmish-tactics.lua")
---load("/data-outrider/talents/mounted/shock-tactics.lua")
---load("/data-outrider/talents/mounted/beast-heart.lua")
+load("/data-outrider/talents/mounted/teamwork.lua")
+load("/data-outrider/talents/mounted/skirmish-tactics.lua")
+load("/data-outrider/talents/mounted/shock-tactics.lua")
+load("/data-outrider/talents/mounted/beast-heart.lua")
+load("/data-outrider/talents/race/traits.lua")
 
 --technique and cunning
 load("/data-outrider/talents/techniques/barbarous-combat.lua")

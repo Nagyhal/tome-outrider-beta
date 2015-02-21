@@ -49,8 +49,8 @@ newBirthDescriptor{
 		"#LIGHT_BLUE# * +0 Magic, +1 Willpower, +2 Cunning",
 	},
 	stats = { str=3, dex=3, wil=1, cun=2},
+	not_on_random_boss = true,
 	talents_types = {
-		["technique/2hweapon-offense"]={true, 0.1},
 		["technique/archery-bow"]={true, 0.1},
 		["technique/combat-techniques-passive"]={true, 0.1},
 		["technique/combat-training"]={true, 0.1},

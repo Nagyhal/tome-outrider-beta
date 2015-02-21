@@ -4,7 +4,7 @@ local Map = require "engine.Map"
 
 local base_bumpInto = _M.bumpInto
 local base_combatMovementSpeed = _M.combatMovementSpeed
-local base_combatPhysicalPower = _M.combatPhysicalpower
+local base_combatPhysicalpower = _M.combatPhysicalpower
 local base_hasTwoHandedWeapon = _M.hasTwoHandedWeapon
 
 -- function _M:bumpInto(target, x, y)
@@ -66,7 +66,7 @@ function _M:combatPhysicalpower(mod, weapon, add)
 			add = add + summoner:callTalent(summoner.T_CHALLENGE_THE_WILDS, "getDam")
 		end
 	end
-	return base_combatPhysicalPower(self, mod, weapon, add)
+	return base_combatPhysicalpower(self, mod, weapon, add)
 end
 
 local base_attackTargetWith = _M.attackTargetWith
@@ -92,7 +92,7 @@ function _M:attackTarget(target, damtype, mult, noenergy, force_unharmed)
 			target = eff.trgt
 		end
 	end
-	local ret = {base_attackTarget(self, target, damtype, mult, noenergy, force_unharmed)}
+	local ret = base_attackTarget(self, target, damtype, mult, noenergy, force_unharmed)
 	self.living_shield_bypass=nil
 	return unpack(ret)
 end

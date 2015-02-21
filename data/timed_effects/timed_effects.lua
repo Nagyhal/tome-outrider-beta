@@ -140,7 +140,7 @@ newEffect{
 }
 
 newEffect{
-	name = "STRIKE_AT_THE_HEART",
+	name = "STRIKE_AT_THE_HEART", image = "talents/strike_at_the_heart.png",
 	desc = "Strike at the Heart",
 	long_desc = function(self, eff)
 		local ct = eff.ct
@@ -235,7 +235,7 @@ newEffect{
 }
 
 newEffect{
-	name = "SPRING_ATTACK",
+	name = "SPRING_ATTACK", image = "talents/spring_attack.png",
 	desc = "Spring Attack",
 	long_desc = function(self, eff) return ("The target's onslaught has ended, but it retains a bonus of %d%% to movement speed and %d to defense. Also, the target gains a bonus to ranged damage against any marked targets for the duration. This bonus is dependent on distance: starting from %d%% at 2 tiles, increasing to %d%% at 5 tiles."):format(eff.move, eff.def, eff.min_pct, eff.max_pct) end,
 	type = "physical",

@@ -85,7 +85,7 @@ newTalent{
 	sustain_stamina = 40,
 	tactical = { BUFF = 2 },
 	on_pre_use = function(self, t, silent)
-		if not self:hasOneHandedWeapon() then
+		if not hasOneHandedWeapon(self) then
 			if not silent then
 				game.logPlayer(self, "You require a one-handed weapon to use this talent.")
 			end
