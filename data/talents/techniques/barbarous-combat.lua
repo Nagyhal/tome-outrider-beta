@@ -93,11 +93,6 @@ newTalent{
 		end
 		return true
 	end,
-	getAtk = function(self, t) return self:combatTalentScale(t, 8, 16)end,
-	getCrit = function(self, t) return self:combatTalentScale(t, 8, 16)end,
-	getMindPower = function(self, t) return self:combatTalentScale(t, 8, 22)end,
-	getPhysPower = function(self, t) return self:combatTalentScale(t, 8, 22)end,
-	getImmune = function(self, t) return self:combatTalentLimit(t, 1, 0.17, 0.5) end,
 	activate = function(self, t)
 		local weapon = self:hasOneHandedWeapon()
 		if not weapon then
@@ -106,27 +101,30 @@ newTalent{
 		end
 
 		self:talentTemporaryValue("combat_atk", t.getAtk(self, t))
-		self:talentTemporaryValue("combat_mindpower", t.getMindPower(self, t))
-		self:talentTemporaryValue("combat_physpower", t.getPhysPower(self, t))
-		self:talentTemporaryValue("combat_physcrit", t.getCrit(self, t))
+		self:talentTemporaryValue("combat_mindpower", t.getMindpower(self, t))
 		return {}
 	end,
-
 	deactivate = function(self, t, p)
 		return true
 	end,
 	info = function(self, t)
 		local atk = t.getAtk(self, t)
-		local mindpower = t.getMindPower(self, t)
-		local physpower = t.getPhysPower(self, t)
-		local crit = t.getCrit(self, t)
-		return ([[While you wield weapons less visibily impressive than some, the merciless precision with which you apply them to your enemies makes them no less intimidating in your hands. 
+		local atk2 = t.getAtk2(self, t)
+		local mindpower = t.getMindpower(self, t)
+		local mindpower2 = t.getMindpower2(self, t)
+		local phys_pen = t.getPhysPen(self, t)
+		return ([[While you prefer weapons less visibily impressive than some, the merciless precision with which you wield them makes them no less intimidating in your hands. 
 		
-		Gain a %d increase to attack and a %d increase to mindpower while wielding a one-handed weapon.
+		Gain a %d increase to attack and APR and a %d increase to mindpower while wielding a one-handed weapon. Critical hits will reduce the physical resistance of the target by %d%% for 2 turns.
 
-		If you choose not to wield an offhand item, these bonuses increase by 65%%, and you will also gain a physical power increase of %d and physical crit chance bonus of %d%%.]]):
-		format(atk, mindpower, physpower, crit)
+		Gain a %d increase to attack and APR and a %d increase to mindpower if you choose to wield an one-handed weapon, and no offhand.]]):
+		format(atk, mindpower, phys_pen, atk2, mindpower2)
 	end,
+	getAtk = function(self, t) return self:combatTalentScale(t, 5, 12)end,
+	getAtk2 = function(self, t) return self:callTalent(t.id, "getAtk")*1.65 end,
+	getMindpower = function(self, t) return self:combatTalentScale(t, 6, 15)end,
+	getMindpower2 = function(self, t) return self:callTalent(t.id, "getMindpower")*1.65 end,
+	getPhysPen = function(self, t) return self:combatTalentScale(t, 15, 35)end,
 }
 
 newTalent{
