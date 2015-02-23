@@ -540,3 +540,30 @@ newTalent{
 	getSlowPower = function(self, t) return self:combatTalentIntervalDamage(t, "cun", 30, 75) end,
 	getPinChance = function(self, t) return self:combatTalentIntervalDamage(t, "cun", 30, 50) end,
 }
+
+newTalent{
+	name = "Numbing Ichor",
+	type = {"spider/weaver-of-woes", 4},
+	points = 5,
+	mode = "passive",
+	require = cuns_req4,
+	callbackOnMeleeAttack = function(self, t, target, hitted, crit, weapon, damtype, mult, dam)
+		if not target:effectsFilter({subtype="pin"}) then return end
+		if hitted and target:canBe("poison") then
+			target:setEffect(target.EFF_NUMBING_POISON, t.getDur(self, t), {power=t.getPoison(self, t), reducte=t.getReduction(self, t), apply_power=self:combatPhysicalpower()})
+		end
+		return true
+	end,
+	info = function(self, t)
+		local dam = t.getDam(self, t)
+		local dur = t.getDur(self, t)
+		local reduction = t.getReduction(self, t)
+		return ([[Any time the spider attacks a pinned target, it infuses it with a numbing serum that prepares it for digestion.
+
+			Victims will suffer %d nature damage per turn for %d turns and a %d%% reduction in global damage output.]]):
+		format(dam, dur, reduction)
+	end,
+	getReduction= function(self, t) return self:combatTalentLimit(t, 25, 10, 20) end,
+	getDur= function(self, t) return self:combatTalentScale(t, 4, 6) end,
+	getPoison = function(self, t) return self:combatTalentPhysicalDamage(t, 15, 40) end,
+}
