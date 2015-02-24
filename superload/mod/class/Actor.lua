@@ -104,6 +104,11 @@ function _M:mountTarget(target)
 		self.mount.rider = self
 		local old_x, old_y = target.x, target.y  -- not sure this is necessary, test
 		game.level:removeEntity(target)
+		target._fake_level_entity = function(level, keyword)
+			if keyword=="has" then
+				return level:hasEntity(self.rider)
+			end
+		end
 		self:move(old_x, old_y, force)
 		self:setEffect(self.EFF_MOUNT, 100, {mount=target})
 		target:setEffect(self.EFF_RIDDEN, 100, {rider=self})
@@ -121,6 +126,7 @@ function _M:dismountTarget(target, x, y)
 	end
 	if x then
 		game.level:addEntity(target)
+		target._fake_level_entity = nil
 		-- game.zone:addEntity(game.level, target, "actor", target.x, target.y)
 		local ox, oy = self.x, self.y
 		local ok = self:move(x, y, true)
