@@ -17,22 +17,6 @@ function _M:init(t, no_default)
 	base_init(self, t, no_default)
 end
 
-
--- local base_learnTalent = _M:learnTalent
-
--- function _M:learnPool(t_id, force, nb)
--- 	base_learnTalent(t_id, force, nb)
--- 	if t.type[1]:find("^mounted/") and not self:knowTalent(self.T_MOUNT) then
--- 		self:learnTalent(self.T_MOUNT, true)
--- 	end
--- end
-
-
--- function _M:mountAct()
--- 	local m = self.mount
--- 	if not self.mount then return end
--- end
-
 function _M:onTakeHit(value, src)
 	if self:isMounted() then
 		local m = self:hasMount()
@@ -65,10 +49,8 @@ end
 function _M:hasMount()
 	--Truly simple placeholder function intended for Outrider use only
 	--TODO: Make it accept any kind of mount
-	--TODO: Make hasEntity return true if the player is riding a (hidden) mount
 	local mount = self.outrider_pet
-	if mount and not mount.dead and (mount.x==self.x and mount.y==self.y or game.level:hasEntity(mount)) then return mount else return false end
-	--OLD: return #self.mounts_owned>0 and true or nil
+	if mount and not mount.dead then return game.level:hasEntity(mount) end
 end
 
 function _M:hasMountPresent()
@@ -104,15 +86,11 @@ function _M:mountTarget(target)
 		self.mount.rider = self
 		local old_x, old_y = target.x, target.y  -- not sure this is necessary, test
 		game.level:removeEntity(target)
-		target._fake_level_entity = function(level, keyword)
-			if keyword=="has" then
-				return level:hasEntity(self.rider)
-			end
-		end
 		self:move(old_x, old_y, force)
 		self:setEffect(self.EFF_MOUNT, 100, {mount=target})
 		target:setEffect(self.EFF_RIDDEN, 100, {rider=self})
 		game.logSeen(self, "%s mounts %s!", self.name:capitalize(), target.name:capitalize())
+		target:fireTalentCheck("callbackOnMounted")
 		return true
 	else return false end
 end
@@ -126,7 +104,6 @@ function _M:dismountTarget(target, x, y)
 	end
 	if x then
 		game.level:addEntity(target)
-		target._fake_level_entity = nil
 		-- game.zone:addEntity(game.level, target, "actor", target.x, target.y)
 		local ox, oy = self.x, self.y
 		local ok = self:move(x, y, true)
@@ -144,6 +121,7 @@ function _M:dismountTarget(target, x, y)
 		target:move(ox, oy, true)
 		target.changed = true
 		self.changed = true
+		target:fireTalentCheck("callbackOnDismounted")
 		return true
 	else return nil end
 end
@@ -344,5 +322,8 @@ function _M:loyaltyCheck(pet, silent)
 		return true
 	end
 end
+
+_M.sustainCallbackCheck.callbackOnMounted = "talents_on_mounted"
+_M.sustainCallbackCheck.callbackOnDismounted = "talents_on_dismounted"
 
 return _M

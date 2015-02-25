@@ -34,13 +34,6 @@ newTalent{
 		return preCheckIsMounted(self, t, silent)
 	end,
 	action = function(self, t)
-		-- if not self:IsMounted() then game.logPlayer(self, "You cannot use Overrun without riding a mount!") return nil end
-		-- local tg = self.getTalentTarget(t)
-		-- local x, y = self:getTarget(tg)
-		-- if not self:hasLOS(x, y) or game.level.map:checkEntity(x, y, Map.TERRAIN, "block_move") then game.logSeen(self, "You can't move there.") return nil	end
-		-- if core.fov.distance(self.x, self.y, x, y) > self:getTalentRange(t) then return nil end
-		-- local _ _, x, y = self:canProject(tg, x, y)
-		-- self.mount:project(tg, x, y, DamageType.TEMPORALSTUN, dam)
 		local tg = {type="beam", range=self:getTalentRange(t), nolock=true, talent =t}
 		local tx, ty, target = self:getTarget(tg)
 		if not tx or not ty or game.level.map(tx, ty, engine.Map.ACTOR) then return nil end
@@ -55,65 +48,12 @@ newTalent{
 		local maxAttackCount = t.getMaxAttackCount(self, t)
 
 		while nextX and nextY and not is_corner_blocked do
-			-- local blockingTarget = game.level.map(nextX, nextY, Map.ACTOR)
-			-- if blockingTarget and self:reactionToward(blockingTarget) < 0 then  --slaughter.lua code, may be useful for later status effect additions
-				-- -- attempt a knockback
-				-- local level = self:getTalentLevelRaw(t)
-				-- local maxSize = 2
-				-- if level >= 5 then
-					-- maxSize = 4
-				-- elseif level >= 3 then
-					-- maxSize = 3
-				-- end
-				-- local blocked = true
-				-- if blockingTarget.size_category <= maxSize then
-					-- if blockingTarget:checkHit(self:combatPhysicalpower(), blockingTarget:combatPhysicalResist(), 0, 95, 15) and blockingTarget:canBe("knockback") then
-						-- blockingTarget:crossTierEffect(blockingTarget.EFF_OFFBALANCE, self:combatPhysicalpower())
-						-- -- determine where to move the target (any adjacent square that isn't next to the attacker)
-						-- local start = rng.range(0, 8)
-						-- for i = start, start + 8 do
-							-- local x = nextX + (i % 3) - 1
-							-- local y = nextY + math.floor((i % 9) / 3) - 1
-							-- if core.fov.distance(currentY, currentX, x, y) > 1
-									-- and game.level.map:isBound(x, y)
-									-- and not game.level.map:checkAllEntities(x, y, "block_move", self) then
-
-								-- game.logSeen(self, "%s knocks back %s!", self.name:capitalize(), blockingTarget.name)
-								-- blocked = false
-								-- break
-							-- end
-						-- end
-					-- end
-				-- end
-			
-				-- if blocked then
-					-- game.logSeen(self, "%s blocks %s!", blockingTarget.name:capitalize(), self.name)
-				-- end
-			-- end
-
-			-- check that we can move
-			-- if not game.level.map:isBound(nextX, nextY) or game.level.map:checkAllEntities(nextX, nextY, "block_move", self) then break end
-
-			-- allow the move
 			currentX, currentY = nextX, nextY
 			nextX, nextY, is_corner_blocked = lineFunction:step()
 
 			mount_target = game.level.map(currentX, currentY, Map.ACTOR)
-			if mount_target then self.mount:attackTarget(mount_target, nil, t.getDamageMultiplier(self, t), true) end
-			-- attack adjacent targets
-			-- for i = 0, 8 do
-				-- local x = currentX + (i % 3) - 1
-				-- local y = currentY + math.floor((i % 9) / 3) - 1
-				-- local target = game.level.map(x, y, Map.ACTOR)
-				-- if target and self:reactionToward(target) < 0 and attackCount < maxAttackCount then
-					-- local damageMultiplier = t.getDamageMultiplier(self, t)
-					-- self:attackTarget(target, nil, damageMultiplier, true)
-					-- attackCount = attackCount + 1
-
-					-- game.level.map:particleEmitter(x, y, 1, "blood", {})
-					-- game:playSoundNear(self, "actions/melee")s
-				-- end
-			-- end
+			if mount_target then self.mount:attackTarget(mount_target, nil, t.getDamageMultiplier(self, t), true)
+			end
 		end
 
 		self:move(currentX, currentY, true)
