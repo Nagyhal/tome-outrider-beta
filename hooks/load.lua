@@ -42,21 +42,21 @@ class:bindHook("DamageProjector:base", function(self, data)
 			ret = true
 		end
 	end
-	local src = data.src
-	if src and src.turn_procs and src.turn_procs.leviathan then
-		local tt = src.turn_procs.leviathan
+	local a = game.level.map(data.x, data.y, engine.Map.ACTOR)
+	if a and self.turn_procs and self.turn_procs.leviathan then
+		local tt = self.turn_procs.leviathan
 		if not tt.done then
-			local chance = src:callTalent(src.T_LEVIATHAN, "getChance")
-			tt.stun_this_turn = rng.percent(chance)
+			tt.stun_this_turn = rng.percent(tt.chance)
 			tt.done = true
 			tt.acts = {} --Only run once per turn per actor
 		end
 		if tt.stun_this_turn and not tt.acts[self] and self:canBe("stun") then
-			local dur = src:callTalent(src.T_LEVIATHAN, "getStunDur")
-			src:logCombat(self, "#Source# stuns #target# with its leviathan prowess!")
-			self:setEffect(self.EFF_STUNNED, dur, {
-				apply_power=src:combatPhysicalpower(), 
-				src=src
+			local user = self
+			if self:isMounted() then user = self.mount end
+			user:logCombat(a, "#Source# stuns #target# with its leviathan prowess!")
+			a:setEffect(a.EFF_STUNNED, tt.dur, {
+				apply_power=user:combatPhysicalpower(), 
+				src=user
 				}
 			)
 			tt.acts[self] = true
@@ -157,12 +157,13 @@ end)
 
 class:bindHook("Combat:attackTarget", function(self, data)
 	local target = data.target
-	if self:isTalentActive(target.T_DIVE_BOMB) then
+	--TODO: Make this also functional for attackTargetWith!
+	if self:isTalentActive(self.T_DIVE_BOMB) or self:isTalentActive("T_COMMAND:_DIVE_BOMB")  then
 		self:probabilityTravel(target.x, target.y, 5) --Pray this works.
 		data.hit = false
 		data.stop = true
 	end
-	if target:isTalentActive(target.T_DIVE_BOMB) then
+	if target:isTalentActive(target.T_DIVE_BOMB) or self:isTalentActive("T_COMMAND:_DIVE_BOMB") then
 		data.hit = false
 		data.stop = true
 	end
