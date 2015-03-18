@@ -181,6 +181,10 @@ class:bindHook("Combat:attackTarget", function(self, data)
 		data.hit = false
 		data.stop = true
 	end
+
+	if self:hasEffect(self.EFF_STRIKE_AT_THE_HEART) then 
+		self:callTalent(self.T_STRIKE_AT_THE_HEART, "handleStrike", data.target, data.hitted)
+	end
 	return data
 end)
 

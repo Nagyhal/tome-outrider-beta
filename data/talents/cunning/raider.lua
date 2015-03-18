@@ -54,27 +54,47 @@ newTalent{
 			Defense: %d to %d]]):
 		format(sunder, stacks_string, move*mult1, move*mult3, atk*mult1, atk*mult3, crit*mult1, crit*mult3, def*mult1, def*mult3)
 	end,
+	handleStrike = function(self, t, target, hitted)
+		local eff = self:hasEffect(self.EFF_STRIKE_AT_THE_HEART)
+		if not (eff and target and hitted) then return end
+		--Only do this once, on the first target
+		if not eff.done then
+			game:onTickEnd(function() 
+				local eff = self:hasEffect(self.EFF_STRIKE_AT_THE_HEART)
+				for target in pairs(eff.targets) do
+					if eff.sunder>0 then
+						target:setEffect(target.EFF_SUNDER_ARMOUR, 3, {power=eff.sunder, apply_power=self:combatPhysicalpower()})
+					end
+				end
+				if eff.store then eff.doUnstoreBonuses(self, eff) end
+				self:removeEffect(self.EFF_STRIKE_AT_THE_HEART)
+			end)
+		end
+		eff.targets[target] = true
+		eff.done=true
+	end,
 	callbackOnMove = function(self, t, moved, force, ox, oy, x, y)
 		if not ox or not oy or (ox==self.x and oy==self.y) then return end
 		local ab = self.__talent_running or (self.mount and self.mount.__talent_running); if ab and ab.is_teleport then return end
 		local lineFunction = core.fov.line(ox, oy, self.x, self.y)
 
 		lx, ly, _ = lineFunction:step(); lx, ly = (lx or x), (ly or y)
-		local stacks = 0
+		local stacks = core.fov.distance(ox, oy, self.x, self.y)
+		local found_target
 		repeat
 			local _, dx, dy = util.getDir(lx, ly, ox, oy)
 			local tg = {type="cone", start_x=ox, start_y=oy, angle=45, radius=self.sight, selffire=false}
-			local acts = {}
+			local is_target
 			local filter = function(px, py, t, self)
 				local a = game.level.map(px, py, engine.Map.ACTOR) 
-				if a then acts[a]=true; stacks=stacks+1 end
+				if a then found_target=true end
 			end
 			self:project(tg, lx+dx, ly+dy, filter)
 			ox, oy = lx, ly
 			lx, ly, _ = lineFunction:step()
 		until (not lx)
 		
-		if stacks>0 then
+		if found_target then
 			for i = 1, stacks do
 				if not self:attr("building_strike_at_heart") then
 					self:attr("building_strike_at_heart", 1, true)
@@ -83,12 +103,12 @@ newTalent{
 					local ct=p and math.min(3, p.ct+1) or 1
 					local mult = t.getMult(self, t, ct)
 					self:setEffect(self.EFF_STRIKE_AT_THE_HEART, 3, {
-					ct=ct,
-					move=t.getMove(self, t)*mult,
-					atk=t.getAtk(self, t)*mult,
-					crit=t.getCrit(self, t)*mult,
-					def=t.getDef(self, t)*mult,
-					sunder=ct>=t.getSunderStacks(self,t) and t.getSunder(self, t) or 0
+						ct=ct,
+						move=t.getMove(self, t)*mult,
+						atk=t.getAtk(self, t)*mult,
+						crit=t.getCrit(self, t)*mult,
+						def=t.getDef(self, t)*mult,
+						sunder=ct>=t.getSunderStacks(self,t) and t.getSunder(self, t) or 0
 					}) 
 				end
 			end
@@ -103,7 +123,7 @@ newTalent{
 	getCrit = function(self, t) return self:combatTalentScale(t, 10, 18) end,
 	getDef = function(self, t) return self:combatTalentScale(t, 5, 12) end,
 	getSunder = function(self, t) return self:combatTalentScale(t, 6, 18) end,
-	getSunderStacks = function(self, t) return math.max(1, self:combatTalentScale(t, 3, 1, 1)) end,
+	getSunderStacks = function(self, t) return math.max(1, math.ceil(self:combatTalentScale(t, 3, 1, 1))) end,
 }
 
 newTalent{

@@ -154,12 +154,11 @@ newEffect{
 	on_gain = function(self, eff) return "#Target# prepares a deadly charge!", "+Strike at the Heart" end,
 	on_lose = function(self, eff) return "#Target# ends the charge.", "-Strike at the Heart" end,
 	activate = function(self, eff, p)
-		eff.targets={}
+		eff.targets = eff.targets or {}
 		self:effectTemporaryValue(eff, "movement_speed", eff.move/100)
 		self:effectTemporaryValue(eff, "combat_def", eff.def)
 		self:effectTemporaryValue(eff, "combat_atk", eff.atk)
 		self:effectTemporaryValue(eff, "combat_physcrit", eff.crit)
-		-- p = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
 		p.doStoreBonuses(self, eff)
 	end,
 	updateValues = function(self, eff)
@@ -178,8 +177,8 @@ newEffect{
 			eff.def = math.max(0, eff.def - p.def)
 			eff.store={def=math.min(p.def, eff.def), move=math.min(p.move, eff.move)}
 		end
-		p = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
-		p.updateValues(self, eff)
+		ed = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
+		ed.updateValues(self, eff)
 	end,
 	doUnstoreBonuses = function(self, eff)
 		if eff.store then
@@ -187,50 +186,38 @@ newEffect{
 			eff.def = eff.def + eff.store.def
 			eff.store=nil
 			local p = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
-			p.updateValues(self, eff)
+			self:effectTemporaryValue(eff, "movement_speed", eff.move/100)
+			self:effectTemporaryValue(eff, "combat_def", eff.def)
 		end
 	end,
-	on_merge = function(self, old_eff, new_eff, p)
+	on_merge = function(self, old_eff, new_eff, ed)
 		new_eff.targets=old_eff.targets
-		self:removeEffect(self.EFF_STRIKE_AT_THE_HEART, true, true)
-		-- local p = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
-		p.activate(self, new_eff, p)
+		-- self:removeEffect(self.EFF_STRIKE_AT_THE_HEART, true, true)
+		local ed = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
+		for i = 1, #old_eff.__tmpvals do
+			self:removeTemporaryValue(old_eff.__tmpvals[i][1], old_eff.__tmpvals[i][2])
+		end
+		ed.doUnstoreBonuses(self, old_eff)
+		ed.activate(self, new_eff, ed)
 		return new_eff
 	end,
-	callbackOnMeleeAttack = function(self, eff, target, hitted, crit, weapon, damtype, mult, dam)
-		if target then eff.targets[target] = hitted and true or false end
-		game:onTickEnd(function() 
-			local p = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
-			if eff.store then p.doUnstoreBonuses(self, eff) end
-			if eff.sunder>0 then
-				for a, hitted in pairs(eff.targets) do
-					if hitted then
-						target:setEffect(target.EFF_SUNDER_ARMOUR, 3, {power=eff.sunder, apply_power=self:combatPhysicalpower()})
-					end
-				end
-			end
-			self:removeEffect(self.EFF_STRIKE_AT_THE_HEART)
-		end)
-	end,
 	callbackOnArcheryAttack = function(self, eff, target, hitted, crit, weapon, ammo, damtype, mult, dam)
-		if target then eff.targets[target] = true end
-		game:onTickEnd(function() self:removeEffect(self.EFF_STRIKE_AT_THE_HEART) end)
+		if target then self:callTalent(self.T_STRIKE_AT_THE_HEART, "handleStrike", target, hitted) end
 	end,
-	deactivate = function(self, eff, p)
+	deactivate = function(self, eff, ed)
 		local ct = eff.ct
+		ed.doUnstoreBonuses(self, eff)
 		if self:knowTalent(self.T_SPRING_ATTACK) and #table.keys(eff.targets)>0 then
 			local t = self:getTalentFromId(self.T_SPRING_ATTACK)
-			--Can't do callEffect in deactivate function
-			-- local p = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
-			p.doUnstoreBonuses(self, eff)
 			self:setEffect(self.EFF_SPRING_ATTACK, t.getDur(self,t), {
-				move = eff.move*ct,
-				def = eff.def*ct,
+				move = eff.move,
+				def = eff.def,
 				min_pct = t.getMinPct(self, t),
 				max_pct = t.getMaxPct(self, t)
 				})
 		end
 		--TODO: Decide how to pass a target
+		--(so you can't use spring attack to destroy EVERYTHING with massive damage mutipliees)
 	end,
 }
 
