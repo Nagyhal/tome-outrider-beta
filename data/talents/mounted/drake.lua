@@ -195,9 +195,9 @@ newTalent{
 		local dam = t2.getDam(pet, t2)
 		local range = pet:getTalentRange(t2)
 		local kb_resist_pen = t2.getKBResistPen(pet, t2)
-		return ([[Command your drake to drag a foe into the air, hurling it and yourself at a location within radius %d, dealing %d%% physical damage increased by 50%% if it is a wall. You will land in a random square of maximum 2 distance from your target. This talent ignores %d%% of the knockback resistance of the thrown target, which takes half damage if it resists being thrown.
+		return ([[Command your drake to drag a foe into the air, hurling it and yourself at a location within radius %d, dealing %d%% physical damage. You will land in a random square of maximum 2 distance from your target. The target takes only half damage if it resists being thrown. This talent ignores %d%% of the knockback resistance of the thrown target. 
 
-		Alternatively, you may use a tempered version of this ability on an ally. In this case, you will deal no damage and land gently in a square of guaranteed distance 1.]]):
+		Alternatively, you may use a gentler version of this ability on an ally. In this case, you will deal no damage and land gently adjacent to your ally.]]):
 		format(range, dam, kb_resist_pen)
 	end,
 }
@@ -282,6 +282,7 @@ newTalent{
 	target = function(self, t) return {type="ball", range=self:getTalentRange(t), radius=self:getTalentRadius(t), selffire=false, talent=t} end,
 	shared_talent = "T_COMMAND:_DIVE_BOMB",
 	on_pre_use= function(self, t, silent)
+		if self:attr("never_move") then return false end
 		if not self.owner.__talent_running and not self.player then
 			 return false end
 		return true
@@ -340,7 +341,7 @@ newTalent{
 			end
 		end)
 
-		if rider then rider:dismountTarget(self) end
+		if rider then game:onTickEnd(function() rider:dismountTarget(self) end) end
 		return true
 	end,
 	info = function(self, t)
@@ -372,6 +373,11 @@ newTalent{
 	radius = function(self, t) return self:combatTalentScale(t, 3, 5) end,
 	target = function(self, t) return {type="ball", range=self:getTalentRange(t), radius=self:getTalentRadius(t), selffire=false, talent=t} end,
 	base_talent = "T_DIVE_BOMB",
+	on_pre_use = function(self, t, silent)
+		if self:attr("never_move") then return false end
+		local mount = self.outrider_pet
+		return mount and mount:callTalent(mount.T_GO_FOR_THE_THROAT, "on_pre_use") or false
+	end,
 	activate = function(self, t)
 		local pet = self.outrider_pet
 		pet:forceUseTalent(t.base_talent, {ignore_energy=true})

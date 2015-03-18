@@ -126,6 +126,26 @@ function _M:dismountTarget(target, x, y)
 	else return nil end
 end
 
+function _M:flyOver(x, y, dist)
+	--This is a slightly modified Probability Travel
+	if game.zone.wilderness then return true end
+	if self:attr("encased_in_ice") then return end
+
+	local dirx, diry = x - self.x, y - self.y
+	local tx, ty = x, y
+	local can = true
+	while game.level.map:isBound(tx, ty) and game.level.map:checkAllEntities(tx, ty, "block_move", self) and dist > 0 do
+		if game.level.map:checkEntity(tx, ty, engine.Map.TERRAIN, "block_move") then can=false break end
+		tx = tx + dirx
+		ty = ty + diry
+		dist = dist - 1
+	end
+	if can and game.level.map:isBound(tx, ty) and not game.level.map:checkAllEntities(tx, ty, "block_move", self) then
+		return engine.Actor.move(self, tx, ty, false)
+	end
+	return true
+end
+
 function _M:mountActBase()
 	return self:actBase()
 end

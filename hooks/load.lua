@@ -162,11 +162,18 @@ class:bindHook("UISet:Classic:Resources", function(self, data)
 	return data
 end)
 
+class:bindHook("Combat:attackTargetWith", function(self, data)
+	if self:hasEffect(self.EFF_STRIKE_AT_THE_HEART) then
+		self:callTalent(self.T_STRIKE_AT_THE_HEART, "handleStrike", data.target, data.hitted)
+	end
+	return data
+end)
+
 class:bindHook("Combat:attackTarget", function(self, data)
 	local target = data.target
 	--TODO: Make this also functional for attackTargetWith!
-	if self:isTalentActive(self.T_DIVE_BOMB) or self:isTalentActive("T_COMMAND:_DIVE_BOMB")  then
-		self:probabilityTravel(target.x, target.y, 5) --Pray this works.
+	if self:isTalentActive(self.T_DIVE_BOMB) or self:isTalentActive("T_COMMAND:_DIVE_BOMB") then
+		if not self:attr("never_move") then self:flyOver(target.x, target.y, 5) end
 		data.hit = false
 		data.stop = true
 	end
