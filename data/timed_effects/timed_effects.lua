@@ -12,7 +12,7 @@ newEffect{
 	desc = "Mounted",
 	long_desc = function(self, eff)
 		if eff.mount.type == "animal" then
-			return ("The target rides atop a bestial steed - sharing damage and gaining the mount's movement speed")
+			return ("The target rides atop a bestial steed - sharing damage and gaining the mount's movement speed.")
 		else return "The target rides atop a mount - sharing damage and gaining the mount's movement speed"
 		end
 	end,
@@ -395,6 +395,43 @@ newEffect{
 }
 
 newEffect{
+	name = "FLANKED",
+	desc = "Flanked",
+	long_desc = function(self, eff) return ("Flanked by the outrider and its allies, the target suffers a defense decrease of %d, a %d%% increase to critical damage and all attackers gain a crit chance bonus of %d%% against it.") end,
+	type = "physical",
+	subtype = { tactic=true },
+	status = "detrimental",
+	parameters = {def=5, crit=7, crit_dam = 10},
+	on_gain = function(self, err) return nil, "+Flanked" end,
+	on_lose = function(self, err) return nil, "-Flanked" end,
+	activate = function(self, eff)
+		if not eff.src then
+			self:removeEffect(self.EFF_PREDATORY_FLANKING, nil, true)
+			error("No source sent to temporary effect Flanking.")
+		end
+		if not eff.allies then
+			self:removeEffect(self.EFF_MOUNT, nil, true)
+			error("No allies list sent to temporary effect Flanking.")
+		end
+		self:effectTemporaryValue(eff, "combat_crit_vulnerable", eff.crit)
+		self:effectTemporaryValue(eff, "combat_def", -eff.def)
+	end,
+	callbackOnActBase = function(self, eff)
+		local src = eff.src
+		if core.fov.distance(self.x, self.y, src.x, src.y) ~= 1 then self:removeEffect(eff.effect_id) end
+		local count = 0 
+		for _, ally in ipairs(eff.allies) do
+			--Checks to see if adjacent ally is not also adjacent to use,
+			if core.fov.distance(self.x, self.y, ally.x, ally.y) == 1 and core.fov.distance(src.x, src.y, ally.x, ally.y) > 1 then
+				count = count+1
+			end
+		end
+		if count < 1 then self:removeEffect(eff.effect_id) end
+	end,
+}
+
+
+newEffect{
 	name = "PREDATORY_FLANKING",
 	desc = "Predatory Flanking", image = "talents/precise_strikes.png",
 	long_desc = function(self, eff) return ("Flanked by the wolf and its allies, the target suffers %d%% increased damage from the source and %d%% from its flanking allies.") end,
@@ -467,7 +504,6 @@ newEffect{
 							bestDistance = distance
 							bestX = x
 							bestY = y
-							game.log("DEBUG: Moving with dx %d and dy %d, distance=%d; cur_dist=%d", dx, dy, distance, cur_dist)
 						end
 					end
 				end
@@ -786,6 +822,46 @@ newEffect{
 				if target.x==ox and target.y==oy then return end
 				if self:canMove(ox, oy) then self:move(ox, oy, true) end
 			end)
+		end
+	end,
+}
+
+newEffect{
+	name = "BOND_BEYOND_BLOOD",
+	desc = "Bond Beyond Blood", image = "talents/summon_control.png",
+	long_desc = function(self, eff) return ("Reduces damage received by %d%% while controlling the mount."):format(eff.res, eff.incdur) end,
+	type = "other",
+	subtype = { focus=true },
+	status = "beneficial",
+	parameters = { res=10, loyalty_discount=10 },
+	activate = function(self, eff)
+		local pet = self.outrider_pet
+		eff.pet = pet
+		if not pet then self:removeEffect(self.EFF_BOND_BEYOND_BLOOD) end
+		if pet and game.party:hasMember(self) and game.party:hasMember(pet) then
+			eff.old_control = game.party.members[pet].control 
+			game.party.members[pet].control ="full"
+		end
+	end,
+	deactivate = function(self, eff)
+		local pet = eff.pet
+		if pet and game.party:hasMember(pet) then
+			game.party.members[pet].control=eff.old_control
+			if pet.player then
+				game.party:setPlayer(self)
+			end
+		end
+	end,
+	callbackOnKill = function(self, eff, target, death_note)
+		--TODO: Add this callback to the mount, too.
+		--The mount will have a whole host of other effects come the redesign, so it's fine to do this later.
+		self:logCombat(target, "#Source# extends its Bond Beyond Blood!")
+		eff.dur = eff.dur+1
+	end,
+	callbackOnTakeDamage = function(self, eff, src, x, y, type, dam, state)
+		if game.party:hasMember(self) and eff.pet.player then
+			dam = dam - dam*eff.res/100
+			return {dam=dam}
 		end
 	end,
 }

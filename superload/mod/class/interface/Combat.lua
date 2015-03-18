@@ -52,6 +52,16 @@ function _M:attackTargetWith(target, weapon, damtype, mult, force_dam)
 	return base_attackTargetWith(self, target, weapon, damtype, mult, force_dam)
 end
 
+local base_physicalCrit = _M.physicalCrit
+function _M:physicalCrit(dam, weapon, target, atk, def, add_chance, crit_power_add)
+	crit_power_add = crit_power_add or 0
+	local eff = target:hasEffect(target.EFF_FLANKING)
+	if eff then
+		crit_power_add = crit_power_add + eff.crit_dam
+	end
+	return base_physicalCrit(self, dam, weapon, target, atk, def, add_chance, crit_power_add)
+end
+
 local base_attackTarget = _M.attackTarget
 function _M:attackTarget(target, damtype, mult, noenergy, force_unharmed)
 	local eff = target:hasEffect(target.EFF_LIVING_SHIELDED)

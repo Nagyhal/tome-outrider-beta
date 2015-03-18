@@ -17,9 +17,8 @@
 -- Nicolas Casalini "DarkGod"
 -- darkgod@te4.org
 
-
 newTalent{
-	name = "Rearing Assualt",
+	name = "Rearing Assault",
 	type = {"mounted/teamwork", 1},
 	points = 5,
 	random_ego = "defensive",
@@ -29,6 +28,12 @@ newTalent{
 	requires_target = true,
 	tactical = { ATTACK = 2 },
 	on_pre_use = function(self, t, silent)
+		if self:isMounted() then
+			if self:attr("never_move") then return false end
+		else
+			local mount = self:hasMount()
+			if mount and mount:attr("never_move") then return false end
+		end
 		return preCheckHasMountPresent(self, t, silent)
 	end,
 	action = function(self, t)
@@ -68,10 +73,10 @@ newTalent{
 	info = function(self, t)
 		local dam = t.getDam(self, t)*100
 		local crit = t.getCrit(self, t)
-		return ([[Your mount rears up and attacks your target for %d%% damage, while moving into its space; your mount and your foe will exchange places. If you are mounted you follow up with a crushing strike or a focused shot with a %d increased critical modifier. You may also call upon your mount to use this while dismounted; this does not cost stamina.]]):
+		return ([[Your mount rears up and attacks your target for %d%% damage, while moving into its space; your mount and your foe will exchange places. If you are mounted you follow up with a crushing strike or a focused shot with a %d%% increased critical modifier. You may also call upon your mount to use this while dismounted; this does not cost stamina.]]):
 			format(dam, crit)
 	end,
-	getDam = function(self, t) return self:combatTalentScale(t, .9, 1.7) end,
+	getDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.8) end,
 	getCrit = function(self, t) return self:combatTalentScale(t, 6, 25) end,
 }
 
@@ -81,19 +86,22 @@ newTalent{
 	type = {"mounted/teamwork", 2},
 	require = mnt_wil_req2,
 	points = 5,
-	cooldown = function(self, t) return self:combatTalentLimit(t, 12, 25, 18) end,
+	cooldown = function(self, t) return math.max(12, self:combatTalentScale(t, 25, 14)) end,
 	loyalty = 5,
 	tactical = { ATTACK = 1, CLOSEIN = 1, DISABLE = { daze = 1 }  },
 	range = function(self, t) return math.min(10, self:combatTalentScale(t, 5, 9)) end,
 	requires_target = true,
 	on_pre_use = function(self, t, silent)
+		local mount = self:hasMount()
+		if mount and mount:attr("never_move") then return false end
 		return preCheckHasMountPresent(self, t, silent)
 	end,
 	action = function(self, t)
 		local mount = self:hasMount()	
-		local tg = {type="hit", range=self:getTalentRange(t), start_x=mount.x, start_y=mount.y}
+		local tg = {type="bolt", range=self:getTalentRange(t), start_x=mount.x, start_y=mount.y}
 		local x, y, target = self:getTarget(tg)
 		if not x or not y or not target then return nil end
+		if self:reactionToward(target) >= 0 then return nil end
 		if core.fov.distance(mount.x, mount.y, x, y) > self:getTalentRange(t) then return nil end
 
 		local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", mount) end
@@ -136,6 +144,69 @@ newTalent{
 			format(range, dam, dur)
 	end,
 	getDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
-	getDur = function(self, t) return self:combatTalentScale(t, 3, 4) end,
+	getDur = function(self, t) return self:combatTalentScale(t, 2.5, 4.2, .75) end,
+}
 
+newTalent{
+	name = "Flanking",
+	type = {"mounted/teamwork", 3},
+	points = 5,
+	require = mnt_wil_req3,
+	mode = "passive",
+	doCheck = function(self, t)
+		local tgts = {}
+		for _, c in pairs(util.adjacentCoords(self.x, self.y)) do
+			local target = game.level.map(c[1], c[2], Map.ACTOR)
+			if target and self:reactionToward(target) < 0 then tgts[#tgts+1] = target end
+		end
+		for _, target in ipairs(tgts) do
+			local allies = {}
+			for _, c in pairs(util.adjacentCoords(target.x, target.y)) do
+				local target2 = game.level.map(c[1], c[2], Map.ACTOR)
+				if target2 and self:reactionToward(target2) >= 0 and core.fov.distance(self.x, self.y, target2.x, target2.y)>1 then allies[#allies+1] = target2 end
+				if #allies>=1 then
+					target:setEffect(target.EFF_FLANKED, 2, {src=self, allies=allies, crit=t.getCritChance(self, t), crit_dam=t.getCritPower(self, t)})
+				end --We run the check to see if we are no longer flanking from within the enemy's temp effect.
+			end
+		end
+	end,
+	callbackOnActBase = function(self, t)
+		t.doCheck(self, t)
+	end,
+	info = function(self, t)
+		local def = t.getDef(self, t)
+		local crit = t.getCritChance(self, t)
+		local crit_dam = t.getCritPower(self, t)
+		return ([[When dismounted, if you and one of your allies both stand adjacent to the same enemy (but not adjacent to one another), then you both gain a bonus of %d%% to critical strike chance and %d%% to critical damage against that enemy. It will also suffer a %d penalty to defense.]]):
+			format(crit, crit_dam, def)
+	end,
+	getDef = function(self, t) return self:combatTalentScale(t, 5, 12) end,
+	getCritChance = function(self, t) return self:combatTalentScale(t, 10, 25) end,
+	getCritPower = function(self, t) return self:combatTalentScale(t, 15, 35) end,
+}
+
+newTalent{
+	name = "Bond Beyond Blood",
+	type = {"mounted/teamwork", 4},
+	points = 5,
+	require = mnt_wil_req4,
+	cooldown = 30,
+	action = function(self, t)
+		self:setEffect(self.EFF_BOND_BEYOND_BLOOD, t.getDur(self, t), {loyalty_discount=t.getLoyaltyDiscount(self, t), res=t.getResist(self, t)})
+		return true
+	end,
+	info = function(self, t)
+		local dur = t.getDur(self, t)
+		local loyalty_discount = t.getLoyaltyDiscount(self, t)
+		local res = t.getResist(self, t)
+		return ([[You and your mount act as one, allowing you to switch between control of yourself and your mount at will for %d turns. While this talent is in effect, your mount loses loyalty at a reduced rate; all loyalty costs are reduced by %d%%.
+
+			While controlling your mount, incoming damage to you is reduced by %d%%.
+
+			Each enemy slain by you or your mount adds 1 to the duration of Bond Beyond Blood.]]):
+			format(dur, loyalty_discount, res)
+	end,
+	getDur = function(self, t) return self:combatTalentScale(t, 5, 12) end,
+	getLoyaltyDiscount = function(self, t) return self:combatTalentLimit(t, 75, 20, 50) end,
+	getResist = function(self, t) return self:combatTalentLimit(t, 100, 40, 70) end,
 }

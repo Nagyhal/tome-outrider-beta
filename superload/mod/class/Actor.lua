@@ -343,6 +343,16 @@ function _M:loyaltyCheck(pet, silent)
 	end
 end
 
+local previous_incLoyalty = _M.incLoyalty
+function _M:incLoyalty(loyalty)
+	local eff = self:hasEffect(self.EFF_BOND_BEYOND_BLOOD)
+	if eff and loyalty < 0 then
+		loyalty = loyalty - loyalty*eff.loyalty_discount/100
+	end
+
+	return previous_incLoyalty(self, loyalty)
+end
+
 _M.sustainCallbackCheck.callbackOnMounted = "talents_on_mounted"
 _M.sustainCallbackCheck.callbackOnDismounted = "talents_on_dismounted"
 
