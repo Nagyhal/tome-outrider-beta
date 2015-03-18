@@ -93,7 +93,8 @@ newTalent{
 		return {type="hit", range=self:getTalentRange(t), selffire=false, talent=t}
 	end,
 	on_pre_use = function(self, t, silent)
-		if self:hasEffect(EFF_RIDDEN) then if not silent then game.logPlayer(self, "Your owner has to command you, for you to use Carry Aloft!") end return false end
+		if self:attr("never_move") then return false end
+		if self:hasEffect(self.EFF_RIDDEN) then if not silent then game.logPlayer(self, "Your owner has to command you, for you to use Carry Aloft!") end return false end
 		return true
 	end,
 	shared_talent = "T_COMMAND:_CARRY_ALOFT",
@@ -161,17 +162,21 @@ newTalent{
 	name = "Command: Carry Aloft",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
-	requires_target = true,
-	direct_hit = true,
 	tactical = { CLOSEIN = 3, DISABLE = { pin = 2 }  },
 	radius = 2,
 	range = function(self, t) return self:combatTalentScale(t, 3, 5) end,
 	cooldown = 12,
 	requires_target = true,
+	direct_hit = true,
 	base_talent = "T_CARRY_ALOFT",
 	target = function(self, t)
 		local pet = self.outrider_pet
 		return pet:getTalentTarget(pet:getTalentFromId(t.base_talent))
+	end,
+	on_pre_use = function(self, t, silent)
+		if self:attr("never_move") then return false end
+		local mount = self.outrider_pet
+		return mount and mount:callTalent(mount.T_CARRY_ALOFT	, "on_pre_use") or false
 	end,
 	action = function(self, t)
 		local tg = {type="hit", range=1, first_target = "friend"}
