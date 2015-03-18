@@ -208,9 +208,10 @@ newTalent{
 	require = mnt_cun_req4,
 	tactical = { DISABLE = { fear = 4 } },
 	range = function (self, t) return math.floor(self:getTalentLevel(t) +4)  end,
+	radius = 2,
 	requires_target = true,
 	target = function(self, t)
-		return {type="ball", radius=1, range=self:getTalentRange(t)}
+		return {type="ball", radius=self:getTalentRadius(t), range=self:getTalentRange(t), talent=t, friendly_fire=false, selffire=false}
 	end,
 	on_learn = function(self, t)
 		if not self:knowTalent(self.T_CATCH_PASSIVE) then self:learnTalent(self.T_CATCH_PASSIVE, true) end
@@ -227,20 +228,29 @@ newTalent{
 		end
 		return true
 	end,
+	callbackOnCrit = function(self, t, type, dam, chance, target)
+			if type=="physical" then
+				self.turn_procs.truephyscrit = true
+		end
+	end,
 	callbackOnKill = function(self, t, target, death_note)
-		if not (self.turn_procs and self.turn_procs.is_crit) then return end
-		if core.fov.distance(target.x, target.y, self.x, self.y)>1 then return end
+			if not (self.turn_procs and self.turn_procs.truephyscrit) then return end
+			if core.fov.distance(target.x, target.y, self.x, self.y)>1 then return end
 		self:setEffect(self.EFF_CATCH, t.getUsageWindow(self, t), {})
 	end,
 	action = function(self, t)
-		local tg = {type="hit", range=self:getTalentRange(t)}
+		local tg = self:getTalentTarget(t)
 		local x, y, target = self:getTarget(tg)
-		if not x or not y or not target then return nil end
+		if not x or not y  then return nil end
+		self:project(tg, x, y, function(px, py)
+			local target = game.level.map(px, py, engine.Map.ACTOR)
+			if not target then return end
 			if target:canBe("confusion") then
 				target:setEffect(target.EFF_CONFUSED, t.getDur(self, t), {power=30 + self:getCun(70), apply_power=self:combatAttack()})
 			else
 				game.logSeen(target, "%s resists the terror!", target.name:capitalize())
 			end
+		end)
 		return true
 	end,
 	info = function(self, t)

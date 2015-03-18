@@ -132,7 +132,7 @@ local function makeBestialMount(self, lev)
 	local tot = 0
 	local list = {}
 	for k, e in pairs(chances) do for i = 1, e do list[#list+1] = k end tot = tot + e end
-	local m = require "mod.class.NPC".new(mounts_list.cold_drake)
+	local m = require "mod.class.NPC".new(mounts_list.wolf)
 	return m
 end
 
@@ -140,17 +140,18 @@ function befriendMount(self, m)
 	m.summoner = self
 	m.faction = self.faction
 	if game.party:hasMember(self) then
-		local can_control = not no_control
 		m.remove_from_party_on_death = true
 		game.party:addMember(m, {
-			control=can_control and "full" or "no",
+			control="no",
 			type="mount",
 			title="Mount",
 			orders = {target=true, leash=true, anchor=true, talents=true},
 			on_control = function(self)
+				self.old_move_others = self.move_others
+				self.move_others = true
 			end,
 			on_uncontrol = function(self)
-				self:removeEffect(self.EFF_SUMMON_CONTROL)
+				self.move_others = self.old_move_others
 			end,
 		})
 	end
@@ -243,7 +244,6 @@ newTalent{
 		for tid, nb in pairs(summon.talents) do
 			local t2 = summon:getTalentFromId(tid)
 			if t2.shared_talent then
-				game.log("DEBUG: trying to unlearn %s", t2.shared_talent)
 				self:unlearnTalentFull(t2.shared_talent)
 			end
 		end
@@ -292,14 +292,12 @@ newTalent{
 		for i=1, rng.range(6, 8) do
 			if first then 
 				local mount = makeBestialMount(self, self:getTalentLevel(t))
-				mountSetupSummon(self, mount, coords[i][1], coords[i][2], false)
+				mountSetupSummon(self, mount, coords[i][1], coords[i][2], true)
 				mount:setEffect(mount.EFF_WILD_CHALLENGER, 2, {src=self})
 			else
 				game.log(tostring(resolvers.current_level))
 				if not coords[i] then return end
-				local base_list=require("mod.class.NPC"):loadList("data/general/npcs/cold-drake.lua")
-				base_list[3] = nil
-				base_list[4] = nil
+				local base_list=require("mod.class.NPC"):loadList("data/general/npcs/canine.lua")
 				local filter = {base_list=base_list
 				}
 
@@ -434,9 +432,7 @@ newTalent{
 	end,
 	action = function(self, t)
 		local mount = self:hasMount()
-		mount:setEffect(mount.EFF_UNBRIDLED_FEROCITY, t.getDur(self, t, {
-			power=t.getPower(self, t)
-			}))
+		mount:setEffect(mount.EFF_UNBRIDLED_FEROCITY, t.getDur(self, t) {power=t.getPower(self, t)})
 		return true
 	end,
 	info = function(self, t)

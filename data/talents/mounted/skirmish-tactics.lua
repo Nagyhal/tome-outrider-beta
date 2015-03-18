@@ -47,7 +47,7 @@ newTalent{
 		local speed = t.getSpeed(self, t)*100
 		local loyalty = t.getLoyalty(self, t)
 		-- local range = t.getRushRange(self, t)
-		return ([[You let off a jagged missile that fills your steed with a savage thirst for blood, enraging it. You shoot your enemy for %d%% damage, bleeding it for %d damage each turn and marking it with the Beastmaster's Mark for %d turns. While this is in effect, your steed concentrates solely upon this foe, moving and attacking %d%% faster, but if you hold it back it will lose %.1f Loyalty per turn that you do this.]]):
+		return ([[You let off a jagged missile that fills your steed with a savage thirst for blood, enraging it. You shoot your enemy for %d%% damage, bleeding it for %d damage and marking it with the Beastmaster's Mark for %d turns. While this is in effect, your steed concentrates solely upon this foe, moving and attacking %d%% faster, but if you hold it back it will lose %.1f Loyalty per turn that you do this.]]):
 		format(dam, bleed, dur, speed, loyalty, range)
 	end,
 	getDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
@@ -139,7 +139,7 @@ newTalent{
 	info = function(self, t)
 		local reduction = t.getReduction(self, t)
 		local speed = t.getSpeed(self, t)
-		return ([[While mounted, if you or your mount are hit for over 15% of your max health (but not enough to kill you), then you take only %d%% of that damage, this sustain deactivates, and you gain a movement speed increase of %d%% for one turn and may mount or dismount freely - but if you do anything other than mount, dismount or move, then this bonus ends.]]):
+		return ([[While mounted, if you or your mount are hit for over 15%% of your max health (but not enough to kill you), then you take only %d%% of that damage, this sustain deactivates, and you gain a movement speed increase of %d%% for one turn and may mount or dismount freely - but if you do anything other than mount, dismount or move, then this bonus ends.]]):
 		format(reduction, speed)
 	end,
 	getReduction = function(self, t) return self:combatTalentLimit(t, 80, 35, 60) end,

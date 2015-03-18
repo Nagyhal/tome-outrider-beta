@@ -18,7 +18,8 @@
 -- darkgod@te4.org
 
 newTalent{
-	name = "Charge",
+	name = "Charge!",
+	short_name = "CHARGE",
 	type = {"mounted/shock-tactics", 1},
 	message = "@Source@ charges!",
 	require = techs_strdex_req1,
@@ -140,7 +141,7 @@ newTalent{
 		local dam = t.getDam(self, t)*100
 		return ([[After performing a successful mounted charge, you gain the Shock Attack status effect for %d turns, during which the surprise and momentum of your attacks gives you an incredible advantage. 
 
-			All basic attacks you make while mounted will knock back foes 1 square as you move into their position. You also access  a free, secondary Charge attack as long as the effect lasts, rushing down a foe up to %d squares away for %d%% damage.]]):
+			All basic attacks you make while mounted will knock back foes 1 square as you move into their position. You also access a free, secondary Charge attack as long as the effect lasts, rushing down a foe up to %d squares away for %d%% damage.]]):
 		format(dur, range, dam)
 	end,
 	getDur = function(self, t) return self:combatTalentScale(t, 2, 5) end,

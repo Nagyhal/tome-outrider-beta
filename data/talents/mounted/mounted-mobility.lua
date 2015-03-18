@@ -31,6 +31,7 @@ newTalent{
 	getMaxAttackCount = function(self, t) return 10 end,	
 	tactical = { ATTACK = { weapon = 2 }, CLOSEIN = 3 },
 	on_pre_use = function(self, t, silent)
+		if self:attr("never_move") then return false end
 		return preCheckIsMounted(self, t, silent)
 	end,
 	action = function(self, t)
@@ -79,7 +80,8 @@ newTalent{
 		return ret
 	end,
 	action = function(self, t)
-		self.mount:setEffect(self.EFF_SPEED, 5, {power=t.getGoadSpeed(self, t)})
+		local mount = self:hasMount()
+		mount:setEffect(self.EFF_SPEED, 5, {power=t.getGoadSpeed(self, t)})
 		return true
 	end,
 	info = function(self, t)
@@ -102,6 +104,12 @@ newTalent{
 	range = function(self, t) return math.floor(2.5 + 0.7*self:getTalentLevel(t)) end,
 	requires_target = true,
 	on_pre_use = function(self, t, silent)
+		if self:isMounted() then
+			if self:attr("never_move") then return false end
+		else
+			local mount = self:hasMount()
+			if mount and mount:attr("never_move") then return false end
+		end
 		return preCheckHasMountPresent(self, t, silent)
 	end,
 	action = function(self, t)

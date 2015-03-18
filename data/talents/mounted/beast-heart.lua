@@ -33,7 +33,7 @@ newTalent{
 		local heal = t.getHeal(self, t)
 		local stamina = t.getStamina(self, t)
 		local bleed_per = t.getBleed(self, t)/6
-		return ([[Partaking of your beastial mount's unfaltering devotion through times of greatest need, you quench your hunger by loosing a little of its blood. Must be dismounted and adjacent to the beast. Regain %d health and %d stamina, while inflicting 6 turns of bleeding for %d damage upon your beast.]]):
+		return ([[Partaking of your bestial mount's unfaltering devotion through times of greatest need, you quench your hunger by loosing a little of its blood. Must be dismounted and adjacent to the beast. Regain %d health and %d stamina, while inflicting 6 turns of bleeding for %d damage upon your beast.]]):
 			format(heal, stamina, bleed_per)
 	end,
 	getStamina = function(self, t) return self:combatTalentScale(t, 10, 60) end,
@@ -83,7 +83,7 @@ newTalent{
 	end,
 	getDam = function(self, t) return self:combatTalentScale(t, 1.8, 2.5) end,
 	getLoyalty = function(self, t) return self:combatTalentScale(t, 15, 35) end,
-	getHeal = function(self, t) return self:combatTalentLimit(t, .05, .1, 35) end
+	getHeal = function(self, t) return self:combatTalentLimit(t, .5, .1, .35) end
 }
 
 newTalent{

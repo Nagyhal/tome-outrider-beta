@@ -75,7 +75,7 @@ newTalentType{ type="great-elk/monarch-of-the-woods", name = "monarch of the woo
 newTalentType{ type="mammoth/thundering-colossus", name = "thundering colossus", description = "Mammoth utility abilities." }
 --Shalore can ride exotic drakes
 --Bears, dwarf mount
-newTalentType{ type="bear/claw-and-crush", name = "claw and crush", description = "Bear power abilities." }
+newTalentType{ type="bear/crushing claws", name = "crushing claws", description = "Bear power abilities." }
 --Xorn, dwarf mount
 newTalentType{ type="xorn/embodiment-of-stone", name = "xorn/embodiment of stone", description = "Xorn defensive and travel abilities." }
 --Yeeks, yeek mount
@@ -330,8 +330,8 @@ load("/data-outrider/talents/mounted/drake.lua")
 load("/data-outrider/talents/mounted/bestial-dominion.lua")
 load("/data-outrider/talents/mounted/mounted-mobility.lua")
 load("/data-outrider/talents/mounted/teamwork.lua")
-load("/data-outrider/talents/mounted/skirmish-tactics.lua")
-load("/data-outrider/talents/mounted/shock-tactics.lua")
+-- load("/data-outrider/talents/mounted/skirmish-tactics.lua")
+-- load("/data-outrider/talents/mounted/shock-tactics.lua")
 load("/data-outrider/talents/mounted/beast-heart.lua")
 load("/data-outrider/talents/race/traits.lua")
 

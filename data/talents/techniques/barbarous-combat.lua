@@ -6,7 +6,7 @@ function hasOneHandedWeapon(self)
 
 	if not self:getInven("MAINHAND") then return end
 	local weapon = self:getInven("MAINHAND")[1]
-	if not weapon or weapon.twohanded then
+	if not weapon or weapon.twohanded or weapon.archery then
 		return nil
 	end
 	return weapon
@@ -15,7 +15,7 @@ end
 function hasFreeOffhand(self)
 	local mainhand = self:getInven("MAINHAND")[1]
 	if mainhand and mainhand.twohanded then return nil end
-	if not self:getInven("OFFHAND") then return true else return nil end
+	if not (self:getInven("OFFHAND") and self:getInven("OFFHAND")[1]) then return true else return nil end
 end
 
 newTalent{
@@ -24,17 +24,17 @@ newTalent{
 	require = mnt_strcun_req1,
 	points = 5,
 	random_ego = "attack",
-	cooldown = 15,
+	cooldown = 10,
 	stamina = 30,
 	tactical = { ATTACKAREA = { weapon = 3 } },
 	range = 0,
 	radius = 1,
-	getDamage = function(self, t) return self:combatTalentWeaponDamage(t, 1.5, 2.1) end,
-	getKnockbackRange = function(self, t) return math.floor(3 + self:getTalentLevel(t)/3) end,
-	--TODO: Could add an unusual element where knockback relates to creatures hit
-	--Or just plain that only creatures knocked back are hit.
+	getDamage = function(self, t) return self:combatTalentScale(t, 1.21, 1.94, .35) end,
+	getKnockbackRange = function(self, t) return self:combatTalentScale(t, 2.5, 4.3) end,
+	--TODO: Could add an unusual element where knockback is a function of number of hits
+	--Or that only creatures knocked back are hit.
 	--Sounds good to me and differentiates it well from Repulsion
-	getKnockbackRadiusMounted = function(self, t) return math.floor(2 + self:getTalentLevel(t)/3) end,
+	getKnockbackRadiusMounted = function(self, t) return self:combatTalentScale(t, 2, 3.8) end,
 	requires_target = true,
 	target = function(self, t)
 		return {type="ball", range=self:getTalentRange(t), selffire=false, radius=self:getTalentRadius(t)}
@@ -55,13 +55,14 @@ newTalent{
 		self:project(tg, self.x, self.y, 
 			function(px, py, tg, self)
 				local target = game.level.map(px, py, Map.ACTOR)
-				if target and target ~= self then
+				local dist = core.fov.distance(px, py, self.x, self.y)
+				if target and self:reactionToward(target)<0 and dist==1 then
 					local hit = self:attackTarget(target, nil, t.getDamage(self, t), true)
-					if hit and self:checkHit(self:combatMindpower(), target:combatMentalResist(), 0, 95) and target:canBe("knockback") then
-						target:knockback(self.x, self.y, t.getKnockbackRange(self, t), recursive)
-						else
-						game.logSeen(target, "%s resists the knockback!", target.name:capitalize())
-					end
+				end
+				if self:checkHit(self:combatMindpower(), target:combatMentalResist(), 0, 95) and target:canBe("knockback") then
+					target:knockback(self.x, self.y, t.getKnockbackRange(self, t), recursive)
+				else
+					game.logSeen(target, "%s resists the knockback!", target.name:capitalize())
 				end
 			end)
 		return true
@@ -85,7 +86,8 @@ newTalent{
 	sustain_stamina = 40,
 	tactical = { BUFF = 2 },
 	on_pre_use = function(self, t, silent)
-		if not hasOneHandedWeapon(self) then
+		-- if not hasOneHandedWeapon(self) then
+		if not t.checkBothWeaponSets(self, t) then
 			if not silent then
 				game.logPlayer(self, "You require a one-handed weapon to use this talent.")
 			end
@@ -93,16 +95,65 @@ newTalent{
 		end
 		return true
 	end,
+	checkBothWeaponSets = function(self, t)
+		local mains = {main=self:getInven("MAINHAND") and self:getInven("MAINHAND")[1],
+			qs = self:getInven("QS_MAINHAND") and self:getInven("QS_MAINHAND")[1]}
+		local offhands = {main=self:getInven("OFFHAND") and self:getInven("OFFHAND")[1],
+			qs = self:getInven("QS_OFFHAND") and self:getInven("QS_OFFHAND")[1]}
+		local one_handed = false
+		local free_off = false
+		for _, set in ipairs{"main", "qs"}do
+			local main = mains[set]
+			if main and not main.twohanded and not main.archery then
+				one_handed = true
+				if not offhands[set] then free_off = true end
+			end
+		end
+		return one_handed, free_off
+	end,
 	activate = function(self, t)
-		local weapon = self:hasOneHandedWeapon()
+		local weapon = hasOneHandedWeapon(self)
 		if not weapon then
 			game.logPlayer(self, "You cannot use Master of Brutality without a one-handed weapon!")
-			return nil
+			return false
 		end
 
-		self:talentTemporaryValue("combat_atk", t.getAtk(self, t))
-		self:talentTemporaryValue("combat_mindpower", t.getMindpower(self, t))
-		return {}
+		local ret = {free_off=false}
+		if hasFreeOffhand(self) then
+				self:talentTemporaryValue(ret, "combat_atk", t.getAtk2(self, t))
+				self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower2(self, t))
+				free_off=true
+		else 
+			self:talentTemporaryValue(ret, "combat_atk", t.getAtk(self, t))
+			self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower(self, t))
+		end
+		return ret
+	end,
+	callbackOnWear  = function(self, t, o, bypass_set) t.checkWeapons(self, t, o, bypass_set) end,
+	callbackOnTakeoff  = function(self, t, o, bypass_set) t.checkWeapons(self, t, o, bypass_set) end,
+	checkWeapons = function(self, t, o, bypass_set)
+		if o.type and o.type=="weapon" then
+			game:onTickEnd(function()
+				local one_handed, free_off = t.checkBothWeaponSets(self, t)
+				if one_handed then
+					local p = self:isTalentActive(t.id); if not p then return end
+					for i = 1, #p.__tmpvals do
+						self:removeTemporaryValue(p.__tmpvals[i][1], p.__tmpvals[i][2])
+					end
+					if free_off then
+						self:talentTemporaryValue(p, "combat_atk", t.getAtk2(self, t))
+						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower2(self, t))
+						p.free_off=true
+					else
+						self:talentTemporaryValue(p, "combat_atk", t.getAtk(self, t))
+						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower(self, t))
+						p.free_off=false
+					end
+				else
+					self:forceUseTalent(t.id, {no_energy=true})
+				end
+			end)
+		end
 	end,
 	deactivate = function(self, t, p)
 		return true
@@ -117,7 +168,7 @@ newTalent{
 		
 		Gain a %d increase to attack and APR and a %d increase to mindpower while wielding a one-handed weapon. Critical hits will reduce the physical resistance of the target by %d%% for 2 turns.
 
-		Gain a %d increase to attack and APR and a %d increase to mindpower if you choose to wield an one-handed weapon, and no offhand.]]):
+		Gain a %d increase to attack and APR and a %d increase to mindpower if you hold nothing in your off-hand.]]):
 		format(atk, mindpower, phys_pen, atk2, mindpower2)
 	end,
 	getAtk = function(self, t) return self:combatTalentScale(t, 5, 12)end,
@@ -136,7 +187,7 @@ newTalent{
 	cooldown = 15,
 	stamina = 30,
 	tactical = { ATTACKAREA = { weapon = 1 } },
-	range = 0,
+	range = 1,
 	radius = 1,
 	getDamage = function(self, t) return self:combatTalentWeaponDamage(t, 0.5, 1.0) end,
 	getBlindDuration = function(self, t) return self:combatTalentScale(t, 4, 6) end,
@@ -144,7 +195,7 @@ newTalent{
 	getBlindTarget = function(self, t) return {type="ball", range=self:getTalentRange(t), selffire=false, friendlyfire=false, radius=self:getTalentRadius(t)} end,
 	getBleedPower = function(self, t) return self:combatTalentPhysicalDamage(t, 25, 150) end,
 	requires_target = true,
-	-- on_pre_use = function(self, t, silent) if not self:hasTwoHandedWeapon() then if not silent then game.logPlayer(self, "You require a two handed weapon to use this talent.") end return false end return true end,
+	on_pre_use = function(self, t, silent) if not hasOneHandedWeapon(self) then if not silent then game.logPlayer(self, "You require a one handed weapon to use this talent.") end return false end return true end,
 	action = function(self, t)
 		local tg = {type="hit", range=self:getTalentRange(t)}
 		local x, y, target = self:getTarget(tg)
@@ -180,7 +231,7 @@ newTalent{
 
 newTalent{
 	name = "Suggest this Talent!",
-	short_name = "T_UNNAMED_OUTRIDER_TALENT",
+	short_name = "UNNAMED_OUTRIDER_TALENT",
 	type = {"technique/barbarous-combat", 4},
 	mode = "passive",
 	require = function(self, t)
@@ -195,6 +246,6 @@ newTalent{
 
 			Throughout its development, many changes have been made to the base idea. Because of talents moving out of the original trees, we have many new trees (either playable now or in the works!)
 
-			But this does mean certain talent categories have lost their original progression. What should I place here? You help decide! Send me your ideas, and I fall in love with any of them, they'll go in! Until then, don't try and put any points into this placeholder talent!]])
+			But this does mean certain talent categories have lost their original progression. What should I place here? You help decide! Send me your ideas, and if I fall in love with any of them, they'll go in! Until then, don't try and put any points into this placeholder talent!]])
 	end,
 }

@@ -176,7 +176,7 @@ newTalent{
 	on_pre_use = function(self, t, silent)
 		if self:attr("never_move") then return false end
 		local mount = self.outrider_pet
-		return mount and mount:callTalent(mount.T_CARRY_ALOFT	, "on_pre_use") or false
+		return mount and mount:callTalent(mount.T_CARRY_ALOFT, "on_pre_use") or false
 	end,
 	action = function(self, t)
 		local tg = {type="hit", range=1, first_target = "friend"}

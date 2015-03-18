@@ -22,7 +22,9 @@ newTalent{
 		shareTalentWithOwner(self, t)
 	end,
 	on_unlearn = function(self, t, p)
-		unshareTalentWithOwner(self, t)
+		if self:getTalentLevelRaw(t) == 0 then
+			unshareTalentWithOwner(self, t)
+		end
 	end,
 	info = function(self, t)
 		local stat = t.getStatBoost(self, t)
@@ -74,7 +76,9 @@ newTalent{
 		shareTalentWithOwner(self, t)
 	end,
 	on_unlearn = function(self, t, p)
-		unshareTalentWithOwner(self, t)
+		if self:getTalentLevelRaw(t) == 0 then
+			unshareTalentWithOwner(self, t)
+		end
 	end,
 	on_pre_use = function(self, t, silent)
 		local tg = {type="ball", radius=self:getTalentRange(t), 0}
@@ -105,11 +109,12 @@ newTalent{
 	end,
 	action = function(self, t)
 		local tg = {type="hit", range=self:getTalentRange(t)}
+		if self:attr("never_move") then tg.range=1 end
 		local x, y, target = self:getTarget(tg)
 		if not x or not y or not target then return nil end
 		if core.fov.distance(self.x, self.y, x, y) > self:getTalentRange(t) then return nil end
 		--TODO: Maybe use something more mount-centric than self.rider:isMounted()
-		local ret = t.doAttack(self, t, target)
+		local ret = t.doAttack(self, t, self, target)
 		local owner = self.owner
 		if ret and owner then owner:startTalentCooldown(owner.T_GO_FOR_THE_THROAT_COMMAND) end
 		return ret
@@ -176,13 +181,14 @@ newTalent{
 		local t2 = mount:getTalentFromId(mount.T_GO_FOR_THE_THROAT)
 
 		local tg = {type="hit", start_x=mount.x, start_y=mount.y, range=mount:getTalentRange(t2)}
+		if self:attr("never_move") then tg.range=1 end
 		local x, y, target = self:getTarget(tg)
 		if not x or not y or not target then return nil end
 		if core.fov.distance(mount.x, mount.y, x, y) > self:getTalentRange(t2) then return nil end
 
 		local mover
 		if self:isMounted() then mover = self else mover = mount end
-		local ret = mount:callTalent(mount.T_GO_FOR_THE_THROAT, "doAttack", target)
+		local ret = mount:callTalent(mount.T_GO_FOR_THE_THROAT, "doAttack", mover, target)
 		if ret then mount:startTalentCooldown(mount.T_GO_FOR_THE_THROAT) end
 		return ret
 	end,
@@ -245,12 +251,6 @@ newTalent{
 	getReduction = function (self, t) return self:combatTalentScale(t, 5, 12) end,
 	getDur = function(self, t) return self:combatTalentScale(t, 4, 7) end,
 	on_pre_use= function(self, t, silent)
-		-- if self~=game.player then
-		-- 	if not silent  then 
-		-- 		game.logPlayer(self, "Your owner has to command you, for you to use Fetch!") 
-		-- 	end  
-		-- 	return false
-		-- end
 		return false
 	end,
 	shared_talent = "T_FETCH_COMMAND",
@@ -258,10 +258,13 @@ newTalent{
 		shareTalentWithOwner(self, t)
 	end,
 	on_unlearn = function(self, t, p)
-		unshareTalentWithOwner(self, t)
+  		if self:getTalentLevelRaw(t) == 0 then
+			unshareTalentWithOwner(self, t)
+		end
 	end,
 	action = function(self, t)
 		local tg = {type="hit", range=self:getTalentRange(t)}
+		if self:attr("never_move") then tg.range=1 end
 		local x, y, target = self:getTarget(tg)
 		if not x or not y or not target then return nil end
 		if core.fov.distance(self.x, self.y, x, y) > self:getTalentRange(t) then return nil end
@@ -305,7 +308,7 @@ newTalent{
 	info = function(self, t)
 		local dam = t.getDam(self, t)
 		local dur = t.getDur(self, t)
-		local reduction = t.getReduction(self, t)*100
+		local reduction = t.getReduction(self, t)
 		local bonus_dam = t.getBonusDam(self, t)*100
 		return ([[The wolf attempts to grab an enemy of up to 1 size category larger than itself, ravaging it within its jaws for %d damage, and reducing its attack and defense by %d. If it succeeds, it will drag its target to its owner over a period of %d turns, granting a %d%% increase in damage when the owner first attacks it within melee range.
 
@@ -335,6 +338,7 @@ newTalent{
 		local t2 = pet:getTalentFromId(pet.T_FETCH)
 
 		local tg = {type="hit", start_x=pet.x, start_y=pet.y, range=pet:getTalentRange(t2)}
+		if self:attr("never_move") then tg.range=1 end
 		local x, y, target = self:getTarget(tg)
 		if not x or not y or not target then return nil end
 		if core.fov.distance(pet.x, pet.y, x, y) > pet:getTalentRange(t2) then return nil end
@@ -381,7 +385,9 @@ newTalent{
 		shareTalentWithOwner(self, t)
 	end,
 	on_unlearn = function(self, t, p)
-		unshareTalentWithOwner(self, t)
+		if self:getTalentLevelRaw(t) == 0 then
+			unshareTalentWithOwner(self, t)
+		end
 	end,
 	info = function(self, t)
 		local stat = t.getStatBoost(self, t)
@@ -480,7 +486,7 @@ newTalent{
 		local dam = t.getDam(self, t)*100
 		local range = self:getTalentRange(t)
 		local cooldown = self:getTalentCooldown(t)
-		return ([[The wolf gains a +%d%% healing modifier bonus and each heal or inscription usage restores its loyalty to you by an additional %d points. Also, when your health is below %d%% of its total, if your wolf is not adjacent to you, it will activate Together, Forever to come rushing to your side, attacking fo %d%% damage (maximum range %d). This ability has a cooldown of %d.]]):
+		return ([[The wolf gains a +%d%% healing modifier bonus and each heal or inscription usage restores its loyalty to you by an additional %d points. Also, when your health is below %d%% of its total, if your wolf is not adjacent to you, it will activate Together, Forever to come rushing to your side, attacking any one nearby enemy for %d%% damage (maximum range %d). This ability has a cooldown of %d.]]):
 		format(heal_mod, regen, threshold, dam, range, cooldown)
 	end
 }
@@ -523,7 +529,7 @@ newTalent{
 	info = function(self, t)
 		local pct = t.getPct(self, t)
 		local secondary = t.getSecondaryPct(self, t)
-		return ([[If you and one of your allies both stand adjacent to the same enemy, but not adjacent to one another, then damage against that foe is increased by %d%%, and your flanking ally's damage by %.1f%%.]])
+		return ([[If you and one of your allies both stand adjacent to the same enemy (but not adjacent to one another), then your damage against that foe is increased by %d%%, and your flanking ally's damage by %.1f%%.]])
 			:format(pct, secondary)
 		end,
 }
