@@ -231,3 +231,51 @@ newTalent{
 		format(life_total)
 	end
 }
+
+newTalent{
+	name = "Primal Bond",
+	type = {"mounted/beast-heart", 4},
+	require = mnt_wil_req4,
+	mode = "passive",
+	no_unlearn_last = true,
+	points = 5,
+	on_learn = function(self, t)
+		local pet = self.outrider_pet
+		if not pet:knowTalentType("race/traits") then pet:learnTalentType("race/traits") end
+		pet.bestial_traits = pet.bestial_traits or {}
+		local ct = t.getNumber(self, t) - #pet.bestial_traits
+		if ct >= 1 then
+			local tt = pet:getTalentTypeFrom("race/traits")	
+			local traits = {}
+			for _, t in ipairs(tt.talents) do
+				if not pet:knowTalent(t.id) then
+					traits[#traits+1] = t.id
+				end
+			end
+			for i = 1, ct do
+				pet.bestial_traits[i] = rng.tableRemove(traits)
+			end
+		end
+		learnTraits(pet)
+		if not pet.unused_traits then pet.unused_traits = 0 end
+		local last = self.talents_learn_vals[t.id] and self.talents_learn_vals[t.id].last or 0
+		if pet then
+			local increase = t.getTraitPoints(self, t)-last
+			pet.unused_traits = pet.unused_traits + increase
+		end
+		self:updateTalentPassives(t)
+	end,
+	passives = function(self, t, p)
+		p.last = t.getTraitPoints(self, t)
+	end,
+	info = function(self, t)
+		local number = t.getNumber(self, t)
+		local trait_points = t.getTraitPoints(self, t)
+		return ([[As you and your beast gain experience, you become sensitive to the traits or latent abilities specific to your beast, to which a lesser handler would be unawares. It takes a full level of experience with your beast and no other to attain this depth of understanding.
+
+			Currently, you may level %d of a maximum of 4 bestial traits, and gain a total of %d "trait points" you may apply specifically to levels in these trait talents.]]):
+		format(number, trait_points)
+	end,
+	getNumber = function(self, t) return math.round(math.min(4, self:combatTalentScale(t, 2, 3.5))) end,
+	getTraitPoints = function(self, t) return math.round(self:combatTalentScale(t, 1, 8, .85)) end,
+}

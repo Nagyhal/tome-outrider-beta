@@ -28,8 +28,26 @@ newTalentType{ allow_random=true, type="mounted/teamwork", name = "teamwork", de
 newTalentType{ allow_random=true, type="mounted/skirmish-tactics", name = "skirmish tactics", description = "Beside your beast, not even the winds can outpace you; atop it, not even the sky can outreach your aim."}
 newTalentType{ allow_random=true, type="mounted/shock-tactics", name = "shock tactics", description = "Shattering your foes' ranks with devastating charge attacks, your shock tactics represent the pinnacle of mounted martial domination and the ultimate unison of steel and steed."}
 newTalentType{ allow_random=true, type="mounted/beast-heart", name = "beast heart", description = "Become no longer beast-rider, but beast-kind."}
-newTalentType{ allow_random=true, type="race/traits", name = "bestial traits", description = "Every beast, when handled with wisdom, can reveal hidden traits that make it appear prodigious, when compared to its natural kin."}
 
+local sort_traits = function(dialog, node)
+	local act = dialog.actor
+	if not act.bestial_traits then return end
+	--Lookup tables to retrieve indexes
+	local ranks = table.keys_to_values(act.bestial_traits)
+	local lookup = table.keys_to_values(node.nodes)
+	table.sort(node.nodes, function(a, b)
+		if ranks[a.__id] and ranks[b.__id] then
+			if ranks[a.__id] < ranks[b.__id] then return true end
+		elseif ranks[a.__id] then
+			return true
+		elseif ranks[b.__id] then
+			return false
+		else
+			return lookup[a] < lookup[b] 
+		end
+	end)
+end
+newTalentType{ allow_random=true, type="race/traits", name = "bestial traits", description = "Even the most mundane of beasts, when handled with wisdom, can reveal hidden traits that make it appear prodigious when compared to its natural kin.", sort=sort_traits}
 
 
 --Mount talents

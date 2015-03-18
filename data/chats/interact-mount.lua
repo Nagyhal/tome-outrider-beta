@@ -53,6 +53,12 @@ local change_talents = function(npc, player)
 	game:registerDialog(ds)
 end
 
+local change_traits = function(npc, player)
+	local TraitsDialog = require "mod.dialogs.TraitsDialog"
+	local ds = TraitsDialog.new(npc, nil, nil)
+	game:registerDialog(ds)
+end
+
 local change_tactics = function(npc, player)
 	game.party:giveOrders(npc)
 end
@@ -81,8 +87,10 @@ local ans = {
 	{"Nothing, let's go."},
 }
 
+if player:knowTalent(player.T_PRIMAL_BOND) then table.insert(ans, 4, {"I want to train your bestial traits", action=change_traits}) end
+
 newChat{ id="welcome",
-	text = [[#LIGHT_GREEN#*Your mount stands at the ready, eager for your next command.*#WHITE#]],
+	text = [[#LIGHT_GREEN#*Your mount waits at the ready, eager for your next command.*#WHITE#]],
 	answers = ans
 }
 

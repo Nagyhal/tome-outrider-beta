@@ -43,6 +43,13 @@ class:bindHook("DamageProjector:base", function(self, data)
 		end
 	end
 	local a = game.level.map(data.x, data.y, engine.Map.ACTOR)
+	if self:knowTalent(self.T_TRAIT_OPPORTUNISTIC) then
+		if a.life <= a.max_life*.25 then
+			local p = self;getTalentFromId(self.T_TRAIT_OPPORTUNISTIC)
+			local pct = p.getPct(self, t)
+			data.dam = data.dam * pct/100
+		end
+	end
 	if a and self.turn_procs and self.turn_procs.leviathan then
 		local tt = self.turn_procs.leviathan
 		if not tt.done then
