@@ -54,73 +54,13 @@ newTalent{
 }
 
 newTalent{
-	name = "Living Shield",
+	name = "Impalement",
 	type = {"technique/dreadful-onset", 2},
 	require = mnt_cun_req2,
-	points = 5,
-	random_ego = "attack",
-	cooldown = 20,
-	stamina = 30,
-	tactical = { ATTACK = 2, DISABLE = 2, DEFEND = 2 },
-	requires_target = true,
-	getDef = function(self, t) return self:combatTalentScale(t, 5, 15) end,
-	getDuration = function(self, t) return 2 + math.floor(self:getTalentLevel(t)) end,
-	getPower = function(self, t) return self:combatTalentPhysicalDamage(t, 5, 25) end,
-	getTransferChance =  function(self, t) return 30 + self:getTalentLevel(t) * 5 end,
-	action = function(self, t)
-		local tg = {type="hit", range=self:getTalentRange(t)}
-		local x, y, target = self:getTarget(tg)
-		if not x or not y or not target then return nil end
-		if core.fov.distance(self.x, self.y, x, y) > 1 then return nil end
-
-		local grappled = false
-
-		--force stance change
-		-- if target and not self:isTalentActive(self.T_GRAPPLING_STANCE) then
-			-- self:forceUseTalent(self.T_GRAPPLING_STANCE, {ignore_energy=true, ignore_cd = true})
-		-- end
-
-		-- breaks active grapples if the target is not grappled
-		if target:isGrappled(self) then
-			grappled = true
-		else
-			self:breakGrapples()
-		end
-		-- end the talent without effect if the target is to big
-		if self:grappleSizeCheck(target) then
-			return true
-		end
-		-- start the grapple; this will automatically hit and reapply the grapple if we're already grappling the target
-		local hit = self:startGrapple(target)
-		local eff = target:hasEffect(target.EFF_GRAPPLED)
-
-		local duration = t.getDuration(self, t)
-
-		if hit and eff then
-			eff.dur=duration
-			target:setEffect(target.EFF_LIVING_SHIELD, duration, {src=self, chance=t.getTransferChance(self, t), def=t.getDef(self, t)})
-			self:setEffect(target.EFF_LIVING_SHIELDED, duration, {trgt=target, chance=t.getTransferChance(self, t)})
-			return true
-		end
-	end,
-	info = function(self, t)
-		local def = t.getDef(self, t)
-		local duration = t.getDuration(self, t)
-		local chance = t.getTransferChance(self, t)
-		return ([[Grapple an adjacent enemy up to one size category larger than you for %d turns; it suffers a %d penalty to defense and all ranged and melee attacks now have a %d%% chance to hit this enemy instead of you. You may move to drag the enemy with you. 
-		At talent level 5, you have mastered the art of cruel redirection, gaining the Block talent for a 100%% chance to reduce up to 100 damage, switching squares upon an impact.]])
-		:format(def, duration, chance)
-	end,
-}
-
-newTalent{
-	name = "Impalement",
-	type = {"technique/dreadful-onset", 3},
 	points = 5,
 	cooldown = function (self, t) return 21 - self:getTalentLevel(t) end,
 	stamina = 25,
 	random_ego = "attack",
-	require = mnt_cun_req3,
 	getArcheryTargetType = function(self, t)
 		local weapon, ammo = self:hasArcheryWeapon()
 		return {range=t.getArcheryRange(self, t)}
@@ -200,12 +140,12 @@ newTalent{
 newTalent{
 	name = "Catch!",
 	short_name = "CATCH",
-	type = {"technique/dreadful-onset", 4},
+	type = {"technique/dreadful-onset", 3},
+	require = mnt_cun_req3,
 	points = 5,
 	random_ego = "attack",
 	cooldown = 20,
 	stamina = 35,
-	require = mnt_cun_req4,
 	tactical = { DISABLE = { fear = 4 } },
 	range = function (self, t) return math.floor(self:getTalentLevel(t) +4)  end,
 	radius = 2,
@@ -319,4 +259,65 @@ newTalent{
 		end
 	end,
 	info = function(self, t) return [[Handles passive ability of Catch!]] end,
+}
+
+
+newTalent{
+	name = "Living Shield",
+	type = {"technique/dreadful-onset", 4},
+	require = mnt_cun_req4,
+	points = 5,
+	random_ego = "attack",
+	cooldown = 20,
+	stamina = 30,
+	tactical = { ATTACK = 2, DISABLE = 2, DEFEND = 2 },
+	requires_target = true,
+	getDef = function(self, t) return self:combatTalentScale(t, 5, 15) end,
+	getDuration = function(self, t) return 2 + math.floor(self:getTalentLevel(t)) end,
+	getPower = function(self, t) return self:combatTalentPhysicalDamage(t, 5, 25) end,
+	getTransferChance =  function(self, t) return 30 + self:getTalentLevel(t) * 5 end,
+	action = function(self, t)
+		local tg = {type="hit", range=self:getTalentRange(t)}
+		local x, y, target = self:getTarget(tg)
+		if not x or not y or not target then return nil end
+		if core.fov.distance(self.x, self.y, x, y) > 1 then return nil end
+
+		local grappled = false
+
+		--force stance change
+		-- if target and not self:isTalentActive(self.T_GRAPPLING_STANCE) then
+			-- self:forceUseTalent(self.T_GRAPPLING_STANCE, {ignore_energy=true, ignore_cd = true})
+		-- end
+
+		-- breaks active grapples if the target is not grappled
+		if target:isGrappled(self) then
+			grappled = true
+		else
+			self:breakGrapples()
+		end
+		-- end the talent without effect if the target is to big
+		if self:grappleSizeCheck(target) then
+			return true
+		end
+		-- start the grapple; this will automatically hit and reapply the grapple if we're already grappling the target
+		local hit = self:startGrapple(target)
+		local eff = target:hasEffect(target.EFF_GRAPPLED)
+
+		local duration = t.getDuration(self, t)
+
+		if hit and eff then
+			eff.dur=duration
+			target:setEffect(target.EFF_LIVING_SHIELD, duration, {src=self, chance=t.getTransferChance(self, t), def=t.getDef(self, t)})
+			self:setEffect(target.EFF_LIVING_SHIELDED, duration, {trgt=target, chance=t.getTransferChance(self, t)})
+			return true
+		end
+	end,
+	info = function(self, t)
+		local def = t.getDef(self, t)
+		local duration = t.getDuration(self, t)
+		local chance = t.getTransferChance(self, t)
+		return ([[Grapple an adjacent enemy up to one size category larger than you for %d turns; it suffers a %d penalty to defense and all ranged and melee attacks now have a %d%% chance to hit this enemy instead of you. You may move to drag the enemy with you. 
+		At talent level 5, you have mastered the art of cruel redirection, gaining the Block talent for a 100%% chance to reduce up to 100 damage, switching squares upon an impact.]])
+		:format(def, duration, chance)
+	end,
 }

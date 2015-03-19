@@ -325,10 +325,54 @@ newTalent{
 	getNum = function(self, t) return math.ceil(self:getTalentLevel(t)*5) + 10 end,
 }
 
+
+
 newTalent{
-	name = "Subdue The Beast",
+	name = "Gruesome Depredation",
 	type = {"mounted/bestial-dominion", 2},
 	require = mnt_str_req2,
+	points = 5,
+	cooldown = 30,
+	tactical = { ATTACK = 2 }, --TODO: Complicated AI routine
+	range = 1 ,
+	requires_target = true,
+	target = function(self, t)
+		--TODO: There is actually an engine bug making keyboard targeting useless. Let's fix this!
+		local mount = self:hasMount()
+		local ret = {type="hit", range=self:getTalentRange(t), friendlyfire=false, selffire=false}
+		if mount then ret.start_x, ret.start_y=mount.x, mount.y end
+		return ret
+	end,
+	on_pre_use = function(self, t, silent)
+		return preCheckHasMountPresent(self, t, silent)
+	end, 
+	action = function(self, t)
+		local tg = self:getTalentTarget(t)
+		local x, y, target = self:getTarget(tg)
+		if not x or not y or not target then return nil end
+		local mount = self:hasMount()
+		local hit = mount:attackTarget(target, nil, t.getDam(self, t), true)
+		if hit and target.dead then
+			local heal = mount.max_life*t.getHeal(self, t)
+			mount:heal(heal)
+		end
+	end,
+	info = function(self, t)
+		local dam = t.getDam(self, t)*100
+		local loyalty = t.getLoyalty(self, t)
+		local heal = t.getHeal(self, t)*100
+		return ([[Your mount bites your enemy for %d%% damage. If this kills it, then your mount's bite devours a great chunk of your enemy's carcass, restoring %d Loyalty and healing your mount for %d%% of its total life.]]):
+			format(dam, loyalty, heal)
+	end,
+	getDam = function(self, t) return self:combatTalentScale(t, 1.8, 2.5) end,
+	getLoyalty = function(self, t) return self:combatTalentScale(t, 15, 35) end,
+	getHeal = function(self, t) return self:combatTalentLimit(t, .5, .1, .35) end
+}
+
+newTalent{
+	name = "Subdue The Beast",
+	type = {"mounted/bestial-dominion", 3},
+	require = mnt_str_req3,
 	points = 5,
 	cooldown = 50,
 	-- tactical = { STAMINA = 2 },
@@ -346,76 +390,6 @@ newTalent{
 			As you master the domestication of wild riding beasts, you are able to still their fury long enough to inscribe them with infusions. You gain an infusion slot for your mount, and may gain others for each Bestial Dominion talent you raise to 5/5 (up to 3 slots).]]):
 		format(restore, max_loyalty, max_dist)
 	end,
-}
-
-newTalent{
-	name = "Feral Affinity",
-	type = {"mounted/bestial-dominion", 3},
-	require = mnt_str_req3,
-	mode = "passive",
-	points = 5,
-	passives = function(self, t, p)
-		local mount = self.outrider_pet
-		if mount then
-			for damtype, val in pairs(mount.resists) do
-				self:talentTemporaryValue(p, "resists", {[damtype]=val*t.getResistPct(self, t)})
-			end
-		end
-	end,
-	on_learn = function(self, t)
-		local mount = self.outrider_pet
-		if mount then
-			mount:learnTalent(mount.T_FERAL_AFFINITY_MOUNT, true, 1)
-		end
-	end,
-	info = function(self, t)
-		local res = t.getResistPct(self, t)
-		local save = t.getSavePct(self, t)
-		local max_dist = t.getMaxDist(self, t)
-		return ([[You share %d%% of the resistances of your steed, while your steed partakes of some of your own defenses against mental attacks (%d%% of your mindpower, contributing to mental save, and up to %d%% of your confusion & fear resistance).
-
-			Levelling Feral Affinity will increase the distance at which you can share your infusions with your mount; currently %d]]
-			):format(res, save, res, max_dist)
-	end,
-	getSavePct = function(self, t) return self:combatTalentScale(t, 15, 35) end,
-	getResistPct = function(self, t) return self:combatTalentScale(t, 25, 50) end,
-	getMaxDist = function(self, t) return math.round(self:combatTalentScale(t, 2, 4.2, .85)) end,
-}
-
-newTalent{
-	name = "Feral Affinity (Mount)",
-	short_name = "FERAL_AFFINITY_MOUNT",
-	type = {"technique/other", 1},
-	mode = "passive",
-	points = 1,
-	passives = function(self, t, p)
-		--TODO: These need to be updated frequently
-		local owner = self.summoner
-		if owner then
-			local save_pct = owner:callTalent(owner.T_FERAL_AFFINITY, "getSavePct")/100
-			local resist_pct = owner:callTalent(owner.T_FERAL_AFFINITY, "getResistPct")/100
-			local save = owner:combatMindpower()*save_pct
-			self:talentTemporaryValue(p, "combat_mentalresist", save)
-			local confusion = (owner:attr("confusion_immune") or 0) * resist_pct
-			local fear = (owner:attr("fear_immune") or 0) * resist_pct
-			local sleep = (owner:attr("sleep_immune") or 0) * resist_pct
-			self:talentTemporaryValue(p, "confusion_immune", confusion)
-			self:talentTemporaryValue(p, "fear_immune", fear)
-			self:talentTemporaryValue(p, "sleep_immune", sleep)
-		end
-	end,
-	info = function(self, t)
-		local res = t.getResistPct(self, t)
-		local save = t.getSavePct(self, t)
-		local max_dist = t.getMaxDist(self, t)
-		return ([[You share some of your rider's defenses against mental attacks (%d%% of mindpower, contributing to mental save, and up to %d%% of your confusion, sleep & fear resistance).
-
-			Levelling Feral Affinity will increase the distance at which you can share your infusions with your mount; currently %d]]
-			):format(res, save, res, max_dist)
-	end,
-	getSavePct = function(self, t) return self:combatTalentScale(t, 25, 50) end,
-	getResistPct = function(self, t) return self:combatTalentScale(t, 35, 60) end,
-	getMaxDist = function(self, t) return math.round(self:combatTalentScale(t, 1, 4.2, .85)) end,
 }
 
 newTalent{

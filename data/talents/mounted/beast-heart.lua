@@ -44,46 +44,53 @@ newTalent{
 	end,
 }
 
+
 newTalent{
-	name = "Gruesome Depredation",
+	name = "Primal Bond",
 	type = {"mounted/beast-heart", 2},
 	require = mnt_wil_req2,
+	mode = "passive",
+	no_unlearn_last = true,
 	points = 5,
-	cooldown = 30,
-	tactical = { ATTACK = 2 }, --TODO: Complicated AI routine
-	range = 1 ,
-	requires_target = true,
-	target = function(self, t)
-		--TODO: There is actually an engine bug making keyboard targeting useless. Let's fix this!
-		local mount = self:hasMount()
-		local ret = {type="hit", range=self:getTalentRange(t), friendlyfire=false, selffire=false}
-		if mount then ret.start_x, ret.start_y=mount.x, mount.y end
-		return ret
-	end,
-	on_pre_use = function(self, t, silent)
-		return preCheckHasMountPresent(self, t, silent)
-	end, 
-	action = function(self, t)
-		local tg = self:getTalentTarget(t)
-		local x, y, target = self:getTarget(tg)
-		if not x or not y or not target then return nil end
-		local mount = self:hasMount()
-		local hit = mount:attackTarget(target, nil, t.getDam(self, t), true)
-		if hit and target.dead then
-			local heal = mount.max_life*t.getHeal(self, t)
-			mount:heal(heal)
+	on_learn = function(self, t)
+		local pet = self.outrider_pet
+		if not pet:knowTalentType("race/traits") then pet:learnTalentType("race/traits") end
+		pet.bestial_traits = pet.bestial_traits or {}
+		local ct = t.getNumber(self, t) - #pet.bestial_traits
+		if ct >= 1 then
+			local tt = pet:getTalentTypeFrom("race/traits")	
+			local traits = {}
+			for _, t in ipairs(tt.talents) do
+				if not pet:knowTalent(t.id) then
+					traits[#traits+1] = t.id
+				end
+			end
+			for i = 1, ct do
+				pet.bestial_traits[i] = rng.tableRemove(traits)
+			end
 		end
+		learnTraits(pet)
+		if not pet.unused_traits then pet.unused_traits = 0 end
+		local last = self.talents_learn_vals[t.id] and self.talents_learn_vals[t.id].last or 0
+		if pet then
+			local increase = t.getTraitPoints(self, t)-last
+			pet.unused_traits = pet.unused_traits + increase
+		end
+		self:updateTalentPassives(t)
+	end,
+	passives = function(self, t, p)
+		p.last = t.getTraitPoints(self, t)
 	end,
 	info = function(self, t)
-		local dam = t.getDam(self, t)*100
-		local loyalty = t.getLoyalty(self, t)
-		local heal = t.getHeal(self, t)*100
-		return ([[Your mount bites your enemy for %d%% damage. If this kills it, then your mount's bite devours a great chunk of your enemy's carcass, restoring %d Loyalty and healing your mount for %d%% of its total life.]]):
-			format(dam, loyalty, heal)
+		local number = t.getNumber(self, t)
+		local trait_points = t.getTraitPoints(self, t)
+		return ([[As you and your beast gain experience, you become sensitive to the traits or latent abilities specific to your beast, to which a lesser handler would be unawares. It takes a full level of experience with your beast and no other to attain this depth of understanding.
+
+			Currently, you may level %d of a maximum of 4 bestial traits, and gain a total of %d "trait points" you may apply specifically to levels in these trait talents.]]):
+		format(number, trait_points)
 	end,
-	getDam = function(self, t) return self:combatTalentScale(t, 1.8, 2.5) end,
-	getLoyalty = function(self, t) return self:combatTalentScale(t, 15, 35) end,
-	getHeal = function(self, t) return self:combatTalentLimit(t, .5, .1, .35) end
+	getNumber = function(self, t) return math.round(math.min(4, self:combatTalentScale(t, 2, 3.5))) end,
+	getTraitPoints = function(self, t) return math.round(self:combatTalentScale(t, 1, 8, .85)) end,
 }
 
 newTalent{
@@ -233,49 +240,27 @@ newTalent{
 }
 
 newTalent{
-	name = "Primal Bond",
+	name = "Bond Beyond Blood",
 	type = {"mounted/beast-heart", 4},
-	require = mnt_wil_req4,
-	mode = "passive",
-	no_unlearn_last = true,
 	points = 5,
-	on_learn = function(self, t)
-		local pet = self.outrider_pet
-		if not pet:knowTalentType("race/traits") then pet:learnTalentType("race/traits") end
-		pet.bestial_traits = pet.bestial_traits or {}
-		local ct = t.getNumber(self, t) - #pet.bestial_traits
-		if ct >= 1 then
-			local tt = pet:getTalentTypeFrom("race/traits")	
-			local traits = {}
-			for _, t in ipairs(tt.talents) do
-				if not pet:knowTalent(t.id) then
-					traits[#traits+1] = t.id
-				end
-			end
-			for i = 1, ct do
-				pet.bestial_traits[i] = rng.tableRemove(traits)
-			end
-		end
-		learnTraits(pet)
-		if not pet.unused_traits then pet.unused_traits = 0 end
-		local last = self.talents_learn_vals[t.id] and self.talents_learn_vals[t.id].last or 0
-		if pet then
-			local increase = t.getTraitPoints(self, t)-last
-			pet.unused_traits = pet.unused_traits + increase
-		end
-		self:updateTalentPassives(t)
-	end,
-	passives = function(self, t, p)
-		p.last = t.getTraitPoints(self, t)
+	require = mnt_wil_req4,
+	cooldown = 30,
+	action = function(self, t)
+		self:setEffect(self.EFF_BOND_BEYOND_BLOOD, t.getDur(self, t), {loyalty_discount=t.getLoyaltyDiscount(self, t), res=t.getResist(self, t)})
+		return true
 	end,
 	info = function(self, t)
-		local number = t.getNumber(self, t)
-		local trait_points = t.getTraitPoints(self, t)
-		return ([[As you and your beast gain experience, you become sensitive to the traits or latent abilities specific to your beast, to which a lesser handler would be unawares. It takes a full level of experience with your beast and no other to attain this depth of understanding.
+		local dur = t.getDur(self, t)
+		local loyalty_discount = t.getLoyaltyDiscount(self, t)
+		local res = t.getResist(self, t)
+		return ([[You and your mount act as one, allowing you to switch between control of yourself and your mount at will for %d turns. While this talent is in effect, your mount loses loyalty at a reduced rate; all loyalty costs are reduced by %d%%.
 
-			Currently, you may level %d of a maximum of 4 bestial traits, and gain a total of %d "trait points" you may apply specifically to levels in these trait talents.]]):
-		format(number, trait_points)
+			While controlling your mount, incoming damage to you is reduced by %d%%.
+
+			Each enemy slain by you or your mount adds 1 to the duration of Bond Beyond Blood.]]):
+			format(dur, loyalty_discount, res)
 	end,
-	getNumber = function(self, t) return math.round(math.min(4, self:combatTalentScale(t, 2, 3.5))) end,
-	getTraitPoints = function(self, t) return math.round(self:combatTalentScale(t, 1, 8, .85)) end,
+	getDur = function(self, t) return self:combatTalentScale(t, 5, 12) end,
+	getLoyaltyDiscount = function(self, t) return self:combatTalentLimit(t, 75, 20, 50) end,
+	getResist = function(self, t) return self:combatTalentLimit(t, 100, 40, 70) end,
 }

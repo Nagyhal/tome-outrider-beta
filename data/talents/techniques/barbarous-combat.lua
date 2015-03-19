@@ -19,9 +19,111 @@ function hasFreeOffhand(self)
 end
 
 newTalent{
-	name = "Tyranny of Steel",
+	name = "Master of Brutality",
 	type = {"technique/barbarous-combat", 1},
 	require = mnt_strcun_req1,
+	points = 5,
+	mode = "sustained",
+	cooldown = 30,
+	sustain_stamina = 40,
+	tactical = { BUFF = 2 },
+	on_pre_use = function(self, t, silent)
+		-- if not hasOneHandedWeapon(self) then
+		if not t.checkBothWeaponSets(self, t) then
+			if not silent then
+				game.logPlayer(self, "You require a one-handed weapon to use this talent.")
+			end
+			return false
+		end
+		return true
+	end,
+	checkBothWeaponSets = function(self, t)
+		local mains = {main=self:getInven("MAINHAND") and self:getInven("MAINHAND")[1],
+			qs = self:getInven("QS_MAINHAND") and self:getInven("QS_MAINHAND")[1]}
+		local offhands = {main=self:getInven("OFFHAND") and self:getInven("OFFHAND")[1],
+			qs = self:getInven("QS_OFFHAND") and self:getInven("QS_OFFHAND")[1]}
+		local one_handed = false
+		local free_off = false
+		for _, set in ipairs{"main", "qs"}do
+			local main = mains[set]
+			if main and not main.twohanded then--and not main.archery then
+				one_handed = true
+				if not offhands[set] then free_off = true end
+			end
+		end
+		return one_handed, free_off
+	end,
+	activate = function(self, t)
+		-- local weapon = hasOneHandedWeapon(self)
+		-- if not weapon then
+		-- 	game.logPlayer(self, "You cannot use Master of Brutality without a one-handed weapon!")
+		-- 	return false
+		-- end
+
+		local ret = {free_off=false}
+		if hasFreeOffhand(self) then
+				self:talentTemporaryValue(ret, "combat_atk", t.getAtk2(self, t))
+				self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower2(self, t))
+				free_off=true
+		else 
+			self:talentTemporaryValue(ret, "combat_atk", t.getAtk(self, t))
+			self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower(self, t))
+		end
+		return ret
+	end,
+	callbackOnWear  = function(self, t, o, bypass_set) t.checkWeapons(self, t, o, bypass_set) end,
+	callbackOnTakeoff  = function(self, t, o, bypass_set) t.checkWeapons(self, t, o, bypass_set) end,
+	checkWeapons = function(self, t, o, bypass_set)
+		if o.type and o.type=="weapon" then
+			game:onTickEnd(function()
+				local one_handed, free_off = t.checkBothWeaponSets(self, t)
+				if one_handed then
+					local p = self:isTalentActive(t.id); if not p then return end
+					for i = 1, #p.__tmpvals do
+						self:removeTemporaryValue(p.__tmpvals[i][1], p.__tmpvals[i][2])
+					end
+					if free_off then
+						self:talentTemporaryValue(p, "combat_atk", t.getAtk2(self, t))
+						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower2(self, t))
+						p.free_off=true
+					else
+						self:talentTemporaryValue(p, "combat_atk", t.getAtk(self, t))
+						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower(self, t))
+						p.free_off=false
+					end
+				else
+					self:forceUseTalent(t.id, {no_energy=true})
+				end
+			end)
+		end
+	end,
+	deactivate = function(self, t, p)
+		return true
+	end,
+	info = function(self, t)
+		local atk = t.getAtk(self, t)
+		local atk2 = t.getAtk2(self, t)
+		local mindpower = t.getMindpower(self, t)
+		local mindpower2 = t.getMindpower2(self, t)
+		local phys_pen = t.getPhysPen(self, t)
+		return ([[While you prefer weapons less visibily impressive than some, the merciless precision with which you wield them makes them no less intimidating in your hands. 
+		
+		Gain a %d increase to attack and APR and a %d increase to mindpower while wielding a one-handed or an archery weapon. Critical hits will reduce the physical resistance of the target by %d%% for 2 turns.
+
+		Gain a %d increase to attack and APR and a %d increase to mindpower if you hold nothing in your off-hand.]]):
+		format(atk, mindpower, phys_pen, atk2, mindpower2)
+	end,
+	getAtk = function(self, t) return self:combatTalentScale(t, 5, 12) end,
+	getAtk2 = function(self, t) return self:callTalent(t.id, "getAtk")*1.65 end,
+	getMindpower = function(self, t) return self:combatTalentScale(t, 6, 15) end,
+	getMindpower2 = function(self, t) return self:callTalent(t.id, "getMindpower")*1.65 end,
+	getPhysPen = function(self, t) return self:combatTalentScale(t, 15, 35) end,
+}
+
+newTalent{
+	name = "Tyranny of Steel",
+	type = {"technique/barbarous-combat", 2},
+	require = mnt_strcun_req2,
 	points = 5,
 	random_ego = "attack",
 	cooldown = 10,
@@ -76,112 +178,33 @@ newTalent{
 	end,
 }
 
-newTalent{
-	name = "Master of Brutality",
-	type = {"technique/barbarous-combat", 2},
-	require = mnt_strcun_req2,
-	points = 5,
-	mode = "sustained",
-	cooldown = 30,
-	sustain_stamina = 40,
-	tactical = { BUFF = 2 },
-	on_pre_use = function(self, t, silent)
-		-- if not hasOneHandedWeapon(self) then
-		if not t.checkBothWeaponSets(self, t) then
-			if not silent then
-				game.logPlayer(self, "You require a one-handed weapon to use this talent.")
-			end
-			return false
-		end
-		return true
-	end,
-	checkBothWeaponSets = function(self, t)
-		local mains = {main=self:getInven("MAINHAND") and self:getInven("MAINHAND")[1],
-			qs = self:getInven("QS_MAINHAND") and self:getInven("QS_MAINHAND")[1]}
-		local offhands = {main=self:getInven("OFFHAND") and self:getInven("OFFHAND")[1],
-			qs = self:getInven("QS_OFFHAND") and self:getInven("QS_OFFHAND")[1]}
-		local one_handed = false
-		local free_off = false
-		for _, set in ipairs{"main", "qs"}do
-			local main = mains[set]
-			if main and not main.twohanded and not main.archery then
-				one_handed = true
-				if not offhands[set] then free_off = true end
-			end
-		end
-		return one_handed, free_off
-	end,
-	activate = function(self, t)
-		local weapon = hasOneHandedWeapon(self)
-		if not weapon then
-			game.logPlayer(self, "You cannot use Master of Brutality without a one-handed weapon!")
-			return false
-		end
 
-		local ret = {free_off=false}
-		if hasFreeOffhand(self) then
-				self:talentTemporaryValue(ret, "combat_atk", t.getAtk2(self, t))
-				self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower2(self, t))
-				free_off=true
-		else 
-			self:talentTemporaryValue(ret, "combat_atk", t.getAtk(self, t))
-			self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower(self, t))
-		end
+newTalent{
+	name = "Suggest this Talent!",
+	short_name = "UNNAMED_OUTRIDER_TALENT",
+	type = {"technique/barbarous-combat", 3},
+	require = mnt_strcun_req3,
+	mode = "passive",
+	require = function(self, t)
+		local ret = mnt_strcun_req4
+		ret.special = {fct = function(self, t) return false end,
+			desc="I'll need an awesome suggeston to unlock this talent!"}
 		return ret
 	end,
-	callbackOnWear  = function(self, t, o, bypass_set) t.checkWeapons(self, t, o, bypass_set) end,
-	callbackOnTakeoff  = function(self, t, o, bypass_set) t.checkWeapons(self, t, o, bypass_set) end,
-	checkWeapons = function(self, t, o, bypass_set)
-		if o.type and o.type=="weapon" then
-			game:onTickEnd(function()
-				local one_handed, free_off = t.checkBothWeaponSets(self, t)
-				if one_handed then
-					local p = self:isTalentActive(t.id); if not p then return end
-					for i = 1, #p.__tmpvals do
-						self:removeTemporaryValue(p.__tmpvals[i][1], p.__tmpvals[i][2])
-					end
-					if free_off then
-						self:talentTemporaryValue(p, "combat_atk", t.getAtk2(self, t))
-						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower2(self, t))
-						p.free_off=true
-					else
-						self:talentTemporaryValue(p, "combat_atk", t.getAtk(self, t))
-						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower(self, t))
-						p.free_off=false
-					end
-				else
-					self:forceUseTalent(t.id, {no_energy=true})
-				end
-			end)
-		end
-	end,
-	deactivate = function(self, t, p)
-		return true
-	end,
+	points = 5,
 	info = function(self, t)
-		local atk = t.getAtk(self, t)
-		local atk2 = t.getAtk2(self, t)
-		local mindpower = t.getMindpower(self, t)
-		local mindpower2 = t.getMindpower2(self, t)
-		local phys_pen = t.getPhysPen(self, t)
-		return ([[While you prefer weapons less visibily impressive than some, the merciless precision with which you wield them makes them no less intimidating in your hands. 
-		
-		Gain a %d increase to attack and APR and a %d increase to mindpower while wielding a one-handed weapon. Critical hits will reduce the physical resistance of the target by %d%% for 2 turns.
+		return ([[Outrider is a class in the very early phases of implementation and testing!
 
-		Gain a %d increase to attack and APR and a %d increase to mindpower if you hold nothing in your off-hand.]]):
-		format(atk, mindpower, phys_pen, atk2, mindpower2)
+			Throughout its development, many changes have been made to the base idea. Because of talents moving out of the original trees, we have many new trees (either playable now or in the works!)
+
+			But this does mean certain talent categories have lost their original progression. What should I place here? You help decide! Send me your ideas, and if I fall in love with any of them, they'll go in! Until then, don't try and put any points into this placeholder talent!]])
 	end,
-	getAtk = function(self, t) return self:combatTalentScale(t, 5, 12)end,
-	getAtk2 = function(self, t) return self:callTalent(t.id, "getAtk")*1.65 end,
-	getMindpower = function(self, t) return self:combatTalentScale(t, 6, 15)end,
-	getMindpower2 = function(self, t) return self:callTalent(t.id, "getMindpower")*1.65 end,
-	getPhysPen = function(self, t) return self:combatTalentScale(t, 15, 35)end,
 }
 
 newTalent{
 	name = "Gory Spectacle",
-	type = {"technique/barbarous-combat", 3},
-	require = mnt_strcun_req3,
+	type = {"technique/barbarous-combat", 4},
+	require = mnt_strcun_req4,
 	points = 5,
 	random_ego = "attack",
 	cooldown = 15,
@@ -226,26 +249,5 @@ newTalent{
 
 			If you fail to slay your foe, however, then it continues to bleed for %d damage over 5 turns as it struggles to recover from your wicked wound.]]):
 			format(dam, dur, radius, bleed)
-	end,
-}
-
-newTalent{
-	name = "Suggest this Talent!",
-	short_name = "UNNAMED_OUTRIDER_TALENT",
-	type = {"technique/barbarous-combat", 4},
-	mode = "passive",
-	require = function(self, t)
-		local ret = mnt_strcun_req4
-		ret.special = {fct = function(self, t) return false end,
-			desc="I'll need an awesome suggeston to unlock this talent!"}
-		return ret
-	end,
-	points = 5,
-	info = function(self, t)
-		return ([[Outrider is a class in the very early phases of implementation and testing!
-
-			Throughout its development, many changes have been made to the base idea. Because of talents moving out of the original trees, we have many new trees (either playable now or in the works!)
-
-			But this does mean certain talent categories have lost their original progression. What should I place here? You help decide! Send me your ideas, and if I fall in love with any of them, they'll go in! Until then, don't try and put any points into this placeholder talent!]])
 	end,
 }

@@ -18,13 +18,153 @@
 -- darkgod@te4.org
 
 newTalent{
-	name = "Rearing Assault",
+	short_name = "LET_EM_LOOSE",
+	name = "Let 'Em Loose!",
 	type = {"mounted/teamwork", 1},
+	require = mnt_wil_req1,
+	points = 5,
+	cooldown = function(self, t) return math.max(12, self:combatTalentScale(t, 25, 14)) end,
+	loyalty = 5,
+	tactical = { ATTACK = 1, CLOSEIN = 1, DISABLE = { daze = 1 }  },
+	range = function(self, t) return math.min(10, self:combatTalentScale(t, 5, 9)) end,
+	requires_target = true,
+	on_pre_use = function(self, t, silent)
+		-- local mount = self:hasMount()
+		-- if mount and mount:attr("never_move") then return false end
+		-- return true
+		return preCheckHasMountPresent(self, t, silent)
+	end,
+	action = function(self, t)
+		local mount = self:hasMount()	
+		local tg = {type="bolt", range=self:getTalentRange(t), start_x=mount.x, start_y=mount.y}
+		local x, y, target = self:getTarget(tg)
+		if not x or not y or not target then return nil end
+		if self:reactionToward(target) >= 0 then return nil end
+		if core.fov.distance(mount.x, mount.y, x, y) > self:getTalentRange(t) then return nil end
+
+		local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", mount) end
+		local linestep = mount:lineFOV(x, y, block_actor)
+
+		local tx, ty, lx, ly, is_corner_blocked 
+		repeat  -- make sure each tile is passable
+			tx, ty = lx, ly
+			lx, ly, is_corner_blocked = linestep:step()
+		until is_corner_blocked or not lx or not ly or game.level.map:checkAllEntities(lx, ly, "block_move", self)
+		if not tx or core.fov.distance(mount.x, mount.y, tx, ty) < 1 then
+			game.logPlayer(self, "Your pet is too close to build up momentum!")
+			return
+		end
+		if not tx or not ty or core.fov.distance(x, y, tx, ty) > 1 then return nil end
+
+		local mounted, px, py = self:isMounted(), self.x, self.y
+		if mounted then self:dismountTarget(mount); if self:isMounted() then return nil end end
+
+		local first = true
+		local ox, oy = mount.x, mount.y
+		mount:move(tx, ty, true)
+		if config.settings.tome.smooth_move > 0 then
+			mount:resetMoveAnim()
+			mount:setMoveAnim(ox, oy, 8, 5)
+		end
+		self:move(px, py, true)
+
+		if core.fov.distance(mount.x, mount.y, x, y) > 1 then return true end
+		if mount:attackTarget(target, nil, t.getDam(self, t), true) and target:canBe("stun") then
+			target:setEffect(target.EFF_DAZED, t.getDur(self, t), {})
+		end
+		return true
+	end,
+	info = function(self, t)
+		local range = self:getTalentRange(t)
+		local dam = t.getDam(self, t)*100
+		local dur = t.getDur(self, t)
+		return ([[Your mount performs a rushing attack on an enemy within %d squares, dealing %d%% damage and dazing it for %d turns. If you are mounted, then using Let 'Em Loose will forcibly dismount you.]]):
+			format(range, dam, dur)
+	end,
+	getDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
+	getDur = function(self, t) return self:combatTalentScale(t, 2.5, 4.2, .75) end,
+}
+
+
+newTalent{
+	name = "Animal Affinity",
+	short_name = "FERAL_AFFINITY",
+	type = {"mounted/teamwork", 2},
+	require = mnt_wil_req2,
+	mode = "passive",
+	points = 5,
+	passives = function(self, t, p)
+		local mount = self.outrider_pet
+		if mount then
+			for damtype, val in pairs(mount.resists) do
+				self:talentTemporaryValue(p, "resists", {[damtype]=val*t.getResistPct(self, t)})
+			end
+		end
+	end,
+	on_learn = function(self, t)
+		local mount = self.outrider_pet
+		if mount then
+			mount:learnTalent(mount.T_FERAL_AFFINITY_MOUNT, true, 1)
+		end
+	end,
+	info = function(self, t)
+		local res = t.getResistPct(self, t)
+		local save = t.getSavePct(self, t)
+		local max_dist = t.getMaxDist(self, t)
+		return ([[You share %d%% of the resistances of your steed, while your steed partakes of some of your own defenses against mental attacks (%d%% of your mindpower, contributing to mental save, and up to %d%% of your confusion & fear resistance).
+
+			Levelling Feral Affinity will increase the distance at which you can share your infusions with your mount; currently %d]]
+			):format(res, save, res, max_dist)
+	end,
+	getSavePct = function(self, t) return self:combatTalentScale(t, 15, 35) end,
+	getResistPct = function(self, t) return self:combatTalentScale(t, 25, 50) end,
+	getMaxDist = function(self, t) return math.round(self:combatTalentScale(t, 2, 4.2, .85)) end,
+}
+
+newTalent{
+	name = "Animal Affinity (Mount)",
+	short_name = "FERAL_AFFINITY_MOUNT",
+	type = {"technique/other", 1},
+	mode = "passive",
+	points = 1,
+	passives = function(self, t, p)
+		--TODO: These need to be updated frequently
+		local owner = self.summoner
+		if owner then
+			local save_pct = owner:callTalent(owner.T_FERAL_AFFINITY, "getSavePct")/100
+			local resist_pct = owner:callTalent(owner.T_FERAL_AFFINITY, "getResistPct")/100
+			local save = owner:combatMindpower()*save_pct
+			self:talentTemporaryValue(p, "combat_mentalresist", save)
+			local confusion = (owner:attr("confusion_immune") or 0) * resist_pct
+			local fear = (owner:attr("fear_immune") or 0) * resist_pct
+			local sleep = (owner:attr("sleep_immune") or 0) * resist_pct
+			self:talentTemporaryValue(p, "confusion_immune", confusion)
+			self:talentTemporaryValue(p, "fear_immune", fear)
+			self:talentTemporaryValue(p, "sleep_immune", sleep)
+		end
+	end,
+	info = function(self, t)
+		local res = t.getResistPct(self, t)
+		local save = t.getSavePct(self, t)
+		local max_dist = t.getMaxDist(self, t)
+		return ([[You share some of your rider's defenses against mental attacks (%d%% of mindpower, contributing to mental save, and up to %d%% of your confusion, sleep & fear resistance).
+
+			Levelling Feral Affinity will increase the distance at which you can share your infusions with your mount; currently %d]]
+			):format(res, save, res, max_dist)
+	end,
+	getSavePct = function(self, t) return self:combatTalentScale(t, 25, 50) end,
+	getResistPct = function(self, t) return self:combatTalentScale(t, 35, 60) end,
+	getMaxDist = function(self, t) return math.round(self:combatTalentScale(t, 1, 4.2, .85)) end,
+}
+
+newTalent{
+	name = "Rearing Assault",
+	type = {"mounted/teamwork", 3},
 	points = 5,
 	random_ego = "defensive",
 	cooldown = 10,
 	stamina = 15,
-	require = mnt_wil_req1,
+	require = mnt_wil_req3,
 	requires_target = true,
 	tactical = { ATTACK = 2 },
 	on_pre_use = function(self, t, silent)
@@ -80,72 +220,6 @@ newTalent{
 	getCrit = function(self, t) return self:combatTalentScale(t, 6, 25) end,
 }
 
-newTalent{
-	short_name = "LET_EM_LOOSE",
-	name = "Let 'Em Loose",
-	type = {"mounted/teamwork", 2},
-	require = mnt_wil_req2,
-	points = 5,
-	cooldown = function(self, t) return math.max(12, self:combatTalentScale(t, 25, 14)) end,
-	loyalty = 5,
-	tactical = { ATTACK = 1, CLOSEIN = 1, DISABLE = { daze = 1 }  },
-	range = function(self, t) return math.min(10, self:combatTalentScale(t, 5, 9)) end,
-	requires_target = true,
-	on_pre_use = function(self, t, silent)
-		local mount = self:hasMount()
-		if mount and mount:attr("never_move") then return false end
-		return preCheckHasMountPresent(self, t, silent)
-	end,
-	action = function(self, t)
-		local mount = self:hasMount()	
-		local tg = {type="bolt", range=self:getTalentRange(t), start_x=mount.x, start_y=mount.y}
-		local x, y, target = self:getTarget(tg)
-		if not x or not y or not target then return nil end
-		if self:reactionToward(target) >= 0 then return nil end
-		if core.fov.distance(mount.x, mount.y, x, y) > self:getTalentRange(t) then return nil end
-
-		local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", mount) end
-		local linestep = mount:lineFOV(x, y, block_actor)
-
-		local tx, ty, lx, ly, is_corner_blocked 
-		repeat  -- make sure each tile is passable
-			tx, ty = lx, ly
-			lx, ly, is_corner_blocked = linestep:step()
-		until is_corner_blocked or not lx or not ly or game.level.map:checkAllEntities(lx, ly, "block_move", self)
-		if not tx or core.fov.distance(mount.x, mount.y, tx, ty) < 1 then
-			game.logPlayer(self, "Your pet is too close to build up momentum!")
-			return
-		end
-		if not tx or not ty or core.fov.distance(x, y, tx, ty) > 1 then return nil end
-
-		local mounted, px, py = self:isMounted(), self.x, self.y
-		if mounted then self:dismountTarget(mount); if self:isMounted() then return nil end end
-
-		local first = true
-		local ox, oy = mount.x, mount.y
-		mount:move(tx, ty, true)
-		if config.settings.tome.smooth_move > 0 then
-			mount:resetMoveAnim()
-			mount:setMoveAnim(ox, oy, 8, 5)
-		end
-		self:move(px, py, true)
-
-		if core.fov.distance(mount.x, mount.y, x, y) > 1 then return true end
-		if mount:attackTarget(target, nil, t.getDam(self, t), true) and target:canBe("stun") then
-			target:setEffect(target.EFF_DAZED, t.getDur(self, t), {})
-		end
-		return true
-	end,
-	info = function(self, t)
-		local range = self:getTalentRange(t)
-		local dam = t.getDam(self, t)*100
-		local dur = t.getDur(self, t)
-		return ([[Your mount performs a rushing attack on an enemy within %d squares, dealing %d%% damage and dazing it for %d turns. If you are mounted, then using Let 'Em Loose will forcibly dismount you.]]):
-			format(range, dam, dur)
-	end,
-	getDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
-	getDur = function(self, t) return self:combatTalentScale(t, 2.5, 4.2, .75) end,
-}
 
 newTalent{
 	name = "Flanking",
@@ -183,30 +257,4 @@ newTalent{
 	getDef = function(self, t) return self:combatTalentScale(t, 5, 12) end,
 	getCritChance = function(self, t) return self:combatTalentScale(t, 10, 25) end,
 	getCritPower = function(self, t) return self:combatTalentScale(t, 15, 35) end,
-}
-
-newTalent{
-	name = "Bond Beyond Blood",
-	type = {"mounted/teamwork", 4},
-	points = 5,
-	require = mnt_wil_req4,
-	cooldown = 30,
-	action = function(self, t)
-		self:setEffect(self.EFF_BOND_BEYOND_BLOOD, t.getDur(self, t), {loyalty_discount=t.getLoyaltyDiscount(self, t), res=t.getResist(self, t)})
-		return true
-	end,
-	info = function(self, t)
-		local dur = t.getDur(self, t)
-		local loyalty_discount = t.getLoyaltyDiscount(self, t)
-		local res = t.getResist(self, t)
-		return ([[You and your mount act as one, allowing you to switch between control of yourself and your mount at will for %d turns. While this talent is in effect, your mount loses loyalty at a reduced rate; all loyalty costs are reduced by %d%%.
-
-			While controlling your mount, incoming damage to you is reduced by %d%%.
-
-			Each enemy slain by you or your mount adds 1 to the duration of Bond Beyond Blood.]]):
-			format(dur, loyalty_discount, res)
-	end,
-	getDur = function(self, t) return self:combatTalentScale(t, 5, 12) end,
-	getLoyaltyDiscount = function(self, t) return self:combatTalentLimit(t, 75, 20, 50) end,
-	getResist = function(self, t) return self:combatTalentLimit(t, 100, 40, 70) end,
 }
