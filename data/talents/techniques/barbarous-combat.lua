@@ -48,7 +48,8 @@ newTalent{
 			local main = mains[set]
 			if main and not main.twohanded then--and not main.archery then
 				one_handed = true
-				if not offhands[set] then free_off = true end
+				free_off = true
+				if offhands[set] or main.archery then free_off = false end
 			end
 		end
 		return one_handed, free_off
@@ -79,8 +80,9 @@ newTalent{
 				local one_handed, free_off = t.checkBothWeaponSets(self, t)
 				if one_handed then
 					local p = self:isTalentActive(t.id); if not p then return end
-					for i = 1, #p.__tmpvals do
+					for i = #p.__tmpvals, 1, -1  do
 						self:removeTemporaryValue(p.__tmpvals[i][1], p.__tmpvals[i][2])
+						p.__tmpvals[i] = nil
 					end
 					if free_off then
 						self:talentTemporaryValue(p, "combat_atk", t.getAtk2(self, t))
@@ -126,7 +128,7 @@ newTalent{
 	require = mnt_strcun_req2,
 	points = 5,
 	random_ego = "attack",
-	cooldown = 10,
+	cooldown = 12,
 	stamina = 30,
 	tactical = { ATTACKAREA = { weapon = 3 } },
 	range = 0,
@@ -158,13 +160,15 @@ newTalent{
 			function(px, py, tg, self)
 				local target = game.level.map(px, py, Map.ACTOR)
 				local dist = core.fov.distance(px, py, self.x, self.y)
-				if target and self:reactionToward(target)<0 and dist==1 then
-					local hit = self:attackTarget(target, nil, t.getDamage(self, t), true)
-				end
-				if self:checkHit(self:combatMindpower(), target:combatMentalResist(), 0, 95) and target:canBe("knockback") then
-					target:knockback(self.x, self.y, t.getKnockbackRange(self, t), recursive)
-				else
-					game.logSeen(target, "%s resists the knockback!", target.name:capitalize())
+				if target and self:reactionToward(target)<0 then
+					if dist == 1 then
+						local hit = self:attackTarget(target, nil, t.getDamage(self, t), true)
+					end
+					if self:checkHit(self:combatMindpower(), target:combatMentalResist(), 0, 95) and target:canBe("knockback") then
+						target:knockback(self.x, self.y, t.getKnockbackRange(self, t), recursive)
+					else
+						game.logSeen(target, "%s resists the knockback!", target.name:capitalize())
+					end
 				end
 			end)
 		return true
@@ -173,7 +177,7 @@ newTalent{
 		local dam = t.getDamage(self, t) * 100
 		local knockback = t.getKnockbackRange(self, t)
 		local radius = t.getKnockbackRadiusMounted(self, t)
-		return ([[You release a maniacal display of brutality upon your foes, lashing out with a reckless attack that hits all adjacent enemies for %d%% and scattering those who are puny of will, knocking them back %d squares. If you are mounted, you may have your beast rise up in a terrifying fashion, knocking back instead all foes within a radius of %d.]]):
+		return ([[You release a maniacal display of brutality upon your foes, lashing out with a reckless attack that hits all adjacent enemies for %d%% while scattering those who are puny of will, knocking them back %d squares. If you are mounted, you may have your beast rise up in a terrifying fashion, knocking back instead all foes within a radius of %d.]]):
 		format(dam, knockback, radius)
 	end,
 }
@@ -183,12 +187,12 @@ newTalent{
 	name = "Suggest this Talent!",
 	short_name = "UNNAMED_OUTRIDER_TALENT",
 	type = {"technique/barbarous-combat", 3},
-	require = mnt_strcun_req3,
 	mode = "passive",
 	require = function(self, t)
-		local ret = mnt_strcun_req4
+		local ret = mnt_strcun_req3(self, t)
+		local desc = ret.special.desc
 		ret.special = {fct = function(self, t) return false end,
-			desc="I'll need an awesome suggeston to unlock this talent!"}
+			desc=desc..", and I'll need an awesome suggeston to unlock this talent!"}
 		return ret
 	end,
 	points = 5,

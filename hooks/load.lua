@@ -19,6 +19,12 @@ class:bindHook("ToME:load", function(self, data)
 	ActorAI:loadDefinition("/data-outrider/ai/")
 end)
 
+class:bindHook("Entity:loadList", function(self, data)
+	if data.file == "/data/general/objects/objects.lua" then
+		self:loadList("/data-outrider/general/objects/hunting_horn.lua", data.no_default, data.res, data.mod, data.loaded)
+	end
+end)
+
 class:bindHook("Actor:move", function(self, data)
 	if self.mount then
 		if not game.level.map(data.x, data.y, engine.Map.ACTOR) then
@@ -32,7 +38,10 @@ end)
 
 class:bindHook("DamageProjector:base", function(self, data)
 	local ret = false
-	local eff = self:hasEffect(self.EFF_SPRING_ATTACK) 
+	if not self.x then return ret end
+	local a = game.level.map(self.x, self.y, engine.Map.ACTOR)
+	if not a or a~=self then return ret end
+	local eff = self.hasEffect and self:hasEffect(self.EFF_SPRING_ATTACK) 
 	if eff then
 		local dist = core.fov.distance(self.x, self.y, data.x, data.y)
 		if dist >= 2 then

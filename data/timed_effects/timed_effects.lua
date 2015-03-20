@@ -54,13 +54,14 @@ newEffect{
 			self:removeEffect(self.EFF_RIDDEN, nil, true)
 			error("No rider sent to temporary effect Ridden.")
 		end
-		eff.tmpid = self:addTemporaryValue("never_move", 1)
+		self:effectTemporaryValue(eff, "never_move", 1)
+		self.on_can_control = function(vocal) return false end
 	end,
 	deactivate = function(self, eff)
-		self:removeTemporaryValue("never_move", eff.tmpid)
 		if self.dead then
 			eff.rider:removeEffect(self.EFF_MOUNT, false, true)
 		end
+		self.on_can_control = nil
 		return
 	end,
 }

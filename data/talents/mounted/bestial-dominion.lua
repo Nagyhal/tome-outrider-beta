@@ -264,6 +264,10 @@ newTalent{
 			if old_fake then mount.__inscription_data_fake=old_fake end
 		end
 	end,
+	callbackOnLevelup = function(self, t, level)
+		local pet = self.outrider_pet
+		pet:forceLevelup(level)
+	end,
 	action = function(self, t)
 		if self:hasEffect(self.EFF_WILD_CHALLENGE) then
 			t.doSummon(self, t)
