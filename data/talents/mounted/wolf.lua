@@ -159,7 +159,7 @@ newTalent{
 
 newTalent{
 	name = "Command: Go for the Throat",
-	short_name = "GO_FOR_THE_THROAT_COMMAND",
+	short_name = "GO_FOR_THE_THROAT_COMMAND", image = "talents/go_for_the_throat.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	cooldown = 8,
@@ -247,7 +247,7 @@ newTalent{
 	tactical = { ATTACK = { PHYSICAL = 2 } },
 	range = function(self, t) return self:combatTalentScale(t, 2, 4) end,
 	getDam = function (self, t) return self:combatTalentPhysicalDamage(t, 15, 35) end,
-	getBonusDam = function (self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
+	getBonusPct = function (self, t) return self:combatTalentScale(t, 130, 170) end,
 	getReduction = function (self, t) return self:combatTalentScale(t, 5, 12) end,
 	getDur = function(self, t) return self:combatTalentScale(t, 4, 7) end,
 	on_pre_use= function(self, t, silent)
@@ -302,6 +302,10 @@ newTalent{
 			eff.power = t.getDam(self, t)
 			eff.dur = t.getDur(self, t)
 			self:setEffect(self.EFF_FETCH, t.getDur(self, t), {target=target})
+			local owner = self.owner
+			if owner then
+				target:setEffect(target.EFF_FETCH_VULNERABLE, t.getDur(self, t), {pct=t.getBonusPct(self, t), src=owner})
+			end
 		end
 		return true
 	end,
@@ -309,17 +313,17 @@ newTalent{
 		local dam = t.getDam(self, t)
 		local dur = t.getDur(self, t)
 		local reduction = t.getReduction(self, t)
-		local bonus_dam = t.getBonusDam(self, t)*100
+		local bonus_pct = t.getBonusPct(self, t)
 		return ([[The wolf attempts to grab an enemy of up to 1 size category larger than itself, ravaging it within its jaws for %d damage, and reducing its attack and defense by %d. If it succeeds, it will drag its target to its owner over a period of %d turns, granting a %d%% increase in damage when the owner first attacks it within melee range.
 
 			The wolf will only use this ability at the command of its owner, and only then when not mounted.]]):
-		format(dam, reduction, dur, bonus_dam)
+		format(dam, reduction, dur, bonus_pct)
 	end,
 }
 
 newTalent{
 	name = "Command: Fetch!",
-	short_name = "FETCH_COMMAND",
+	short_name = "FETCH_COMMAND", image = "talents/fetch.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	cooldown = 30,
@@ -355,11 +359,11 @@ newTalent{
 			local dam = t2.getDam(pet, t2)
 			local dur = t2.getDur(pet, t2)
 			local reduction = t2.getReduction(pet, t2)*100
-			local bonus_dam = t2.getBonusDam(pet, t2)*100
+			local bonus_pct = t2.getBonusPct(pet, t2)
 			return ([[The wolf attempts to grab an enemy of up to 1 size category larger than itself, ravaging it within its jaws for %d damage, and reducing its attack and defense by %d. If it succeeds, it will drag its target to its owner over a period of %d turns, granting a %d%% increase in damage when the owner first attacks it within melee range.
 
 			The wolf will only use this ability at the command of its owner, and only then when not mounted.]]):
-			format(dam, reduction, dur, bonus_dam)
+			format(dam, reduction, dur, bonus_pct)
 		end
 	end
 }

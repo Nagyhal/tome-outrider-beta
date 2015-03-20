@@ -897,3 +897,35 @@ newEffect{
 		end
 	end,
 }
+
+newEffect{
+	name = "FETCH_VULNERABLE", image = "talents/willful_combat.png",
+	desc = "Vulnerable (Fetch)",
+	long_desc = function(self, eff) return ("When the wolf's owner next strikes this target with a weapon attack, it gains a %d%% bonus to damage."):format(eff.pct) end,
+	type = "physical",
+	subtype = { focus=true, trgt},
+	status = "detrimental",
+	parameters = { pct=110, src },
+	on_gain = function(self, eff) return ("#Target#'s is vulnerable to %s's next strike"):format(eff.src.name), "+Vulnerable" end,
+	-- on_lose = function(self, eff) return ("#Target#' completes the strike") end,
+	activate = function(self, eff)
+		if not eff.src then
+			self:removeEffect(self.EFF_FETCH_VULNERABLE, nil, true)
+			error("No source sent to temporary effect Vulnerable (Fetch).")
+		end
+	end,
+	callbackOnTakeDamage = function(self, eff, src, x, y, type, dam, state)
+		if eff.src == src and core.fov.distance(self.x, self.y, src.x, src.y) == 1 then
+			dam = dam * eff.pct/100
+			if not self.turn_procs.handled_fetch_vulnerable then
+				game:onTickEnd(function()
+					self:removeEffect(self.EFF_FETCH_VULNERABLE)
+				end)
+				self.turn_procs.handled_fetch_vulnerable= true
+			end
+		end
+		return {dam=dam}
+	end,
+	deactivate = function(self, eff)
+	end,
+}
