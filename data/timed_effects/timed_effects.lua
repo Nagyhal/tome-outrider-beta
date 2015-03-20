@@ -307,11 +307,42 @@ newEffect{
 	callbackOnKill = function(self, eff, tgt, death_note)
 		if tgt.exp_worth and tgt.exp_worth > 0 then eff.ct=math.max(0, eff.ct-1) end
 	end,
+	callbackOnWear = function(self, eff)
+		local ed = self:getEffectFromId(self.EFF_WILD_CHALLENGE)
+		ed.checkChanges(self, eff, ed)
+	end,
+	callbackOnTakeoff = function(self, eff)
+		local ed = self:getEffectFromId(self.EFF_WILD_CHALLENGE)
+		ed.checkChanges(self, eff, ed)
+	end,
+	checkChanges= function(self, eff, ed)
+		local new_val = self.challenge_the_wilds_boost or 0
+		if eff.buff~=new_val then
+			eff.buff = new_val
+			ed.updateValues(self, eff)
+		end
+	end,
+	updateValues = function(self, eff)
+		if eff.buff_id then
+			self:removeTemporaryValue(eff, "combat_atk", eff.buff_id)
+			self:removeTemporaryValue(eff, "combat_dam", eff.buff_id)
+			eff.atk_id, eff.dam_id = nil, nil
+		end
+		if eff.buff and eff.buff>0 then
+			eff.atk_id = self:addTemporaryValue("combat_atk", eff.buff)
+			eff.dam_id = self:addTemporaryValue("combat_dam", eff.buff)
+		end			
+	end,
 	on_gain = function(self, err) return "#Target#'s wild challenge begins!" end,
 	on_lose = function(self, err) return "#Target#' has ended the wild challenge" end,
 	activate = function(self, eff)
+		eff.buff = self.challenge_the_wilds_boost or 0
+		eff.atk_id = self:addTemporaryValue("combat_atk", eff.buff)
+		eff.dam_id = self:addTemporaryValue("combat_dam", eff.buff)
 	end,
 	deactivate = function(self, eff)
+		if eff.buff_id then self:removeTemporaryValue("combat_atk", eff.buff_id) end
+		if eff.buff_id then self:removeTemporaryValue("combat_dam", eff.buff_id) end
 	end,
 }
 

@@ -85,7 +85,8 @@ newBirthDescriptor{
 		max_life = 120,
 		resolvers.equip{ id=true,
 			{type="armor", subtype="light", name="rough leather armour", autoreq=true, ego_chance=-1000},
-			{type="weapon", subtype="greatsword", name="iron longsword", autoreq=true, ego_chance=-1000, ego_chance=-1000},
+			{type="weapon", subtype="longsword", name="iron longsword", autoreq=true, ego_chance=-1000, ego_chance=-1000},
+			 {defined="HUNTING_HORN"}
 		},
 		resolvers.inventory{ id=true, inven="QS_MAINHAND",
 			{type="weapon", subtype="longbow", name="elm longbow", autoreq=true, ego_chance=-1000},
