@@ -237,7 +237,7 @@ newTalent{
 	require = mnt_strcun_req4,
 	points = 5,
 	random_ego = "attack",
-	cooldown = 15,
+	cooldown = 12,
 	stamina = 30,
 	tactical = { ATTACKAREA = { weapon = 1 } },
 	range = 1,

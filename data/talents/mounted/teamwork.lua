@@ -162,7 +162,7 @@ newTalent{
 	type = {"mounted/teamwork", 3},
 	points = 5,
 	random_ego = "defensive",
-	cooldown = 10,
+	cooldown = 6,
 	stamina = 15,
 	require = mnt_wil_req3,
 	requires_target = true,
