@@ -5,6 +5,7 @@ function _M:grantInscription(target, id, name, data, cooldown, vocal, src, bypas
 	if not target or not target.max_inscriptions then
 		error("Invalid target passed to ActorInscription")
 	end
+	target.inscription_objects = target.inscription_objects or {}
 	-- Check allowance
 	local t = target:getTalentFromId(target["T_"..name.."_1"])
 	if target.inscription_restrictions and not target.inscription_restrictions[t.type[1]] then
@@ -57,8 +58,17 @@ function _M:grantInscription(target, id, name, data, cooldown, vocal, src, bypas
 	end
 
 	-- Unlearn old talent
-	local oldname = self.inscriptions[id]
+	local oldname = target.inscriptions[id]
 	if oldname then
+		if target.drop_unlearnt_inscriptions then
+			local o = target.inscription_objects[oldname]
+			if o then
+				-- self:addObject(self:getInven("INVEN"), o, false, false)
+				game.level:addEntity(o)
+				game.level.map:addObject(target.x, target.y, o)
+				target.inscription_objects[oldname] = nil
+			end
+		end
 		target:unlearnTalent(target["T_"..oldname])
 		target.inscriptions_data[oldname] = nil
 	end
@@ -66,7 +76,10 @@ function _M:grantInscription(target, id, name, data, cooldown, vocal, src, bypas
 	-- Learn new talent
 	name = name.."_"..id
 	data.__id = id
-	if src and src.obj then data.item_name = src.obj:getName{do_color=true, no_count=true}:toTString() end
+	if src and src.obj then
+		data.item_name = src.obj:getName{do_color=true, no_count=true}:toTString()
+		target.inscription_objects[name] = src.obj:clone()
+	end
 	target.inscriptions_data[name] = data
 	target.inscriptions[id] = name
 --	print("Inscribing on "..self.name..": "..tostring(name))

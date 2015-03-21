@@ -38,8 +38,7 @@ local change_inscriptions = function(npc, player)
 	local titleupdator = player:getEncumberTitleUpdator(("Equipment(%s) <=> Inventory(%s)"):format(npc.name:capitalize(), player.name:capitalize()))
 	d = require("mod.dialogs.ShowInventory").new(titleupdator(), player:getInven("INVEN"), function(o) return o.type == "scroll" end , function(o, item)
 		local inven = player:getInven("INVEN")
-		if player:grantInscription(npc, nil, o.inscription_talent, o.inscription_data, true, true, {obj=o, inven=inven, item=item})
-			then
+		if player:grantInscription(npc, nil, o.inscription_talent, o.inscription_data, true, true, {obj=o, inven=inven, item=item}) then
 			player:removeObject(inven, item)
 		end
 	end, player)
