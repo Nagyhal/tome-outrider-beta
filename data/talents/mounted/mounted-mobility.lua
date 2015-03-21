@@ -20,7 +20,7 @@
 newTalent{
 	name = "Overrun",
 	type = {"mounted/mounted-mobility", 1},
-	require = mnt_str_req1,
+	require = mnt_strdex_req1,
 	points = 5,
 	loyalty = 15,
 	cooldown = 15,
@@ -72,7 +72,7 @@ newTalent{
 	cooldown = function (self, t) return math.floor(20-2*self:getTalentLevel(t)) end,
 	loyalty = 25,
 	no_energy = true,
-	require = mnt_str_req2,
+	require = mnt_strdex_req2,
 	getGoadSpeed = function (self, t) return self:combatTalentScale(t, 0.2, 0.65, 0.85) end,
 	tactical = { BUFF = 2, CLOSEIN = 2, ESCAPE = 2 },
 	on_pre_use = function(self, t, silent)
@@ -92,7 +92,7 @@ newTalent{
 newTalent{
 	name = "Savage Bound",
 	type = {"mounted/mounted-mobility", 3},
-	require = mnt_str_req3,
+	require = mnt_strdex_req3,
 	points = 5,
 	cooldown = 8,
 	loyalty = 15,
@@ -150,7 +150,7 @@ newTalent{
 newTalent{
 	name = "Mounted Acrobatics",
 	type = {"mounted/mounted-mobility", 4},
-	require = mnt_str_req4,
+	require = mnt_strdex_req4,
 	points = 5,
 	mode = "passive",
 	range = function (self, t) return math.floor(3 + self:getTalentLevel(t)/2) end,

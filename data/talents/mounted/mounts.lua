@@ -103,7 +103,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Interact with your mount", short_name = "INTERACT_MOUNT",
+	name = "Interact With Your Mount", short_name = "INTERACT_MOUNT",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	no_energy = true,

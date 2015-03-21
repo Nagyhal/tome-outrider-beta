@@ -223,9 +223,9 @@ newTalent{
 
 newTalent{
 	name = "Flanking",
-	type = {"mounted/teamwork", 3},
+	type = {"mounted/teamwork", 4},
 	points = 5,
-	require = mnt_wil_req3,
+	require = mnt_wil_req4,
 	mode = "passive",
 	doCheck = function(self, t)
 		local tgts = {}

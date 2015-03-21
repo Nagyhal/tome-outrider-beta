@@ -37,6 +37,7 @@ newTalent{
 		end
 		return true
 	end,
+	--TODO: This code is virtually nonsensical at this stage, let's delete most of it.
 	checkBothWeaponSets = function(self, t)
 		local mains = {main=self:getInven("MAINHAND") and self:getInven("MAINHAND")[1],
 			qs = self:getInven("QS_MAINHAND") and self:getInven("QS_MAINHAND")[1]}

@@ -220,10 +220,7 @@ newTalent{
 	name = "Challenge the Wilds",
 	type = {("mounted/bestial-dominion"), 1},
 	autolearn_talent = "T_INTERACT_MOUNT",
-	require =  {
-		stat = { str=function(level) return 12 + (level-1) * 8 end },
-		level = function(level) return 0 + (level-1)*5  end,
-	},
+	require =  mnt_strwil_req1,
 	points = 5,
 	cooldown = 50,
 	stamina = 50,
@@ -334,7 +331,7 @@ newTalent{
 newTalent{
 	name = "Gruesome Depredation",
 	type = {"mounted/bestial-dominion", 2},
-	require = mnt_str_req2,
+	require = mnt_strwil_req2,
 	points = 5,
 	cooldown = 30,
 	tactical = { ATTACK = 2 }, --TODO: Complicated AI routine
@@ -376,7 +373,7 @@ newTalent{
 newTalent{
 	name = "Subdue The Beast",
 	type = {"mounted/bestial-dominion", 3},
-	require = mnt_str_req3,
+	require = mnt_strwil_req3,
 	points = 5,
 	cooldown = 50,
 	-- tactical = { STAMINA = 2 },
@@ -402,7 +399,7 @@ newTalent{
 	points = 5,
 	cooldown = function(self, t) return self:combatTalentLimit(t, 20, 50, 30) end,
 	stamina = 80,
-	require = mnt_str_req4,
+	require = mnt_strwil_req4,
 	no_energy = true,
 	tactical = { BUFF = 3 }, 
 	on_pre_use = function(self, t)
