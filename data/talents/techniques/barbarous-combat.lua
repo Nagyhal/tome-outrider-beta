@@ -45,7 +45,7 @@ newTalent{
 			qs = self:getInven("QS_OFFHAND") and self:getInven("QS_OFFHAND")[1]}
 		local one_handed = false
 		local free_off = false
-		for _, set in ipairs{"main", "qs"}do
+		for _, set in ipairs{"main"} do
 			local main = mains[set]
 			if main and not main.twohanded then--and not main.archery then
 				one_handed = true
@@ -64,12 +64,16 @@ newTalent{
 
 		local ret = {free_off=false}
 		if hasFreeOffhand(self) then
-				self:talentTemporaryValue(ret, "combat_atk", t.getAtk2(self, t))
 				self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower2(self, t))
+				self:talentTemporaryValue(ret, "combat_physcrit", t.getPhysCrit2(self, t))
+				self:talentTemporaryValue(ret, "combat_critical_power", t.getCritPower2(self, t))
+				self:talentTemporaryValue(ret, "combat_apr", t.getApr2(self, t))
 				free_off=true
 		else 
-			self:talentTemporaryValue(ret, "combat_atk", t.getAtk(self, t))
 			self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower(self, t))
+			self:talentTemporaryValue(ret, "combat_physcrit", t.getPhysCrit(self, t))
+			self:talentTemporaryValue(ret, "combat_critical_power", t.getCritPower(self, t))
+			self:talentTemporaryValue(ret, "combat_apr", t.getApr(self, t))
 		end
 		return ret
 	end,
@@ -86,12 +90,17 @@ newTalent{
 						p.__tmpvals[i] = nil
 					end
 					if free_off then
-						self:talentTemporaryValue(p, "combat_atk", t.getAtk2(self, t))
+						game.log("DEBUG: melee equipped")
 						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower2(self, t))
+						self:talentTemporaryValue(p, "combat_physcrit", t.getPhysCrit2(self, t))
+						self:talentTemporaryValue(p, "combat_critical_power", t.getCritPower2(self, t))
+						self:talentTemporaryValue(p, "combat_apr", t.getApr2(self, t))
 						p.free_off=true
 					else
-						self:talentTemporaryValue(p, "combat_atk", t.getAtk(self, t))
 						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower(self, t))
+						self:talentTemporaryValue(p, "combat_physcrit", t.getPhysCrit(self, t))
+						self:talentTemporaryValue(p, "combat_critical_power", t.getCritPower(self, t))
+						self:talentTemporaryValue(p, "combat_apr", t.getApr(self, t))
 						p.free_off=false
 					end
 				else
@@ -104,20 +113,36 @@ newTalent{
 		return true
 	end,
 	info = function(self, t)
-		local atk = t.getAtk(self, t)
-		local atk2 = t.getAtk2(self, t)
+		local apr = t.getApr(self, t)
+		local apr2 = t.getApr2(self, t)
+		local crit_power = t.getCritPower(self, t)
+		local crit_power2 = t.getCritPower2(self, t)
+		local phys_crit = t.getPhysCrit(self, t)
+		local phys_crit2 = t.getPhysCrit2(self, t)
 		local mindpower = t.getMindpower(self, t)
 		local mindpower2 = t.getMindpower2(self, t)
 		local phys_pen = t.getPhysPen(self, t)
-		return ([[While you prefer weapons less visibily impressive than some, the merciless precision with which you wield them makes them no less intimidating in your hands. 
+		return ([[While you prefer weapons less visibily impressive than some, the merciless precision with which you wield them makes them no less intimidating in your hands. Critical hits will reduce the physical resistance of the target by %d%% for 2 turns.
 		
-		Gain a %d increase to attack and APR and a %d increase to mindpower while wielding a one-handed or an archery weapon. Critical hits will reduce the physical resistance of the target by %d%% for 2 turns.
+		Also, while wielding a one-handed or an archery weapon, gain the following bonuses:
+		+%d mindpower
+		+%d%% physical crit chance
+		+%d%% critical power
+		+%d APR
 
-		Gain a %d increase to attack and APR and a %d increase to mindpower if you hold nothing in your off-hand.]]):
-		format(atk, mindpower, phys_pen, atk2, mindpower2)
+		If you hold nothing in your off-hand, instead gain the following benefits:
+		+%d mindpower
+		+%d%% physical crit chance
+		+%d%% critical power
+		+%d APR]]):
+		format(phys_pen, mindpower, phys_crit, crit_power, apr, mindpower2, phys_crit2, crit_power2, apr2)
 	end,
-	getAtk = function(self, t) return self:combatTalentScale(t, 5, 12) end,
-	getAtk2 = function(self, t) return self:callTalent(t.id, "getAtk")*1.65 end,
+	getApr = function(self, t) return self:combatTalentScale(t, 5, 12) end,
+	getApr2 = function(self, t) return self:callTalent(t.id, "getApr")*1.65 end,
+	getPhysCrit = function(self, t) return self:combatTalentScale(t, 3, 7) end,
+	getPhysCrit2 = function(self, t) return self:callTalent(t.id, "getPhysCrit")*1.85 end,
+	getCritPower = function(self, t) return self:combatTalentScale(t, 15, 30) end,
+	getCritPower2 = function(self, t) return self:callTalent(t.id, "getCritPower")*1.65 end,
 	getMindpower = function(self, t) return self:combatTalentScale(t, 6, 15) end,
 	getMindpower2 = function(self, t) return self:callTalent(t.id, "getMindpower")*1.65 end,
 	getPhysPen = function(self, t) return self:combatTalentScale(t, 15, 35) end,
