@@ -355,14 +355,16 @@ newEffect{
 	subtype = { focus=true },
 	decrease = 0, no_remove = true,
 	status = "beneficial",
-	parameters = {},
+	parameters = {first=true},
 	callbackOnTakeDamage = function(self, eff, src, x, y, type, dam, tmp, no_martyr)
+		if not eff.first then return end
 		if (self.life-dam) < self.max_life*.5 then
 			game:onTickEnd(function()
 				local src = eff.src
 				src:callTalent(src.T_CHALLENGE_THE_WILDS, "doBefriendMount", self)
+				eff.first = false
+				self:removeEffect(self.EFF_WILD_CHALLENGER, nil, true)
 			end)
-			self:removeEffect(self.EFF_WILD_CHALLENGER, nil, true)
 		end
 	end,
 	on_gain = function(self, err) return "#Target# rises to the challenge!" end,
