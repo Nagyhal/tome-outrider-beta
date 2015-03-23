@@ -931,3 +931,21 @@ newEffect{
 	deactivate = function(self, eff)
 	end,
 }
+
+newEffect{
+	name = "OUTRIDER_PROVOKED", --image = "talents/backlash.png",
+	desc = "Provoked",
+	long_desc = function(self, eff) return ("Damage is increased by %d%%, but all damage resistances are decreased by %d%%"):format(eff.boost, eff.red) end,
+	type = "mental",
+	subtype = { tactic=true, morale=true },
+	status = "detrimental",
+	parameters = { buff=20, dam=25, red=10 },
+	on_gain = function(self, eff) return "#Target#' is provoked!", "+Provoked" end,
+	on_lose = function(self, eff) return "#Target#' is no longer provoked!", "-Provoked" end,
+	activate = function(self, eff)
+		self:effectTemporaryValue(eff, "inc_damage", {all=eff.buff})
+		self:effectTemporaryValue(eff, "resists", {all=-eff.dam})
+		self:effectTemporaryValue(eff, "combat_armor", -eff.red)
+		self:effectTemporaryValue(eff, "combat_def", -eff.red)
+	end,
+}

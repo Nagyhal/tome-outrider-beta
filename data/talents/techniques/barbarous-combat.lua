@@ -210,25 +210,49 @@ newTalent{
 
 
 newTalent{
-	name = "Suggest this Talent!",
+	name = "Scatter the Unworthy",
 	short_name = "UNNAMED_OUTRIDER_TALENT",
 	type = {"technique/barbarous-combat", 3},
-	mode = "passive",
-	require = function(self, t)
-		local ret = mnt_strcun_req3(self, t)
-		local desc = ret.special.desc
-		ret.special = {fct = function(self, t) return false end,
-			desc=desc..", and I'll need an awesome suggeston to unlock this talent!"}
-		return ret
-	end,
+	require = mnt_strcun_req3,
 	points = 5,
-	info = function(self, t)
-		return ([[Outrider is a class in the very early phases of implementation and testing!
-
-			Throughout its development, many changes have been made to the base idea. Because of talents moving out of the original trees, we have many new trees (either playable now or in the works!)
-
-			But this does mean certain talent categories have lost their original progression. What should I place here? You help decide! Send me your ideas, and if I fall in love with any of them, they'll go in! Until then, don't try and put any points into this placeholder talent!]])
+stamina = 30,
+	cooldown = 18, 
+	range = 0,
+	radius = function(self, t) return math.floor(self:combatTalentScale(t, 4, 8)) end,
+	tactical = { ATTACKAREA = { confusion = 1, fear = 1 }, DISABLE = { confusion = 1, fear = 1 } },
+	requires_target = true,
+	target = function(self, t)
+		return {type="cone", range=self:getTalentRange(t), radius=self:getTalentRadius(t), selffire=false}
 	end,
+	passives = function(self, t , p)
+		self:talentTemporaryValue(p, "combat_mindpower", t.getBuff(self, t))
+		self:talentTemporaryValue(p, "combat_mentalresist", t.getBuff(self, t))
+	end,
+	action = function(self, t)
+		local tg = self:getTalentTarget(t)
+		local x, y = self:getTarget(tg)
+		if not x or not y then return nil end
+		self:project(tg, x, y, DamageType.TEST_OF_METTLE, {dur=t.getDur(self,t), red=t.getReduction(self, t)})
+		game.level.map:particleEmitter(self.x, self.y, self:getTalentRadius(t), "directional_shout", {life=8, size=3, tx=x-self.x, ty=y-self.y, distorion_factor=0.1, radius=self:getTalentRadius(t), nb_circles=8, rm=0.8, rM=1, gm=0.4, gM=0.6, bm=0.1, bM=0.2, am=1, aM=1})
+		return true
+	end,
+	info = function(self, t)
+		local r = self:getTalentRadius(t)
+		local dur = t.getDur(self, t)
+		local red = t.getReduction(self, t)
+		local buff = t.getBuff(self, t)
+		return ([[Test the mettle of your foes, sifting out the worthy from the weak. Targets who fail a mind save in a cone of radius %d face will be either panicked or provoked for %d turns. Panicked foes suffer a 50%% chance to be flee from you each turn, while provoked foes increase their damage by 20%% while reducing all resistances by 25%% and defense and armour by %d.
+
+			Levelling Scatter the Unworthy past the first level will hone your powers of tactical dominance, increasing mindpower by %d and mind save by %d.]]):
+		format(r, dur, red, buff, buff)
+	end,
+	getDur = function(self, t) return math.floor(self:combatTalentScale(t, 4, 6)) end,
+	getReduction = function(self, t) return math.round(self:combatTalentScale(t, 5, 12)) end,
+	getBuff = function(self, t) 
+		local offset = self:getTalentMastery(t)
+		local tl = self:getTalentLevel(t)
+		tl = tl - offset
+		return self:getTalentLevelRaw(t)>1 and math.round(self:combatTalentScale(tl, 6, 19, .7, nil, offset)) or 0 end,
 }
 
 newTalent{
