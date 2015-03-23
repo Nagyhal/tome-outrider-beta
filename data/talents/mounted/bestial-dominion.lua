@@ -258,7 +258,7 @@ newTalent{
 			local name = string.sub(ab.id, 3)
 			mount.__inscription_data_fake = self.inscriptions_data[name]
 			mount:forceUseTalent(ab.id, {no_energy=true, talent_reuse=true, no_talent_fail=true, silent=true})
-			if old_fake then mount.__inscription_data_fake=old_fake end
+			mount.__inscription_data_fake=old_fake
 		end
 	end,
 	callbackOnLevelup = function(self, t, level)
