@@ -8,7 +8,7 @@ end
 
 --Effects for basic mount functionality
 newEffect{
-	name = "MOUNT",
+	name = "MOUNT", image="talents/mount.png",
 	desc = "Mounted",
 	long_desc = function(self, eff)
 		if eff.mount.type == "animal" then
@@ -38,7 +38,7 @@ newEffect{
 }
 
 newEffect{
-	name = "RIDDEN",
+	name = "RIDDEN", image="talents/mount.png",
 	desc = "Ridden",
 	long_desc = function(self, eff)
 		return ("The target is being ridden, sharing damage with its controller")
@@ -67,7 +67,7 @@ newEffect{
 }
 
 newEffect{
-	name = "LIVING_SHIELD",
+	name = "LIVING_SHIELD", image="talents/living_shield.png",
 	desc = "Used as a Living Shield",
 	long_desc = function(self, eff) return ("The target is being used as a living shield, reducing defense by %d. The target's manhandler will have a %d%% chance to redirect attacks onto it!"):format(eff.def, eff.pct) end,
 	type = "physical",
@@ -91,7 +91,7 @@ newEffect{
 }
 
 newEffect{
-	name = "LIVING_SHIELDED",
+	name = "LIVING_SHIELDED", image="talents/living_shield.png",
 	desc = "Living Shield",
 	display_desc = function(self, eff) return ("Living Shield: %s"):format(string.bookCapitalize(eff.trgt.name)) end,
 	long_desc = function(self, eff) return ("The target grips its victim and enjoys a %d%% chance to displace damage onto it."):format(eff.chance) end,
@@ -124,7 +124,7 @@ newEffect{
 }
 
 newEffect{
-	name = "IMPALED",
+	name = "IMPALED", image = "talents/impalement.png",
 	desc = "Impaled",
 	long_desc = function(self, eff) return ("The target is skewered against an obstacle, floor tile, or living thing, and is pinned and bled for %d per turn. Teleporting will break this pin."):format(eff.bleed) end,
 	type = "physical",
@@ -245,7 +245,7 @@ newEffect{
 }
 
 newEffect{
-	name = "HOWLING_ARROWS",
+	name = "HOWLING_ARROWS", image="talents/wailing_weapon.png",
 	desc = "Howling Arrows",
 	long_desc = function(self, eff) return ("The target has a %d%% chance to confuse (power %d) with each archery attack."):format(eff.chance, eff.power) end,
 	type = "physical",
@@ -262,7 +262,7 @@ newEffect{
 }
 
 newEffect{
-	name = "SHRIEKING_STRIKES",
+	name = "SHRIEKING_STRIKES", image="talents/wailing_weapon.png",
 	desc = "Shrieking Strikes",
 	long_desc = function(self, eff) return ("The target has a %d%% chance to confuse (power %d) with each melee attack."):format(eff.chance, eff.power) end,
 	type = "physical",
@@ -279,7 +279,7 @@ newEffect{
 }
 
 newEffect{
-	name = "UNBRIDLED_FEROCITY", image = "talents/willful_combat.png",
+	name = "UNBRIDLED_FEROCITY", image = "talents/unbridled_ferocity.png",
 	desc = "Unbridled Ferocity",
 	long_desc = function(self, eff) return ("The target is unleashed, gaining a %d bonus to physical power; however, the target cannot be mounted while in this state. Furthermore, when taking damage, the target will not lose Loyalty but will regain it."):format(eff.power) end,
 	type = "mental",
@@ -379,7 +379,7 @@ newEffect{
 }
 
 newEffect{
-	name = "PINNED_TO_THE_WALL", image = "effects/pinned.png",
+	name = "PINNED_TO_THE_WALL", image = "talents/impalement.png",
 	desc = "Pinned to the wall",
 	long_desc = function(self, eff) return "The target is pinned to the wall or some other suitable piece of terrain, unable to move. If the terrain is detroyed, the target will be able to move agian." end,
 	type = "physical",
@@ -411,7 +411,7 @@ newEffect{
 }
 
 newEffect{
-	name = "UNCANNY_TENACITY", image = "talents/thaloren_wrath.png",
+	name = "UNCANNY_TENACITY", image = "talents/uncannity_tenacity.png",
 	desc = "Uncanny Tenacity",
 	long_desc = function(self, eff) return ("The wolf gains a %d bonus to saves and a %d%% bonus to resist all, so long as it starts its turn next to an enemy at less than %d%% of its max health."):format(eff.saves, eff.res, eff.threshold) end,
 	type = "physical",
@@ -429,7 +429,7 @@ newEffect{
 }
 
 newEffect{
-	name = "FLANKED",
+	name = "FLANKED", image = "talents/flanking.png",
 	desc = "Flanked",
 	long_desc = function(self, eff) return ("Flanked by the outrider and its allies, the target suffers a defense decrease of %d, a %d%% increase to critical damage and all attackers gain a crit chance bonus of %d%% against it.") end,
 	type = "physical",
@@ -466,8 +466,8 @@ newEffect{
 
 
 newEffect{
-	name = "PREDATORY_FLANKING",
-	desc = "Predatory Flanking", image = "talents/precise_strikes.png",
+	name = "PREDATORY_FLANKING", image = "talents/predatory_flanking.png",
+	desc = "Predatory Flanking",
 	long_desc = function(self, eff) return ("Flanked by the wolf and its allies, the target suffers %d%% increased damage from the source and %d%% from its flanking allies.") end,
 	type = "physical",
 	subtype = { tactic=true },
@@ -500,7 +500,7 @@ newEffect{
 }
 
 newEffect{
-	name = "FETCH",
+	name = "FETCH", image="talents/fetch.png",
 	desc = "Fetch!",
 	long_desc = function(self, eff) return ("The wolf, each turn, will drag its grappled target towards its master."):format(eff.chance) end,
 	type = "physical",
@@ -574,8 +574,8 @@ local function removeOtherTwinThreatEffects(self, eff)
 end
 
 newEffect{
-	name = "TWIN_THREAT_MOUNTED",
-	desc = "Twin Threat: Mounted", image = "talents/together_forever.png",
+	name = "TWIN_THREAT_MOUNTED", image = "talents/twin_threat.png",
+	desc = "Twin Threat: Mounted",
 	long_desc = function(self, eff) return ("Beast and master act in concert. The beast stands a %d%% chance to make a free, instananeous attack for each of the rider's physical critical hits."):format(eff.chance) end,
 	type = "other",
 	decrease = 0, no_remove = true,
@@ -607,8 +607,8 @@ newEffect{
 }
 
 newEffect{
-	name = "TWIN_THREAT_ADJACENT",
-	desc = "Twin Threat: Adjacent", image = "talents/together_forever.png",
+	name = "TWIN_THREAT_ADJACENT", image = "talents/twin_threat.png",
+	desc = "Twin Threat: Adjacent",
 	long_desc = function(self, eff) return ("Beast and master act in concert, each gaining a %d%% increase to healing modifer and a %d bonus to stamina and loyalty regen."):format(eff.heal, eff.regen) end,
 	type = "other",
 	decrease = 0, no_remove = true,
@@ -630,8 +630,8 @@ newEffect{
 }
 
 newEffect{
-	name = "TWIN_THREAT_MID",
-	desc = "Twin Threat: Mid Range", image = "talents/together_forever.png",
+	name = "TWIN_THREAT_MID", image = "talents/twin_threat.png",
+	desc = "Twin Threat: Mid Range",
 	long_desc = function(self, eff) return ("Beast and master act in concert, each gaining a %d%% increase in movement speed and a %d%% cooldown reduction to all Techniques talents."):format(eff.move, eff.cooldown) end,
 	type = "other",
 	decrease = 0, no_remove = true,
@@ -658,8 +658,8 @@ newEffect{
 }
 
 newEffect{
-	name = "TWIN_THREAT_LONG",
-	desc = "Twin Threat: Long Range", image = "talents/together_forever.png",
+	name = "TWIN_THREAT_LONG", image = "talents/twin_threat.png",
+	desc = "Twin Threat: Long Range",
 	long_desc = function(self, eff) return ("Beast and master act in concert. Successful attacks against targets adjacent to the beast will increase its Loyalty to the owner by %d. Also, when the beast reaches %d%% of its life total, the owner receives the ability to hasten to its aid in a heroic dash."):format(eff.regen, eff.life_total) end,
 	type = "other",
 	decrease = 0, no_remove = true,
@@ -687,7 +687,7 @@ newEffect{
 }
 
 newEffect{
-	name = "BEASTMASTER_MARK",
+	name = "BEASTMASTER_MARK",  image="talents/beastmasters_mark.png",
 	desc = "Beastmaster's Mark",
 	long_desc = function(self, eff) return ("The beast is filled with a thirst for blood, gaining a %d%% bonus to movement and attack speed, but losing %d%% loyalty each turn it does not move toward or attack %s"):format(eff.target.name) end,
 	type = "mental",
@@ -729,7 +729,7 @@ newEffect{
 }
 
 newEffect{
-	name = "VESTIGIAL_MAGICKS",
+	name = "VESTIGIAL_MAGICKS", image="talents/vestigial_magicks.png",
 	desc = "Vestigial Magicks",
 	long_desc = function(self, eff) return ("The spider's residual magic energies have been awoken. Attackers will suffer %d arcane damage."):format(eff.power) end,
 	type = "spell",
@@ -749,7 +749,7 @@ newEffect{
 }
 
 newEffect{
-	name = "CATCH",
+	name = "CATCH", image="talents/catch.png",
 	desc = "Catch: Readied!",
 	long_desc = function(self, eff) return "The target, having recently slain an adjacent enemy with a critical hit, is ready to hurl its severed remnants back at its foes." end,
 	type = "spell",
@@ -763,7 +763,7 @@ newEffect{
 }
 
 newEffect{
-	name = "AERIAL_SUPREMACY",
+	name = "AERIAL_SUPREMACY", image="talents/aerial_supremacy.png",
 	desc = "Aerial Supremacy",
 	long_desc = function(self, eff) return ("The drake gains a bonus of %d to attack, defense, and physical save."):format(eff.buff) end,
 	type = "physical",
@@ -780,7 +780,7 @@ newEffect{
 }
 
 newEffect{
-	name = "LOOSE_IN_THE_SADDLE",
+	name = "LOOSE_IN_THE_SADDLE", image="talents/loose_in_the_saddle.png",
 	desc = "Loose in the Saddle",
 	long_desc = function(self, eff) return ("The rider moves with an additional %d%% movement speed, but any action other than moving, mounting or dismounting will break the effect."):format(eff.speed*100) end,
 	type = "physical",
@@ -806,7 +806,7 @@ newEffect{
 }
 
 newEffect{
-	name = "LOOSE_IN_THE_SADDLE_SHARED",
+	name = "LOOSE_IN_THE_SADDLE_SHARED", image="talents/loose_in_the_saddle.png",
 	desc = "Loose in the Saddle",
 	long_desc = function(self, eff) return ("The rider moves with an additional %d%% movement speed, but any action other than moving, mounting or dismounting will break the effect."):format(eff.speed) end,
 	type = "other",
@@ -831,7 +831,7 @@ newEffect{
 }
 
 newEffect{
-	name = "SHOCK_ATTACK",
+	name = "SHOCK_ATTACK", image = "talents/shock_and_awe.png",
 	desc = "Shock Attack",
 	long_desc = function(self, eff) return ("The rider will knock back 1 square any enemy it targets with a melee attack."):format() end,
 	type = "physical",
@@ -862,7 +862,7 @@ newEffect{
 
 newEffect{
 	name = "BOND_BEYOND_BLOOD",
-	desc = "Bond Beyond Blood", image = "talents/summon_control.png",
+	desc = "Bond Beyond Blood", image = "talents/bond_beyond_blood.png",
 	long_desc = function(self, eff) return ("Reduces damage received by %d%% while controlling the mount."):format(eff.res, eff.incdur) end,
 	type = "other",
 	subtype = { focus=true },
@@ -901,7 +901,7 @@ newEffect{
 }
 
 newEffect{
-	name = "FETCH_VULNERABLE", image = "talents/willful_combat.png",
+	name = "FETCH_VULNERABLE", image = "talents/backlash.png",
 	desc = "Vulnerable (Fetch)",
 	long_desc = function(self, eff) return ("When the wolf's owner next strikes this target with a weapon attack, it gains a %d%% bonus to damage."):format(eff.pct) end,
 	type = "physical",
