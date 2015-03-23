@@ -354,9 +354,18 @@ newTalent{
 		local mount = self:hasMount()
 		local hit = mount:attackTarget(target, nil, t.getDam(self, t), true)
 		if hit and target.dead then
+			mount:logCombat(target, "#Source# devours the flesh of #Target#!")
+			self:attr("allow_on_heal", 1)
 			local heal = mount.max_life*t.getHeal(self, t)
 			mount:heal(heal)
+			if core.shader.active(4) then
+				self:addParticles(Particles.new("shader_shield_temp", 1, {toback=false,size_factor=1.5, y=-0.3, img="healgreen", life=25}, {type="healing", time_factor=2000, beamsCount=20, noup=1.0}))
+			end
+			self:attr("allow_on_heal", -1)
+		else
+			mount:logCombat(target, "#Source# gains no life from Gruesome Depredation!")
 		end
+		return true
 	end,
 	info = function(self, t)
 		local dam = t.getDam(self, t)*100
