@@ -246,6 +246,15 @@ newTalent{
 				self:unlearnTalentFull(t2.shared_talent)
 			end
 		end
+		if summon.inscription_objects then
+			for name, o in pairs(summon.inscription_objects) do
+				game.level:addEntity(o)
+				game.level.map:addObject(summon.x, summon.y, o)
+				o.auto_pickup = true
+				summon.inscription_objects[name] = nil
+				summon:unlearnTalent(summon["T_"..name])
+			end
+		end
 		--Unset pet
 		self.outrider_pet = nil
 		self.max_loyalty = self.max_loyalty + (self.base_max_loyalty-summon.mount_data.base_loyalty)

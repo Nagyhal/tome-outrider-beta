@@ -66,6 +66,7 @@ function _M:grantInscription(target, id, name, data, cooldown, vocal, src, bypas
 				-- self:addObject(self:getInven("INVEN"), o, false, false)
 				game.level:addEntity(o)
 				game.level.map:addObject(target.x, target.y, o)
+				o.auto_pickup = true
 				target.inscription_objects[oldname] = nil
 			end
 		end
