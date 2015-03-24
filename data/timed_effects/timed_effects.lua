@@ -957,3 +957,22 @@ newEffect{
 		self:effectTemporaryValue(eff, "combat_def", -eff.red)
 	end,
 }
+
+newEffect{
+	name = "SET_LOOSE", image = "talents/let_em_loose.png",
+	desc = "Set Loose",
+	long_desc = function(self, eff) return ("The beast has been emboldened by the charge, gaining a damage bonus of %d%% and a bonus of %d to defense and all saves."):format(eff.dam, eff.def) end,
+	type = "physical",
+	subtype = { tactic=true, morale=true },
+	status = "beneficial",
+	parameters = { dam=10, def=8 },
+	on_gain = function(self, eff) return "#Target#' is set loose!", "+Set Loose" end,
+	on_lose = function(self, eff) return "#Target#' is no longer set loose!", "-Set Loose" end,
+	activate = function(self, eff)
+		self:effectTemporaryValue(eff, "inc_damage", {all=eff.dam})
+		self:effectTemporaryValue(eff, "combat_def", eff.def)
+		self:effectTemporaryValue(eff, "combat_physresist", eff.def)
+		self:effectTemporaryValue(eff, "combat_spellresist", eff.def)
+		self:effectTemporaryValue(eff, "combat_mentalresist", eff.def)
+	end,
+}
