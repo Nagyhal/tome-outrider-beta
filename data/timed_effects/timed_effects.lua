@@ -34,6 +34,7 @@ newEffect{
 		end
 	end,
 	deactivate = function(self, eff)
+		self.mount = nil
 	end,
 }
 
@@ -55,13 +56,12 @@ newEffect{
 			error("No rider sent to temporary effect Ridden.")
 		end
 		self:effectTemporaryValue(eff, "never_move", 1)
-		self.on_can_control = function(vocal) return false end
 	end,
 	deactivate = function(self, eff)
 		if self.dead then
 			eff.rider:removeEffect(self.EFF_MOUNT, false, true)
 		end
-		self.on_can_control = nil
+		self.rider = nil
 		return
 	end,
 }

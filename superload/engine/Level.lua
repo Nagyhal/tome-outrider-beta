@@ -7,4 +7,21 @@ function _M:hasEntity(e)
 	return self.entities[e.uid]
 end
 
+base_removeEntity = _M.removeEntity
+function _M:removeEntity(e)
+	if not e._fake_level_entity and e.rider then
+		return true
+	end
+	return base_removeEntity(self, e)
+end
+
+base_addEntity = _M.addEntity
+function _M:addEntity(e)
+	if not e._fake_level_entity and e.rider then
+		return true
+	end
+	return base_addEntity(self, e)
+end
+
+
 return _M

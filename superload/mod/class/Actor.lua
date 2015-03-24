@@ -107,16 +107,14 @@ function _M:dismountTarget(target, x, y)
 		-- game.zone:addEntity(game.level, target, "actor", target.x, target.y)
 		local ox, oy = self.x, self.y
 		local ok = self:move(x, y, true)
+		self:removeEffect(self.EFF_MOUNT, false, true)
+		target:removeEffect(self.EFF_RIDDEN, false, true)
+		game.logSeen(self, "%s dismounts from %s", self.name:capitalize(), target.name:capitalize())
 		game.level:addEntity(self)
 		-- game.zone:addEntity(game.level, self, "actor", self.x, self.y)
 		if not ok then return end
 
-		game.logSeen(self, "%s dismounts from %s", self.name:capitalize(), target.name:capitalize())
 		--game.level:addEntity(target)
-		target.rider= nil
-		self.mount = nil
-		self:removeEffect(self.EFF_MOUNT, false, true)
-		target:removeEffect(self.EFF_RIDDEN, false, true)
 		target:added()
 		target:move(ox, oy, true)
 		target.changed = true
@@ -307,7 +305,7 @@ function _M:loyaltyCheck(pet, silent)
 		forced = true
 	end
 
-	-- See if we create an anomaly
+	-- See if we create an "anomaly"
 	if not forced and self.turn_procs.loyalty_checked then return false end  -- This is so players can't chain cancel out of targeting to trigger anomalies on purpose, we clear it out in postUse
 	-- if not forced then self.turn_procs.loyalty_checked = true end
 	-- return true if we roll an anomly
