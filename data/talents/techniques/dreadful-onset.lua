@@ -3,7 +3,7 @@ newTalent{
 	type = {"technique/dreadful-onset", 1},
 	points = 5,
 	cooldown = 15,
-	stamina = 10,
+	-- stamina = 5,
 	require = mnt_cun_req1,
 	no_energy = true,
 	tactical = { BUFF = { weapon = 2 }, DISABLE = { confusion = 2 } }, 
@@ -11,6 +11,7 @@ newTalent{
 		if self:hasEffect(self.EFF_DISARMED) or self:isUnarmed() then if silent then game.logPlayer(self, "You must equip a weapon to convert it into a Wailing Weapon!") end return false end
 		return true
 	end,
+	radius = function(self, t) return math.round(self:combatTalentScale(t, 2, 3)) end,
 	action = function(self, t)
 		local eff_id
 		if self:hasArcheryWeapon() then eff_id = self.EFF_HOWLING_ARROWS else eff_id = self.EFF_SHRIEKING_STRIKES end
@@ -19,23 +20,32 @@ newTalent{
 	end,
 	doTryConfuse = function(self, t, target)
 		assert(target, "No target sent to doTryConfuse")
-		if target:canBe("confusion") and rng.percent(t.getConfuseChance(self, t)) then
-			target:setEffect(target.EFF_CONFUSED, t.getConfuseDur(self, t), {power=t.getConfusePower(self, t)})
-			local eff = target:hasEffect(target.EFF_CONFUSED)
+		if self.turn_procs.done_wailing_weapon then return end
+		local acts = {}
+		self:project({type="ball", target.x, target.y, radius=self:getTalentRadius(t), selffire=false, friendlyfire=false}, target.x, target.y, function(px, py)
+			local a = game.level.map(px, py, engine.Map.ACTOR)
+			if a and a~=target and self:reactionToward(a)<0 then acts[a] = true end
+		end)
+		local target2 = rng.tableIndex(acts)
+		if target2 and target2:canBe("confusion") and rng.percent(t.getConfuseChance(self, t)) then
+			target2:setEffect(target.EFF_CONFUSED, t.getConfuseDur(self, t), {power=t.getConfusePower(self, t)})
+			local eff = target2:hasEffect(target2.EFF_CONFUSED)
 			if eff then
-				if self:hasEffect(self.EFF_HOWLING_ARROWS) then self:logCombat(target, "#Source#'s howling arrows confuse #target#!") end
-				if self:hasEffect(self.EFF_SHRIEKING_STRIKES) then self:logCombat(target, "#Source#'s shrieking strikes confuse #target#!") end
+				if self:hasEffect(self.EFF_HOWLING_ARROWS) then self:logCombat(target2, "#Source#'s howling arrows confuse #target#!") end
+				if self:hasEffect(self.EFF_SHRIEKING_STRIKES) then self:logCombat(target2, "#Source#'s shrieking strikes confuse #target#!") end
 			end
 		end
+		self.turn_procs.done_wailing_weapon = true
 	end,
 	info = function(self, t)
 		local dur = t.getDur(self, t)
 		local confuse_dur = t.getConfuseDur(self, t)
+		local radius = self:getTalentRadius(t)
 		local chance = t.getConfuseChance(self, t)
 		local power = t.getConfusePower(self, t)
 		local silence_chance = t.getSilenceChance(self, t)
-		return ([[Taking either specially notched arrows from your quiver, or sought-after feathers which you affix to your melee weaponry, you let loose horridly screeching missiles or hack at your foes with howling strikes. For %d turns, attacks you make with your current weaponry have a %d%% chance to confuse their target (power %d, duration %d). At level 5, the cacophony created is enough to drown out the chants of spellcasters, applying an additional silence chance of %d%%.]])
-		:format(dur, chance, power, confuse_dur, silence_chance)
+		return ([[Taking either specially notched arrows from your quiver, or sought-after feathers which you affix to your melee weaponry, you let loose horridly screeching missiles or hack at your foes with howling strikes. For %d turns, attacks you make with your current weaponry have a %d%% chance to confuse a single enemy in radius %d around your target (power %d, duration %d). At level 5, the cacophony created is enough to drown out the chants of spellcasters, applying an additional silence chance of %d%%. This effect can proc once per turn.]])
+		:format(dur, chance, radius, power, confuse_dur, silence_chance)
 	end,
 	getDur = function(self, t) return self:combatTalentLimit(t, 10, 3.75, 5.5, .35) end,
 	getConfuseDur = function(self, t) return self:combatTalentScale(t, 2.75, 4, .35) end,
@@ -58,39 +68,17 @@ newTalent{
 	type = {"technique/dreadful-onset", 2},
 	require = mnt_cun_req2,
 	points = 5,
-	cooldown = function (self, t) return 21 - self:getTalentLevel(t) end,
-	stamina = 25,
+	cooldown = 16,
+	stamina = 15,
 	random_ego = "attack",
-	getArcheryTargetType = function(self, t)
-		local weapon, ammo = self:hasArcheryWeapon()
-		return {range=t.getArcheryRange(self, t)}
-	end,
-	getArcheryRange = function(self, t) return math.floor(self:getTalentLevel(t)) end,
-	range = function(self, t)
-		return t.getArcheryRange(self, t)
-	end,
-	getFinalRange = function(self, t)
-		if self:hasArcheryWeapon("bow") then return t.getArcheryRange(self, t)
-		else return 1 end
-	end,
-	getKnockbackRange = function (self, t)
-		return math.floor ((self:getTalentLevel(t) / 2) + 2)
-	end,
-	getDuration = function (self, t)
-		return math.floor (self:getTalentLevel(t) + 2)
-	end,
-	getDamage = function (self, t)
-		return self:combatTalentWeaponDamage(t, 1, 1.4)
-	end,
+	range = function(self, t) return t.getKnockbackRange(self, t)-1 end,
 	tactical = { ATTACK = { weapon = 1 }, DISABLE = { pin = 2 } },
 	requires_target = true,
 	on_pre_use = function(self, t, silent) --No longer a ranged-focussed tree!
-		if not self:hasArcheryWeapon("bow") then
-			if not self:hasTwoHandedWeapon() then
-				if not silent then 
-					game.logPlayer(self, "You require a bow or a two-handed weapon for this talent.")
-					return false
-				end
+		if not self:hasArcheryWeapon("bow") and not self:hasArcheryWeaponQS("bow") then
+			if not silent then 
+				game.logPlayer(self, "You require a bow in one of your weapon slots for this talent.")
+				return false
 			end
 		end
 	return true
@@ -101,10 +89,11 @@ newTalent{
 		if math.max(math.abs(dx), math.abs(dy))>1 then
 			dx, dy = dx / math.max(dx, dy), dy / math.max(dx, dy)
 		end
-		target:knockback(self.x, self.y, t.getKnockbackRange(self, t))
+		local dist = core.fov.distance(self.x, self.y, target.x, target.y)
+		local total_knockback = t.getKnockbackRange(self, t) - dist
+		target:knockback(self.x, self.y, total_knockback)
 		--we need to detect if the target hits an obstacle, and the obstacle must be within knockback range
 		local tx, ty = target.x + dx, target.y + dy
-		if math.floor(core.fov.distance(self.x, self.y, tx, ty)) > t.getKnockbackRange(self, t)+1 then return nil end
 		local ter = game.level.map(tx, ty, engine.Map.TERRAIN)
 		if ter and ter.does_block_move then
 			if target:canBe("pin") then
@@ -115,26 +104,30 @@ newTalent{
 		end
 	end,
 	action = function(self, t)
-		if self:hasArcheryWeapon("bow") then
-			local targets = self:archeryAcquireTargets(t.getArcheryTargetType(self, t), {one_shot=true})
-			if not targets then return end
-			self:archeryShoot(targets, t, nil, {mult=self:combatTalentWeaponDamage(t, 1, 1.4)})
-			return true
-		else 
-			--melee routine
-			local tg = {type="hit", range=t.getFinalRange(self, t)}
-			local x, y, target = self:getTarget(tg)
-			if not x or not y or not target then return nil end
-			if core.fov.distance(self.x, self.y, x, y) > 1 then return nil end
-			t.archery_onhit(self, t, target, x, y)
-			self:quickSwitchWeapons()
-			return true
-		end
+		if self:hasArcheryWeapon("bow") then --do nothing
+		elseif self:hasArcheryWeaponQS("bow") then
+			self:quickSwitchWeapons(true, nil, true)
+		else return false end
+		local targets = self:archeryAcquireTargets(t.getArcheryTargetType(self, t), {one_shot=true})
+		if not targets then return end
+		self:archeryShoot(targets, t, nil, {mult=self:combatTalentWeaponDamage(t, 1, 1.4)})
+		return true
 	end,
 	info = function(self, t)
-		return ([[Take a point-blank shot for %d%% damage, pushing your enemy back up to %d squares and pinning it (for %d turns) against any suitable obstacle, natural or man-made. You may perform this manoeuvre with a melee weapon; but doing so will force you to switch to your secondary weapon set.]]):
-		format(t.getDamage(self, t) * 100, t.getKnockbackRange(self, t), t.getDuration(self, t))
+		local dam_pct = t.getDamage(self, t) * 100
+		local range = self:getTalentRange(t)
+		local knockback_range = t.getKnockbackRange(self, t)
+		local dur = t.getDuration(self, t)
+		return ([[Take a point-blank shot for %d%% damage at a maximum range of %d, pushing your enemy back up to a maximum distance of %d and pinning it (for %d turns) against any suitable obstacle, natural or man-made. You may perform this manoeuvre with a melee weapon; but doing so will force you to switch to your secondary weapon set.]]):
+		format(dam_pct, range, knockback_range, dur)
 	end,
+	getArcheryTargetType = function(self, t)
+		local weapon, ammo = self:hasArcheryWeapon()
+		return {range=self:getTalentRange(t)}
+	end,
+	getKnockbackRange = function (self, t) return math.round(self:combatTalentScale(t, 2.7, 4.2)) end,
+	getDuration = function (self, t) return math.round(self:combatTalentScale(t, 3, 6))  end,
+	getDamage = function (self, t) return self:combatTalentWeaponDamage(t, 1.0, 1.6) end,
 }
 
 newTalent{
@@ -145,13 +138,13 @@ newTalent{
 	points = 5,
 	random_ego = "attack",
 	cooldown = 20,
-	stamina = 35,
+	-- stamina = 35,
 	tactical = { DISABLE = { fear = 4 } },
 	range = function (self, t) return math.floor(self:getTalentLevel(t) +4)  end,
 	radius = 2,
 	requires_target = true,
 	target = function(self, t)
-		return {type="ball", radius=self:getTalentRadius(t), range=self:getTalentRange(t), talent=t, friendly_fire=false, selffire=false}
+		return {type="ball", radius=self:getTalentRadius(t), range=self:getTalentRange(t), talent=t, friendlyfire=false, selffire=false}
 	end,
 	on_learn = function(self, t)
 		if not self:knowTalent(self.T_CATCH_PASSIVE) then self:learnTalent(self.T_CATCH_PASSIVE, true) end
