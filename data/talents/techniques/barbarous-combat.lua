@@ -154,8 +154,8 @@ newTalent{
 	require = mnt_strcun_req2,
 	points = 5,
 	random_ego = "attack",
-	cooldown = 12,
-	stamina = 30,
+	cooldown = 15,
+	stamina = 18,
 	tactical = { ATTACKAREA = { weapon = 3 } },
 	range = 0,
 	radius = 1,
@@ -215,14 +215,14 @@ newTalent{
 	type = {"technique/barbarous-combat", 3},
 	require = mnt_strcun_req3,
 	points = 5,
-stamina = 30,
+	stamina = 10,
 	cooldown = 18, 
 	range = 0,
 	radius = function(self, t) return math.floor(self:combatTalentScale(t, 4, 8)) end,
 	tactical = { ATTACKAREA = { confusion = 1, fear = 1 }, DISABLE = { confusion = 1, fear = 1 } },
 	requires_target = true,
 	target = function(self, t)
-		return {type="cone", range=self:getTalentRange(t), radius=self:getTalentRadius(t), selffire=false}
+		return {type="cone", range=self:getTalentRange(t), radius=self:getTalentRadius(t), selffire=false, friendlyfire=false}
 	end,
 	passives = function(self, t , p)
 		self:talentTemporaryValue(p, "combat_mindpower", t.getBuff(self, t))
@@ -261,16 +261,11 @@ newTalent{
 	require = mnt_strcun_req4,
 	points = 5,
 	random_ego = "attack",
-	cooldown = 12,
-	stamina = 30,
+	cooldown = 10,
+	stamina = 18,
 	tactical = { ATTACKAREA = { weapon = 1 } },
 	range = 1,
 	radius = 1,
-	getDamage = function(self, t) return self:combatTalentWeaponDamage(t, 0.5, 1.0) end,
-	getBlindDuration = function(self, t) return self:combatTalentScale(t, 4, 6) end,
-	getBlindRadiusMounted = function(self, t) return self:combatTalentScale(t, 2, 4) end,
-	getBlindTarget = function(self, t) return {type="ball", range=self:getTalentRange(t), selffire=false, friendlyfire=false, radius=self:getTalentRadius(t)} end,
-	getBleedPower = function(self, t) return self:combatTalentPhysicalDamage(t, 25, 150) end,
 	requires_target = true,
 	on_pre_use = function(self, t, silent) if not hasOneHandedWeapon(self) then if not silent then game.logPlayer(self, "You require a one handed weapon to use this talent.") end return false end return true end,
 	action = function(self, t)
@@ -278,10 +273,10 @@ newTalent{
 		local x, y, target = self:getTarget(tg)
 		if not x or not y or not target then return nil end
 		if core.fov.distance(self.x, self.y, x, y) > 1 then return nil end
-		local hit = self:attackTarget(target, nil, t.getDamage(self, t), true)
+		local hit = self:attackTarget(target, nil, t.getDam(self, t), true)
 		--blind foes on target kill
 		if hit and target.dead then
-			local tg = t.getBlindTarget(self, t)
+			local tg = {type="ball", range=self:getTalentRange(t), selffire=false, friendlyfire=false, radius=self:getTalentRadius(t)}
 			if self:isMounted() then tg.radius = t.getBlindRadiusMounted(self, t) end
 			self:project(tg, self.x, self.y, function(px, py, tg, self)
 				local target = game.level.map(px, py, Map.ACTOR)
@@ -295,7 +290,7 @@ newTalent{
 		return true
 	end,
 	info = function(self, t)
-		local dam = t.getDamage(self, t) * 100
+		local dam = t.getDam(self, t) * 100
 		local dur = t.getBlindDuration(self, t)
 		local radius = t.getBlindRadiusMounted(self, t)
 		local bleed = t.getBleedPower(self, t)
@@ -304,4 +299,8 @@ newTalent{
 			If you fail to slay your foe, however, then it continues to bleed for %d damage over 5 turns as it struggles to recover from your wicked wound.]]):
 			format(dam, dur, radius, bleed)
 	end,
+	getDam = function(self, t) return self:combatTalentWeaponDamage(t, 1.2, 1.7) end,
+	getBlindDuration = function(self, t) return self:combatTalentScale(t, 4, 6) end,
+	getBlindRadiusMounted = function(self, t) return self:combatTalentScale(t, 2, 4) end,
+	getBleedPower = function(self, t) return self:combatTalentPhysicalDamage(t, 25, 150) end,
 }
