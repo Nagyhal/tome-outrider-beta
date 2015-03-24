@@ -118,7 +118,8 @@ class:bindHook("Actor:postUseTalent", function(self, data)
 		local name = string.sub(ab.id, 3)
 		local inscription_data = self.__inscription_data_fake or self.inscriptions_data[name]
 		if inscription_data.heal then
-			owner:incLoyalty(5)
+			--TODO: Decide whether this goes in
+			-- owner:incLoyalty(5)
 		end
 	end
 	data.ab, data.trigger = ab, trigger

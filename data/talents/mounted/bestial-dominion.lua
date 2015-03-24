@@ -333,7 +333,7 @@ newTalent{
 	type = {"mounted/bestial-dominion", 2},
 	require = mnt_strwil_req2,
 	points = 5,
-	cooldown = 30,
+	cooldown = 16,
 	tactical = { ATTACK = 2 }, --TODO: Complicated AI routine
 	range = 1 ,
 	requires_target = true,
@@ -371,7 +371,7 @@ newTalent{
 		local dam = t.getDam(self, t)*100
 		local loyalty = t.getLoyalty(self, t)
 		local heal = t.getHeal(self, t)*100
-		return ([[Your mount bites your enemy for %d%% damage. If this kills it, then your mount's bite devours a great chunk of your enemy's carcass, restoring %d Loyalty and healing your mount for %d%% of its total life.]]):
+		return ([[Your mount bites your enemy for %d%% damage. If this hits, then your mount's bite devours a great chunk of your enemy's carcass, restoring %d Loyalty and healing your mount for %d%% of its total life.]]):
 			format(dam, loyalty, heal)
 	end,
 	getDam = function(self, t) return self:combatTalentScale(t, 1.8, 2.5) end,
@@ -384,6 +384,7 @@ newTalent{
 	type = {"mounted/bestial-dominion", 3},
 	require = mnt_strwil_req3,
 	points = 5,
+	stamina = 30,
 	cooldown = 50,
 	-- tactical = { STAMINA = 2 },
 	getRestore = function(self, t) return self:combatTalentScale(t, 20, 40) end,
@@ -407,7 +408,7 @@ newTalent{
 	type = {"mounted/bestial-dominion", 4},
 	points = 5,
 	cooldown = function(self, t) return self:combatTalentLimit(t, 20, 50, 30) end,
-	stamina = 80,
+	stamina = 50,
 	require = mnt_strwil_req4,
 	no_energy = true,
 	tactical = { BUFF = 3 }, 
@@ -416,15 +417,19 @@ newTalent{
 	end,
 	action = function(self, t)
 		local mount = self:hasMount()
-		mount:setEffect(mount.EFF_UNBRIDLED_FEROCITY, t.getDur(self, t) {power=t.getPower(self, t)})
+		mount:setEffect(mount.EFF_UNBRIDLED_FEROCITY, t.getDur(self, t), {power=t.getPower(self, t), atk=t.getAtk(self, t), move=t.getMove(self, t)})
 		return true
 	end,
 	info = function(self, t)
 		local dur = t.getDur(self, t)
 		local power = t.getPower(self, t)
-		return ([[You throw caution to the wind and let your bestial steed revel in the glory of the hunt, gaining a %d increase in physical power for %d turns, and not depleting but regaining Loyalty with each hit that it endures. However, if you fall from your beast while it is in this furious state, you will not be able to re-mount.]]):
-		format(power, dur)
+		local atk = t.getAtk(self, t)
+		local move_pct = t.getMove(self, t)*100
+		return ([[You throw caution to the wind and let your bestial steed revel in the glory of the hunt, gaining a %d increase in physical power for %d turns, %d to accuracy, %d%% to move speed and not depleting but regaining Loyalty with each hit that it endures. However, if you fall from your beast while it is in this furious state, you will not be able to re-mount.]]):
+		format(power, dur, atk, move_pct)
 	end,
 	getDur = function(self, t) return self:combatTalentScale(t, 4.75, 6, .35) end,
 	getPower = function(self, t) return self:combatTalentScale(t, 10, 30) end,
+	getAtk = function(self, t) return math.round(t.getPower(self, t)/2) end,
+	getMove = function(self, t) return .5 end,
 }

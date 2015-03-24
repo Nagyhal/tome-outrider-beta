@@ -13,7 +13,7 @@ function _M:init(t, no_default)
 		loyalty_regen_coeff = 1 and t.can_mount or 0,
 		share_damage = 50 and t.can_mount or 0
 	}
-	t.loyalty_regen = t.loyalty_regen or 1
+	t.loyalty_regen = t.loyalty_regen or .5
 	base_init(self, t, no_default)
 end
 

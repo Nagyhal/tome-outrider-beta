@@ -285,11 +285,13 @@ newEffect{
 	type = "mental",
 	subtype = { focus=true },
 	status = "beneficial",
-	parameters = { power=8 },
+	parameters = { power=8, atk = 4, move=50 },
 	on_gain = function(self, err) return "#Target#'s ferocity is unleashed!" end,
 	on_lose = function(self, err) return "#Target#' becomes less ferocious." end,
 	activate = function(self, eff)
 		self:effectTemporaryValue(eff, "combat_dam", eff.power)
+		self:effectTemporaryValue(eff, "combat_atk", eff.atk)
+		self:effectTemporaryValue(eff, "movement_speed", eff.move)
 	end,
 	deactivate = function(self, eff)
 	end,
