@@ -23,7 +23,7 @@ newTalent{
 		else return 1 end
 	end,
 	on_pre_use = function(self, t)
-		if self:isMounted() or not self:getMountList() then
+		if self:isMounted() or not self:hasMount() then
 			return false
 		else return true
 		end

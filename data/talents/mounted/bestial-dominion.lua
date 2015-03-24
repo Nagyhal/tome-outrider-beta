@@ -171,9 +171,11 @@ function befriendMount(self, m)
 	self.mounts_owned = self.mounts_owned or {}
 	self.mounts_owned[#self.mounts_owned+1] = m
 	m.show_owner_loyalty_pool = true
+
 	--Other mount stuff
-	if self:knowTalent(self.T_FERAL_AFFINITY) then
-		m:learnTalent(m.T_FERAL_AFFINITY_MOUNT, true, 1)
+	shareAllTalentsWithPet(self, m)
+	if self:knowTalent(self.T_PRIMAL_BOND) then
+		self:callTalent(self.T_PRIMAL_BOND, "on_learn")
 	end
 	m:resetToFull()
 	--Loyalty
@@ -389,6 +391,9 @@ newTalent{
 	-- tactical = { STAMINA = 2 },
 	getRestore = function(self, t) return self:combatTalentScale(t, 20, 40) end,
 	getMaxLoyalty = function(self, t) return math.round(self:combatTalentScale(t, 5, 15), 5) end,
+	on_pre_use = function(self, t, silent)
+		return preCheckHasMount(self, t, silent)
+	end,
 	action = function(self, t)
 		self:incLoyalty(t.getRestore(self, t)*self.max_loyalty/ 100)
 		return true
@@ -412,8 +417,8 @@ newTalent{
 	require = mnt_strwil_req4,
 	no_energy = true,
 	tactical = { BUFF = 3 }, 
-	on_pre_use = function(self, t)
-		return preCheckHasMountPresent(self, t)
+	on_pre_use = function(self, t, silent)
+		return preCheckHasMountPresent(self, t, silent)
 	end,
 	action = function(self, t)
 		local mount = self:hasMount()

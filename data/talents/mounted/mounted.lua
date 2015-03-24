@@ -389,6 +389,14 @@ function preCheckIsMounted(self, t, silent)
 	end
 end
 
+function preCheckHasMount(self, t, silent)
+	if self:hasMount() then return true
+	else
+		if not silent then game.logPlayer(self, "You must have a mount to do that!") end
+		return false
+	end
+end
+
 function preCheckHasMountPresent(self, t, silent)
 	if self:hasMountPresent() then return true
 	else
@@ -412,6 +420,16 @@ end
 function shareTalentWithOwner(self, t)
 	if not t.shared_talent then error(("No shared talent for talent %s"):format(t.id))end
 	if self.owner then self.owner:learnTalent(t.shared_talent, true, 1) else error(("No owner to share with for talent %s"):format(t.id)) end
+end
+
+function shareAllTalentsWithPet(self, pet)
+	if not pet then return end
+	for tid, _ in pairs(self.talents) do
+		local t = self:getTalentFromId(tid)
+		if t and t.shared_talent then
+			pet:learnTalent(t.shared_talent, true, 1)
+		end
+	end
 end
 
 function unshareTalentWithOwner(self, t)

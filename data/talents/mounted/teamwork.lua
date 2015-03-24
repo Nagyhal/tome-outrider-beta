@@ -110,12 +110,7 @@ newTalent{
 			end
 		end
 	end,
-	on_learn = function(self, t)
-		local mount = self.outrider_pet
-		if mount then
-			mount:learnTalent(mount.T_FERAL_AFFINITY_MOUNT, true, 1)
-		end
-	end,
+	shared_talent = "T_FERAL_AFFINITY_MOUNT",
 	info = function(self, t)
 		local res = t.getResistPct(self, t)
 		local save = t.getSavePct(self, t)

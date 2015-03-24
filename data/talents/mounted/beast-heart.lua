@@ -101,6 +101,9 @@ newTalent{
 	points = 5,
 	sustain_stamina = 100,
 	cooldown = 10,
+	on_pre_use = function(self, t, silent)
+		return preCheckHasMount(self, t, silent)
+	end,
 	activate = function(self, t)
 		return {}
 	end,
@@ -245,6 +248,9 @@ newTalent{
 	points = 5,
 	require = mnt_wil_req4,
 	cooldown = 30,
+	on_pre_use = function(self, t, silent)
+		return preCheckHasMount(self, t, silent)
+	end,
 	action = function(self, t)
 		self:setEffect(self.EFF_BOND_BEYOND_BLOOD, t.getDur(self, t), {loyalty_discount=t.getLoyaltyDiscount(self, t), res=t.getResist(self, t)})
 		return true
