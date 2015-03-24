@@ -95,7 +95,7 @@ newTalent{
 	require = mnt_strdex_req3,
 	points = 5,
 	cooldown = 8,
-	loyalty = 15,
+	loyalty = 8,
 	tactical = { CLOSEIN = 3, DISABLE = { pin = 2 }  },
 	direct_hit = true,
 	getDamage = function(self, t) return self:combatTalentWeaponDamage(t, 0.9, 1.4) end,

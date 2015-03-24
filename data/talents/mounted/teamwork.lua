@@ -172,7 +172,8 @@ newTalent{
 	points = 5,
 	random_ego = "defensive",
 	cooldown = 6,
-	stamina = 15,
+	stamina = 6,
+	loyalty= 3,
 	require = mnt_wil_req3,
 	requires_target = true,
 	tactical = { ATTACK = 2 },
@@ -260,7 +261,7 @@ newTalent{
 		local def = t.getDef(self, t)
 		local crit = t.getCritChance(self, t)
 		local crit_dam = t.getCritPower(self, t)
-		return ([[When dismounted, if you and one of your allies both stand adjacent to the same enemy (but not adjacent to one another), then you both gain a bonus of %d%% to critical strike chance and %d%% to critical damage against that enemy. It will also suffer a %d penalty to defense.]]):
+		return ([[If you and one of your allies both stand adjacent to the same enemy (but not adjacent to one another), then you both gain a bonus of %d%% to critical strike chance and %d%% to critical damage against that enemy. It will also suffer a %d penalty to defense.]]):
 			format(crit, crit_dam, def)
 	end,
 	getDef = function(self, t) return self:combatTalentScale(t, 5, 12) end,

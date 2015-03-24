@@ -373,7 +373,7 @@ newTalent{
 	require = mnt_cun_req1,
 	mode = "passive",
 	getStatBoost = function(self, t) return self:getTalentLevelRaw(t) * 2 end,
-	getRegen = function(self, t) return math.round(self:combatTalentScale(t, .5, 3.5, .35), .5)  end,
+	getRegen = function(self, t) return math.round(self:combatTalentScale(t, .2, 1.5, .35), .5)  end,
 	getSaves = function(self, t) return self:getTalentLevelRaw(t) * 3 end,
 	passives = function(self, t, p)
 		self:talentTemporaryValue(p, "inc_stats",  {[self.STAT_WIL] = t.getStatBoost(self, t)})

@@ -154,7 +154,7 @@ newTalent{
 		--
 		local regen_on_shot = t.getRegenOnShot(self, t)
 		local life_total = t.getLifeTotal(self, t)
-		return ([[When you and your beast ride together, your physical critical hits grant a %d%% chance for your beast to attack again.
+		return ([[When you and your beast ride together, each of your physical hits grants a %d%% chance for your beast to attack again.
 
 			When you and your beast fight adjacent to one another, increase your healing modifiers by %d%%, and regain Stamina and Loyalty at a rate of %.1f per turn.
 

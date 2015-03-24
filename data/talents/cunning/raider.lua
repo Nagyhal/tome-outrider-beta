@@ -164,7 +164,7 @@ newTalent{
 		local saves = self:combatDefenseBase() * t.getSavesPct(self, t)/100
 		self:talentTemporaryValue(p, "combat_physresist", saves)
 		self:talentTemporaryValue(p, "combat_spellresist", saves)
-		self:talentTemporaryValue(p, "combat_mindresist", saves)
+		self:talentTemporaryValue(p, "combat_mentalresist", saves)
 	end,
 	activate = function(self, t)
 		return {}

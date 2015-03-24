@@ -593,8 +593,9 @@ newEffect{
 	activate = function(self, eff)
 		removeOtherTwinThreatEffects(self, eff)
 	end,
-	callbackOnCrit = function(self, eff, type, dam, chance, target)
-		if type=="physical" and self:isMounted() and rng.percent(eff.chance) then
+	callbackOnMeleeAttack = function(self, eff, target, hitted, crit, weapon, damtype, mult, dam)
+		if not hitted then return end
+		if self:isMounted() and rng.percent(eff.chance) then
 			game:onTickEnd(function()
 				--If not done on tick end, the free hit impacts before the physical crit actually impacts. This can result in wasted attacks, as well as other weirdness.
 				local mount = self:hasMount()
