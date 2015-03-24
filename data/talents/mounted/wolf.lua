@@ -206,34 +206,32 @@ newTalent{
 	points = 5,
 	require = mnt_dex_req3,
 	mode = "passive",
-	getThreshold = function (self, t) return math.round(self:combatTalentScale(t, 25, 40), 5) end,
-	getSaves = function (self, t) return math.round(self:combatTalentScale(t, 5, 20), 1) end,
-	getRes = function (self, t) return self:combatTalentScale(t, 8, 20) end,
-	callbackOnAct = function(self, t)
-		local okay = false
-		local tg = {type="ball", radius=self:getTalentRange(t), talent=t}
-		local actors_list = {}
-		self:project(tg, self.x, self.y, function(px, py)
-			local a = game.level.map(px, py, Map.ACTOR)
-			if a and self:reactionToward(a) < 0 and a.life < a.max_life*t.getThreshold(self, t)/100 then
-				okay = true
-			end
-		end)
-		if okay then self:setEffect(self.EFF_UNCANNY_TENACITY, 2, {saves=t.getSaves(self, t), res=t.getRes(self, t)})
-		elseif self:hasEffect(self.EFF_UNCANNY_TENACITY) then
-			--It might be more logical to have the effect try to unset itself when activated, rather than do it from within the talent.
-			--This way is tidier, though.
-			self:removeEffect(self.EFF_UNCANNY_TENACITY)
+	cooldown = function(self, t) return self:combatTalentLimit(t, 8, 20, 10) end,
+	callbackOnActBase = function(self, t)
+		if self:isTalentCoolingDown(t.id) then return end
+		if self.life <= self.max_life*.15 then
+			self:callTalent(t.id, "setEffect")
 		end
-		local act = rng.table(actors_list)
+		self:startTalentCooldown(t.id)
+	end,
+	setEffect = function(self, t)
+		self:setEffect(self.EFF_UNCANNY_TENACITY, t.getDur(self, t), {res=t.getRes(self, t), buff=t.getBuff(self, t)})
 	end,
 	info = function(self, t)
-		local threshold =  t.getThreshold(self, t)
-		local saves = t.getSaves(self, t)
 		local res = t.getRes(self, t)
-		return ([[The wolf will stop at nothing to hound and harry its prey; when it starts its turn adjacent to an enemy at less than %d%% health, the wolf gains a %d bonus to saves and a %d%% bonus to resist all (including stuns, pins, knockback, confusion and fear.)]]):
-		format(threshold, saves, res)
+		local immediate_res = t.getImmediateRes(self, t)
+		local dur = t.getDur(self, t)
+		local buff = t.getBuff(self, t)
+		local cooldown = self:getTalentCooldown(t)
+		return ([[The wolf will stop at nothing to hound and harry its prey; Whenever the wolf is hit for over 15%% of its health in a single attack or reaches 15%% of its life total, it will reduce all incoming damage by %d%% for %d turns (and the triggering attack by %d%%), while increasing attack and physical power by %d. While in this state, the wolf will also remove 2 turns from a random detrimental effect each turn.
+
+			This effect has a cooldown of %d.]]):
+		format(res, dur, immediate_res, buff, cooldown)
 	end,
+	getRes = function (self, t) return math.round(self:combatTalentScale(t, 10, 20)) end,
+	getImmediateRes = function (self, t) return math.round(t.getRes(self, t)*2.5) end,
+	getDur = function (self, t) return math.round(self:combatTalentScale(t, 3, 6)) end,
+	getBuff = function (self, t) return math.round(self:combatTalentScale(t, 5, 15)) end,
 }
 
 newTalent{

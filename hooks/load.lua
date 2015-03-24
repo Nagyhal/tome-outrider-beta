@@ -37,10 +37,13 @@ class:bindHook("Actor:move", function(self, data)
 end)	
 
 class:bindHook("DamageProjector:base", function(self, data)
-	local ret = false
+	local ret = nil
+	--Does the source actually exist? (a useful check!)
 	if not self.x then return ret end
+	--Does the damage come from an actor?
 	local a = game.level.map(self.x, self.y, engine.Map.ACTOR)
 	if not a or a~=self then return ret end
+
 	local eff = self.hasEffect and self:hasEffect(self.EFF_SPRING_ATTACK) 
 	if eff then
 		local dist = core.fov.distance(self.x, self.y, data.x, data.y)
@@ -59,28 +62,9 @@ class:bindHook("DamageProjector:base", function(self, data)
 			data.dam = data.dam * pct/100
 		end
 	end
-	if a and self.turn_procs and self.turn_procs.leviathan then
-		local tt = self.turn_procs.leviathan
-		if not tt.done then
-			tt.stun_this_turn = rng.percent(tt.chance)
-			tt.done = true
-			tt.acts = {} --Only run once per turn per actor
-		end
-		if tt.stun_this_turn and not tt.acts[self] and self:canBe("stun") then
-			local user = self
-			if self:isMounted() then user = self.mount end
-			user:logCombat(a, "#Source# stuns #target# with its leviathan prowess!")
-			a:setEffect(a.EFF_STUNNED, tt.dur, {
-				apply_power=user:combatPhysicalpower(), 
-				src=user
-				}
-			)
-			tt.acts[self] = true
-		end
-	end
 
-	local a = game.level.map(data.x, data.y, engine.Map.ACTOR)
-	if a then
+	local target = game.level.map(data.x, data.y, engine.Map.ACTOR)
+	if target then
 		local eff = a:hasEffect(a.EFF_PREDATORY_FLANKING)
 		if eff then
 			if eff.src==self then
@@ -95,6 +79,52 @@ class:bindHook("DamageProjector:base", function(self, data)
 	return ret
 end)
 
+class:bindHook("DamageProjector:final", function(self, data)
+	--Does the source actually exist? (a useful check!)
+	if not self.x then return nil end
+	--Does the damage come from an actor?
+	local a = game.level.map(self.x, self.y, engine.Map.ACTOR)
+	if not a or a~=self then return nil end
+
+	local target = game.level.map(data.x, data.y, engine.Map.ACTOR)
+
+	if target and self.turn_procs and self.turn_procs.leviathan then
+		local tt = self.turn_procs.leviathan
+		if not tt.done then
+			tt.stun_this_turn = rng.percent(tt.chance)
+			tt.done = true
+			tt.acts = {} --Only run once per turn per actor
+		end
+		if tt.stun_this_turn and not tt.acts[self] and self:canBe("stun") then
+			local user = self
+			if self:isMounted() then user = self.mount end
+			user:logCombat(target, "#Source# stuns #target# with its leviathan prowess!")
+			a:setEffect(a.EFF_STUNNED, tt.dur, {
+				apply_power=user:combatPhysicalpower(), 
+				src=user
+				}
+			)
+			tt.acts[self] = true
+		end
+	end
+
+	if target then
+		if target:knowTalent(target.T_UNCANNY_TENACITY) then
+			if data.dam > self.max_life*.15 then
+				if not target:isTalentCoolingDown(target.T_UNCANNY_TENACITY) then
+					local res_pct= target:callTalent(target.T_UNCANNY_TENACITY, "getImmediateRes")
+					local true_res =  data.dam*res_pct
+					data.dam = data.dam - true_res
+					game.logSeen(target, "#CRIMSON#%s overcomes %d of the damage!", target.name:capitalize(), true_res)
+					target:callTalent(target.T_UNCANNY_TENACITY, "setEffect")
+					target:startTalentCooldown(target.T_UNCANNY_TENACITY)
+				end
+			end
+		end
+	end
+
+	return data
+end)
 class:bindHook("Actor:postUseTalent", function(self, data)
 	local ab = data.t
 	local trigger = data.trigger

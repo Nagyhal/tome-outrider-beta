@@ -415,18 +415,24 @@ newEffect{
 newEffect{
 	name = "UNCANNY_TENACITY", image = "talents/uncannity_tenacity.png",
 	desc = "Uncanny Tenacity",
-	long_desc = function(self, eff) return ("The wolf gains a %d bonus to saves and a %d%% bonus to resist all, so long as it starts its turn next to an enemy at less than %d%% of its max health."):format(eff.saves, eff.res, eff.threshold) end,
+	long_desc = function(self, eff) return ("The wolf gains %d%% to resist all and a %d bonus to attack and physical power. Each turn, its tenacity allows it to overcome 2 turns of a random detrimental effect."):format(eff.res, eff.buff) end,
 	type = "physical",
-	subtype = { tactic=true },
+	subtype = { tactic=true, morale=true },
 	status = "beneficial",
-	parameters = { saves=10, res=5, threshold=25 },
+	parameters = { buff=5, res=5, threshold=25 },
 	on_gain = function(self, err) return "#Target#'s tenacity is unleashed!." end,
 	on_lose = function(self, err) return "#Target# has become less tenacious." end,
 	activate = function(self, eff)
-		self:effectTemporaryValue(eff, "combat_physresist", eff.saves)
-		self:effectTemporaryValue(eff, "combat_spellresist", eff.saves)
-		self:effectTemporaryValue(eff, "combat_mindresist", eff.saves)
-		self:effectTemporaryValue(eff, "resists", {all=eff.power})
+		self:effectTemporaryValue(eff, "resists", {all=eff.res})
+		self:effectTemporaryValue(eff, "combat_atk", eff.buff)
+		self:effectTemporaryValue(eff, "combat_dam", eff.buff)
+	end,
+	callbackOnActBase = function(self, t)
+		local filter = {status="detrimental"}
+		local list = self:effectsFilter(filter, 1)
+		local eff_id = list[1]
+		--TODO: is this okay?
+		if eff_id then self.tmp[eff_id].dur = self.tmp[eff_id].dur-2 end
 	end,
 }
 
