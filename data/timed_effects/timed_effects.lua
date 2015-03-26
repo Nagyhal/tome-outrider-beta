@@ -518,15 +518,17 @@ newEffect{
 	on_gain = function(self, err) return "#Target# will fetch the target!", "+Fetch" end,
 	on_lose = function(self, err) return "#Target# finishes fetching the target", "-Fetch" end,
 	callbackOnAct= function(self, eff)
-		while self:enoughEnergy() do
+		local stuck = false
+		while self:enoughEnergy() and not stuck do
 			if eff.target.dead then return true end
 
 			-- apply periodic timer instead of random chance
-			local owner = self.owner
-			local cur_dist = core.fov.distance(eff.target.x, eff.target.y, owner.x, owner.y) 
+			local owner, target = self.owner, eff.target
+			local cur_dist = core.fov.distance(target.x, target.y, owner.x, owner.y) 
 			if not owner or cur_dist <=1 then return end
+			self.never_move = self.never_move-1 -- Yeah, I'm a massive hack, so shoot me
 			if not self:attr("never_move") then
-				local targetX, targetY = owner.x, owner.y
+				local dest_x, dest_y = owner.x, owner.y
 
 				local bestX, bestY
 				local bestDistance = cur_dist
@@ -534,32 +536,39 @@ newEffect{
 				for i = start, start + 8 do
 					local dx = (i % 3) - 1
 					local dy = math.floor((i % 9) / 3) - 1
-					local x, y = self.x+dx, self.y+dy
-					if x ~= self.x or y ~= self.y then
-						local tx, ty = eff.target.x+dx, eff.target.y+dy
-						local distance = core.fov.distance(tx, ty, targetX, targetY)
-						local a = game.level.map(x, y, engine.Map.ACTOR)
-						local can_drag = (not game.level.map:checkAllEntities(tx, ty, "block_move", self)) or (tx==self.x and ty==self.y)
-						if distance < bestDistance
-								and game.level.map:isBound(x, y) --TODO: In theory, you could drag enemies off the map. However, because the player isn't ever likely to be n that direction, this may not happen. Still, it could be cleaner.
-								and ((not game.level.map:checkAllEntities(x, y, "block_move", self) and not a) or (a and a==eff.target and can_drag)) then
+					local sx, sy = self.x+dx, self.y+dy
+					if sx ~= self.x or sy ~= self.y then
+						local tx, ty = target.x+dx, target.y+dy
+						-- local distance = core.fov.distance(tx, ty, dest_x, dest_y)
+						local distance = math.sqrt(math.abs(dest_x-tx)^2+math.abs(dest_y-ty)^2)
+						local can_drag = target:canMove(tx, ty) or (tx==self.x and ty==self.y)
+						local can_move = self:canMove(sx, sy) or (sx==target.x and sy==target.y)
+						if distance < bestDistance and can_move and can_drag then
 							bestDistance = distance
-							bestX = x
-							bestY = y
+							bestX = sx
+							bestY = sy
 						end
 					end
 				end
 
 				if bestX then
 					--TODO: Reset player to Outrider if player is controlling wolf - otherwise this will consume 1,000,000,000 turns
-					--TODO: We don't allow the player to use this, but THEN we could.
-					game.logPlayer(self, "#F53CBE#You fetch your target toward %s.", owner.name)
+					--TODO: We don't allow the player (as wolf) to use this, but THEN we could.
+					self:logCombat(owner, "#Source# fetches its target toward #target#")
+					local oldx, oldy = self.x, self.y
 					self:move(bestX, bestY, false)
+					-- print("DEBUG (fetch): Trying to move to "..bestX.." "..bestY)
+					if (self.x == oldx) and (self.y == oldy) then stuck = true end
+					-- if stuck then print("DEBUG (fetch): Dig not drag.") else print("DEBUG (fetch): Successfully dragged target.") end
+				else stuck=true
 				end
+			self.never_move = self.never_move+1
+			else stuck=true
 			end
 		end
 	end,
 	activate = function(self, eff)
+		self:effectTemporaryValue(eff, "never_move", 1)
 		checkEffectHasParameter(self, eff, "target")
 		if not self.dragged_entities then self.dragged_entities = {} end
 		local t, e = self.dragged_entities, eff.target
