@@ -17,6 +17,38 @@
 -- Nicolas Casalini "DarkGod"
 -- darkgod@te4.org
 
+local overrun_block_path = function(typ, lx, ly, for_highlights)
+	if not game.level.map:isBound(lx, ly) then
+		return true, false, false
+	elseif not typ.no_restrict then
+		if typ.range and typ.start_x then
+			local dist = core.fov.distance(typ.start_x, typ.start_y, lx, ly)
+			if dist > typ.range then return true, false, false end
+		elseif typ.range and typ.source_actor and typ.source_actor.x then
+			local dist = core.fov.distance(typ.source_actor.x, typ.source_actor.y, lx, ly)
+			if dist > typ.range then return true, false, false end
+		end
+		local is_known = game.level.map.remembers(lx, ly) or game.level.map.seens(lx, ly)
+		if typ.requires_knowledge and not is_known then
+			return true, false, false
+		end
+		if game.level.map:checkEntity(lx, ly, engine.Map.TERRAIN, "block_move") then
+			if for_highlights then
+				-- Targeting highlight should be yellow if we don't know what we're firing through
+				if not is_known then
+					return true, "unknown", true
+				end
+			end
+			return true, false, true
+		end
+		if for_highlights and not is_known then
+			return false, "unknown", true
+		end
+	end
+	-- If we don't block the path, then the explode point should be here
+	return false, true, true
+end
+
 newTalent{
 	name = "Overrun",
 	type = {"mounted/mounted-mobility", 1},
@@ -25,7 +57,9 @@ newTalent{
 	loyalty = 15,
 	cooldown = 15,
 	requires_target = true,
-	target = function(self, t) return {type="beam", range=self:getTalentRange(t), friendlyfire=false} end,
+	target = function(self, t)
+		return {type="beam", range=self:getTalentRange(t), friendlyfire=false, nolock=true, talent=t, block_path=overrun_block_path}
+	end,
 	range = function(self, t) return math.floor(self:getTalentLevel(t) + 2) end,
 	getDamageMultiplier = function(self, t) return self:combatTalentScale(t, 1.5, 2.25) end,
 	getMaxAttackCount = function(self, t) return 10 end,	
@@ -35,30 +69,38 @@ newTalent{
 		return preCheckIsMounted(self, t, silent)
 	end,
 	action = function(self, t)
-		local tg = {type="beam", range=self:getTalentRange(t), nolock=true, talent =t}
+		local tg = self:getTalentTarget(t)
+		-- local tg = {type="beam", range=self:getTalentRange(t), nolock=true, talent =t}
 		local tx, ty, target = self:getTarget(tg)
 		if not tx or not ty or game.level.map(tx, ty, engine.Map.ACTOR) then return nil end
 		if core.fov.distance(self.x, self.y, tx, ty) > self:getTalentRange(t) then return nil end
 
-		local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", target) end
-		local lineFunction = core.fov.line(self.x, self.y, tx, ty, block_actor)
+		-- local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", self) end
+		-- local lineFunction = core.fov.line(self.x, self.y, tx, ty, block_actor)
+		local lineFunction = self:lineFOV(tx, ty)
 		local nextX, nextY, is_corner_blocked = lineFunction:step()
 		local currentX, currentY = self.x, self.y
 
-		local attackCount = 0
-		local maxAttackCount = t.getMaxAttackCount(self, t)
-
-		while nextX and nextY and not is_corner_blocked do
+		local mount_targets = {}
+		local stop = false
+		while nextX and nextY and not is_corner_blocked and not stop do
 			currentX, currentY = nextX, nextY
+			--I have no idea why the is_corner_block return value is proving to be useless
+			--TODO: Suss this out
 			nextX, nextY, is_corner_blocked = lineFunction:step()
+			if game.level.map:checkEntity(nextX, nextY, engine.Map.TERRAIN, "block_move") then stop = true end
 
-			mount_target = game.level.map(currentX, currentY, Map.ACTOR)
-			if mount_target then self.mount:attackTarget(mount_target, nil, t.getDamageMultiplier(self, t), true)
-			end
+			local a = game.level.map(currentX, currentY, Map.ACTOR)
+			mount_targets[#mount_targets+1] = a
 		end
 
+		for _, target in ipairs(mount_targets) do
+			self.mount:attackTarget(target, nil, t.getDamageMultiplier(self, t), true)
+		end
+		local ox, oy = self.x, self.y
 		self:move(currentX, currentY, true)
-
+		self:resetMoveAnim()
+		self:setMoveAnim(ox, oy, 8, 8)
 		return true
 	end,
 	info = function(self, t)
@@ -131,8 +173,9 @@ newTalent{
 			local feat = game.level.map(x, y, engine.Map.TERRAIN); if feat and feat:check(block_move) then return nil end
 			mover:move(x, y, true)
 		end
-		self:resetMoveAnim()
-		self:setMoveAnim(ox, oy, 8, 5, 8, 3)
+		mover:resetMoveAnim()
+		local jump = mover==self and .75 or 1 --Higher jump for un-ridden wolf; it just looks better
+		mover:setMoveAnim(ox, oy, 20, 4, 8, jump)
 		if target then
 			if core.fov.distance(mount.x, mount.y, x, y) > 1 then return true end
 			local hit = mount:attackTarget(target, nil, t.getDamage(self, t), true)
