@@ -169,7 +169,7 @@ newTalent{
 	target = function(self, t)
 		return {type="ball", range=self:getTalentRange(t), selffire=false, radius=self:getTalentRadius(t)}
 	end,
-	on_pre_use = function(self, t, silent) if self:isUnarmed() then if not silent then game.logPlayer(self, "You require a weapon to use this talent.") end return false end return true end,
+	on_pre_use = function(self, t, silent) if not hasOneHandedWeapon(self) then if not silent then game.logPlayer(self, "You require a one-handed weapon to use this talent.") end return false end return true end,
 	action = function(self, t)
 		local tg = self:getTalentTarget(t)
 		if self:isMounted() then tg.radius =  t.getKnockbackRadiusMounted(self, t) end
@@ -267,7 +267,7 @@ newTalent{
 	range = 1,
 	radius = 1,
 	requires_target = true,
-	on_pre_use = function(self, t, silent) if not hasOneHandedWeapon(self) then if not silent then game.logPlayer(self, "You require a one handed weapon to use this talent.") end return false end return true end,
+	on_pre_use = function(self, t, silent) if not hasOneHandedWeapon(self) then if not silent then game.logPlayer(self, "You require a one-handed weapon to use this talent.") end return false end return true end,
 	action = function(self, t)
 		local tg = {type="hit", range=self:getTalentRange(t)}
 		local x, y, target = self:getTarget(tg)

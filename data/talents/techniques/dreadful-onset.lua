@@ -104,10 +104,12 @@ newTalent{
 		end
 	end,
 	action = function(self, t)
-		if self:hasArcheryWeapon("bow") then --do nothing
-		elseif self:hasArcheryWeaponQS("bow") then
-			self:quickSwitchWeapons(true, nil, true)
-		else return false end
+		if not self:hasArcheryWeapon("bow") then --do nothing
+			if self:hasArcheryWeaponQS("bow") then
+				self:quickSwitchWeapons(true, nil, true)
+			end
+		end
+		if not self:hasArcheryWeapon("bow") then return end
 		local targets = self:archeryAcquireTargets(t.getArcheryTargetType(self, t), {one_shot=true})
 		if not targets then return end
 		self:archeryShoot(targets, t, nil, {mult=self:combatTalentWeaponDamage(t, 1, 1.4)})
