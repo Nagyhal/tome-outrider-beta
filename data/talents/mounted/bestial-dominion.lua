@@ -33,7 +33,7 @@ local mounts_list = {
 		ai_tactic = resolvers.tactic("melee"),
 		-- ai_tactic = resolvers.talented_ai_tactic(), --this breaks things :(
 		life_rating = 10,
-		global_speed_base = 1.2,
+		global_speed_base = 1,
 		desc = [[A large and sturdy wolf, this one seems to have some greater cunning or purpose about it.]],
 		resolvers.nice_tile{image="invis.png", color=colors.UMBER, image="npc/canine_w.png"},
 		max_life = 100,
@@ -174,6 +174,7 @@ function befriendMount(self, m)
 
 	--Other mount stuff
 	shareAllTalentsWithPet(self, m)
+	self.unused_traits = 0
 	if self:knowTalent(self.T_PRIMAL_BOND) then
 		self:callTalent(self.T_PRIMAL_BOND, "on_learn")
 	end
