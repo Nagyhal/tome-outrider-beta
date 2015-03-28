@@ -43,12 +43,12 @@ newBirthDescriptor{
 	locked_desc = "You are weak and unseasoned; you have tasted only your first kiss with the fanged children of the wilderness, and have mistaken it for a cooing maiden's. Soon our ragged tides will sweep down from out of the mountains of the north and upon your sweet Maj'Eyal; then, you will know the true glory of our homeland which you call barbarous.",
 	desc = {
 		"Outriders are the mounted military elite of those scattered and forgotten peoples who roam beyond the limits of known order and rule.",
-		"Their most important stats are: Strength or Dexterity and Cunning",
+		"Their most important stats are: Strength and Cunning in melee, OR Dexterity and Willpower at range.",
 		"#GOLD#Stat modifiers:",
 		"#LIGHT_BLUE# * +3 Strength, +3 Dexterity, +0 Constitution",
 		"#LIGHT_BLUE# * +0 Magic, +1 Willpower, +2 Cunning",
 	},
-	stats = { str=3, dex=3, wil=1, cun=2},
+	stats = { str=3, dex=3, wil=1, cun=3},
 	not_on_random_boss = true,
 	talents_types = {
 		["technique/archery-bow"]={true, 0.1},
@@ -71,11 +71,8 @@ newBirthDescriptor{
 
 	talents = {
 		[ActorTalents.T_CHALLENGE_THE_WILDS] = 1,
-		-- [ActorTalents.T_DEATH_DANCE] = 1,
 		[ActorTalents.T_BOW_MASTERY] = 1,
 		[ActorTalents.T_WEAPON_COMBAT] = 1,
-		-- [ActorTalents.T_BRAZEN_LUNGE] = 1,
-		-- [ActorTalents.T_TYRANNY_OF_STEEL] = 1,
 		[ActorTalents.T_WEAPONS_MASTERY] = 1,
 		[ActorTalents.T_OVERRUN] = 1,
 		[ActorTalents.T_SHOOT] = 1
@@ -83,6 +80,9 @@ newBirthDescriptor{
 	
 	copy = {
 		max_life = 120,
+		class_start_check = function(self)
+			self:grantQuest("outrider-start")
+		end,
 		resolvers.equip{ id=true,
 			{type="armor", subtype="light", name="rough leather armour", autoreq=true, ego_chance=-1000},
 			{type="weapon", subtype="longsword", name="iron longsword", autoreq=true, ego_chance=-1000, ego_chance=-1000},

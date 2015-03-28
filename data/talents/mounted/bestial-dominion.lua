@@ -182,6 +182,10 @@ function befriendMount(self, m)
 	--Loyalty
 	if not self.base_max_loyalty then self.base_max_loyalty=100 end
 	self.max_loyalty = self.max_loyalty + (m.mount_data.base_loyalty-self.base_max_loyalty)
+	--Quest complete
+	if self:isQuestStatus("outrider-start", engine.Quest.PENDING) then
+		self:setQuestStatus("outrider-start", engine.Quest.COMPLETED)
+	end
 end
 
 function mountSetupSummon(self, m, x, y, no_control)
@@ -275,15 +279,26 @@ newTalent{
 	end,
 	callbackOnLevelup = function(self, t, level)
 		local pet = self.outrider_pet
-		pet:forceLevelup(level)
+		if pet then pet:forceLevelup(level) end
 	end,
 	action = function(self, t)
 		if self:hasEffect(self.EFF_WILD_CHALLENGE) then
-			t.doSummon(self, t)
-			self:removeEffect(self.EFF_WILD_CHALLENGE, nil, true)
+			t.doWarning(self, t)
+			--No return values from dialogs?
 		else self:setEffect(self.EFF_WILD_CHALLENGE, 3, {ct=t.getNum(self, t)})
 		end
-		return true
+		return
+	end,
+	doWarning = function (self, t)
+		local Dialog = require "engine.ui.Dialog"
+		local fct = function(ret)
+			if not ret then return end
+			t.doSummon(self, t)
+			self:removeEffect(self.EFF_WILD_CHALLENGE, nil, true)
+			self:startTalentCooldown(self.T_CHALLENGE_THE_WILDS)
+			return true
+		end
+		return Dialog:yesnoLongPopup("Your quarry is near...", "You can feel your quarry stalking nearby - but it does not stalk alone. Moreover, letting out your Wild Challenge could bring threats greater than mere beasts upon you. If the time is not ripe or the area not primed for the hunt, then it is better you do not proceed.", 300, fct, "I am ready! RELEASE MY FURY!", "I need to prepare for my trial.")
 	end,
 	doSummon = function(self, t)
 		--params: file, no_default, res, mod, loaded
@@ -308,7 +323,6 @@ newTalent{
 				mountSetupSummon(self, mount, coords[i][1], coords[i][2], true)
 				mount:setEffect(mount.EFF_WILD_CHALLENGER, 2, {src=self})
 			else
-				game.log(tostring(resolvers.current_level))
 				if not coords[i] then return end
 				local base_list=require("mod.class.NPC"):loadList("data/general/npcs/canine.lua")
 				local filter = {base_list=base_list
