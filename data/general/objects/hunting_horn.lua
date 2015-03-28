@@ -24,7 +24,7 @@ newEntity{base = "BASE_TOOL_MISC",
 	plot = true,
 	unique = true,
 	name = "Hunting Horn", color = colors.YELLOW,
-	desc = [[Inlaid with scenes of hunting, revelry and righteous war-making, just as you remember them from your homeland. The hunting horn is an indispensable tool in the chase and capture of wild beasts.]],
+	desc = [[Inlaid with scenes of hunting, revelry and righteous war-making, just as you remember them from your homeland. A hunting horn is an indispensable tool in the chase and capture of wild beasts.]],
 	cost = 1,
 	material_level = 1,
 	rarity = false,
@@ -32,10 +32,41 @@ newEntity{base = "BASE_TOOL_MISC",
 	special_desc = function(self) return [[During your Wild Challenge:
 		+5 attack
 		+5 physical power
+
 While in control of a wild beast:
 		beast gains +5 attack
 		beast gains +5 physical power]] end,
 	wielder = {
 		challenge_the_wilds_boost = 5
 	},
+	on_wear = function(self, who)
+		local pet = who.outrider_pet
+		if pet then
+			if self.current_buff_target then
+				local old_pet = self.current_buff_target 
+				old_pet:unlearnTalent(old_pet.T_HUNTING_HORN_BUFF, true)
+			end
+			pet:learnTalent(pet.T_HUNTING_HORN_BUFF, true, 1)
+			self.current_buff_target = pet
+		end
+	end,
+	on_takeoff = function(self, who)
+		local pet = self.current_buff_target
+		if pet then
+			pet:unlearnTalentFull(pet.T_HUNTING_HORN_BUFF)
+		end
+	end,
+	callbackOnActBase = function(self, who)
+		local pet = who.outrider_pet
+		local old = self.current_buff_target
+		if pet and (not old or old~=pet) then
+			if old then
+				old:unlearnTalent(old.T_HUNTING_HORN_BUFF, true)
+			end
+			pet:learnTalent(pet.T_HUNTING_HORN_BUFF, true, 1)
+			self.current_buff_target = pet
+		elseif not pet and old then
+			old:unlearnTalent(old.T_HUNTING_HORN_BUFF, true)
+		end
+	end,
 }

@@ -124,3 +124,19 @@ newTalent{
 			format()
 	end,
 }
+
+newTalent{
+	name = "Hunting Horn Buff",
+	type = {"mounted/mounted-base", 1},
+	points = 1,
+	hide = "always",
+	mode = "passive",
+	passives = function(self, t, p)
+		self:talentTemporaryValue(p, "combat_dam", 5)
+		self:talentTemporaryValue(p, "combat_atk", 5)
+	end,
+	info = function(self, t)
+		return ([[+5 physical power and +5 attack]]):
+			format()
+	end,
+}
