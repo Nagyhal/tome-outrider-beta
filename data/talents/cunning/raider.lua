@@ -3,7 +3,7 @@ newTalent{
 	type = {"cunning/raider", 1},
 	mode = "passive",
 	points = 5,
-	require = cuns_req1,
+	require = mnt_dexcun_req1,
 	info = function(self, t)
 		local fatigue_pct = t.getFatiguePct(self, t)
 		local counter_pct = t.getCounterPct(self, t)
@@ -31,7 +31,7 @@ newTalent{
 	name = "Strike at the Heart",
 	type = {"cunning/raider", 2},
 	mode = "passive",
-	require = cuns_req2,
+	require = mnt_dexcun_req2,
 	points = 5,
 	info = function(self, t)
 		local mult1 = t.getMult(self, t, 1)
@@ -118,6 +118,12 @@ newTalent{
 		else
 			self:removeEffect(self.EFF_STRIKE_AT_THE_HEART)
 			self:attr("building_strike_at_heart", 0, true)
+			self.turn_procs.did_strike = true
+		end
+	end,
+	callbackonActBase = function(self, t)
+		if self:attr("building_strike_at_heart") and not self.turn_procs.did_strike then
+			self:attr("building_strike_at_heart", 0, true)
 		end
 	end,
 	getMult = function(self, t, ct) return self:combatScale(ct, 1, 1, 2.5, 3, .75) end,
@@ -133,7 +139,7 @@ newTalent{
 	name = "Spring Attack",
 	type = {"cunning/raider", 3},
 	mode = "passive",
-	require = cuns_req3,
+	require = mnt_dexcun_req3,
 	points = 5,
 	info = function(self, t)
 		local dur = t.getDur(self, t)
@@ -156,7 +162,7 @@ newTalent{
 	name = "Impunity of Warlords",
 	type = {"cunning/raider", 4},
 	mode = "sustained",
-	require = cuns_req4,
+	require = mnt_dexcun_req4,
 	points = 5,
 	sustain_stamina = 50,
 	no_energy=true,
