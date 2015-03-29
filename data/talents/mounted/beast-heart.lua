@@ -1,7 +1,7 @@
 newTalent{
 	name = "Feast of Blood",
 	type = {"mounted/beast-heart", 1},
-	require = mnt_wil_req1,
+	require = mnt_wilcun_req_high1,
 	points = 5,
 	cooldown = function(self, t) return self:combatTalentLimit(t, 15, 35, 25) end,
 	loyalty = 20,
@@ -48,7 +48,7 @@ newTalent{
 newTalent{
 	name = "Primal Bond",
 	type = {"mounted/beast-heart", 2},
-	require = mnt_wil_req2,
+	require = mnt_wilcun_req_high2,
 	mode = "passive",
 	no_unlearn_last = true,
 	points = 5,
@@ -96,7 +96,7 @@ newTalent{
 newTalent{
 	name = "Twin Threat",
 	type = {"mounted/beast-heart", 3},
-	require = mnt_wil_req3,
+	require = mnt_wilcun_req_high3,
 	mode = "sustained",
 	points = 5,
 	sustain_stamina = 100,
@@ -246,7 +246,7 @@ newTalent{
 	name = "Bond Beyond Blood",
 	type = {"mounted/beast-heart", 4},
 	points = 5,
-	require = mnt_wil_req4,
+	require = mnt_wilcun_req_high4,
 	cooldown = 30,
 	on_pre_use = function(self, t, silent)
 		return preCheckHasMount(self, t, silent)

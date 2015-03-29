@@ -169,70 +169,58 @@ for i = 1, 4 do
 	end
 	Talents.main_env["mnt_strdex_req"..i] = f
 end
--- mnt_strcun_req1 = function(self, t)
--- 	local special = {
--- 		fct = function(self, t, offset)
--- 	local tlev = self:getTalentLevelRaw(t.id) + (levmod or 0)
--- 	local r  = 10 + tlev * 2
--- 			local ok = false
--- 			for _, stat in ipairs{"str", "cun"} do
--- 				if self:getStat(stat) >= r then ok = true end
--- 			end
--- 			return ok
--- 		end,
--- 		desc=("Str or Cun at %d"):format(r)
--- 		}
--- 	local level = function(level) return 8 + (level-1)  end
--- 	return {special=special, level=level}
--- end
--- mnt_strcun_req2 = function(self, t)
--- 	local special = {
--- 		fct = function(self, t, offset)
--- 	local tlev = self:getTalentLevelRaw(t.id) + (levmod or 0)
--- 	local r  = 10 + tlev * 2
--- 			local ok = false
--- 			for _, stat in ipairs{"str", "cun"} do
--- 				if self:getStat(stat) >= r then ok = true end
--- 			end
--- 			return ok
--- 		end,
--- 		desc=("Str or Cun at %d"):format(r)
--- 		}
--- 	local level = function(level) return 8 + (level-1)  end
--- 	return {special=special, level=level}
--- end
--- mnt_strcun_req3 = function(self, t)
--- 	local special = {
--- 		fct = function(self, t, offset)
--- 	local tlev = self:getTalentLevelRaw(t.id) + (levmod or 0)
--- 	local r  = 10 + tlev * 2
--- 			local ok = false
--- 			for _, stat in ipairs{"str", "cun"} do
--- 				if self:getStat(stat) >= r then ok = true end
--- 			end
--- 			return ok
--- 		end,
--- 		desc=("Str or Cun at %d"):format(r)
--- 		}
--- 	local level = function(level) return 8 + (level-1)  end
--- 	return {special=special, level=level}
--- end
--- mnt_strcun_req4 = function(self, t)
--- 	local special = {
--- 		fct = function(self, t, offset)
--- 	local tlev = self:getTalentLevelRaw(t.id) + (levmod or 0)
--- 	local r  = 10 + tlev * 2
--- 			local ok = false
--- 			for _, stat in ipairs{"str", "cun"} do
--- 				if self:getStat(stat) >= r then ok = true end
--- 			end
--- 			return ok
--- 		end,
--- 		desc=("Str or Cun at %d"):format(r)
--- 		}
--- 	local level = function(level) return 8 + (level-1)  end
--- 	return {special=special, level=level}
--- end
+
+for i = 1, 4 do
+	local f = function(self, t, offset)
+		local tlev = self:getTalentLevelRaw(t.id) + (offset or 0)
+		local r  = 4+ i*8 + tlev*2
+		local special = {
+			fct = function(self, t, offset)
+				local ok = false
+				for _, stat in ipairs{"dex", "cun"} do
+					if self:getStat(stat) >= r then ok = true end
+				end
+				return ok
+			end,
+			desc=("Dexterity or Cunning at %d"):format(r)
+		}
+		local level = function(level) return (i-1)*4 + (level-1)  end
+		return {special=special, level=level}
+	end
+	Talents.main_env["mnt_dexcun_req"..i] = f
+end
+
+
+for i = 1, 4 do
+	local f = function(self, t, offset)
+		local stat = "wil"
+		return {
+		stat = {[stat] = function(level) return 12+ i*8 + level*2 end},
+		level = function(level) return (i-1)*4 + (level+9) end
+		}
+	end
+	Talents.main_env["mnt_wil_req_high"..i] = f
+end
+
+for i = 1, 4 do
+	local f = function(self, t, offset)
+		local tlev = self:getTalentLevelRaw(t.id) + (offset or 0)
+		local r  = 12+ i*8 + tlev*2
+		local special = {
+			fct = function(self, t, offset)
+				local ok = false
+				for _, stat in ipairs{"wil", "cun"} do
+					if self:getStat(stat) >= r then ok = true end
+				end
+				return ok
+			end,
+			desc=("Willpower or Cunning at %d"):format(r)
+		}
+		local level = function(level) return (i-1)*4 + (level+9)  end
+		return {special=special, level=level}
+	end
+	Talents.main_env["mnt_wilcun_req_high"..i] = f
+end
 
 mnt_str_req1 = {
 	stat = { str=function(level) return 12 + (level-1) * 2 end },
