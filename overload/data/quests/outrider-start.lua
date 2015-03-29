@@ -26,6 +26,9 @@ desc = function(self, who)
 		desc[#desc+1] = "#LIGHT_GREEN#Out from the wilderness, you have subdued a mighty #BOLD#wolf!#BOLD# There is much you can do with this beast, an ally that will prove true and steadfast so long as the blood of your noble people flows through you, and the ancient knowledge of your elders lives and grows within you.#WHITE#"
 		desc[#desc+1] = "#LIGHT_GREEN#You can teach it talents as it levels, change its name, even inscribe it with potent infusions.#WHITE#"
 		desc[#desc+1] = "#LIGHT_GREEN#Take great care not to let your beast fall in battle, for you will have to complete the arduous hunt again! #WHITE#"
+	else
+		desc[#desc+1] = "#BLUE#To find your first mount, you will need to slay only 10 enemies while Challenge the Wilds is active. For all subsequent uses of Challenge the Wilds, the amount will be higher.#WHITE#"
 	end
+		
 	return table.concat(desc, "\n")
 end

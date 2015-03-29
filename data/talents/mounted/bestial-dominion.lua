@@ -213,8 +213,8 @@ function mountSetupSummon(self, m, x, y, no_control)
 	m.gainExp = function() end
 	m.forceLevelup = function(self) if self.summoner then return mod.class.Actor.forceLevelup(self, self.summoner.level) end end
 	m.no_points_on_levelup = function(self)
-		self.unused_stats = self.unused_stats + 2
-		if self.level >= 2 and (self.level % 3 == 0 or self.level % 5 == 0) then self.unused_talents = self.unused_talents + 1 end
+		self.unused_stats = self.unused_stats + (self.level % 2==0  and 3 or 2)
+		if self.level >= 2 and (self.level % 2 == 0) then self.unused_talents = self.unused_talents + 1 end
 	end
 	mod.class.Actor.forceLevelup(m, self.level)	
 	m:resolve() m:resolve(nil, true)
@@ -235,7 +235,7 @@ newTalent{
 	range = 10,
 	tactical = { BUFF = 5 },
 	on_pre_use = function(self, t, silent)
-		if self:hasMount() then if not silent then game.logPlayer(self, "Use Challenge the Wilds when you do not already have a mount.") end return false
+		if self:hasMount() then if not silent then game.logPlayer(self, "Use Challenge the Wilds when you seek a mount, not when you already have one.") end return false
 		else
 			local eff = self:hasEffect(self.EFF_WILD_CHALLENGE)
 			if eff and eff.ct>0 then if not silent then game.logPlayer(self, "You must slay %d enemies before you may prove your might to the wilderness.", eff.ct) end return false 
@@ -285,7 +285,9 @@ newTalent{
 		if self:hasEffect(self.EFF_WILD_CHALLENGE) then
 			t.doWarning(self, t)
 			--No return values from dialogs?
-		else self:setEffect(self.EFF_WILD_CHALLENGE, 3, {ct=t.getNum(self, t)})
+		else
+			local ct = self:isQuestStatus("outrider-start", engine.Quest.PENDING) and 10 or t.getNum(self, t)
+			self:setEffect(self.EFF_WILD_CHALLENGE, 3, {ct=ct})
 		end
 		return
 	end,
@@ -349,7 +351,7 @@ newTalent{
 		:format(num, dam)
 	end,
 	getDam = function(self, t) return self:getTalentLevel(t) * 10 end,
-	getNum = function(self, t) return math.ceil(self:getTalentLevel(t)*5) + 10 end,
+	getNum = function(self, t) return math.ceil(self:getTalentLevelRaw(t)*5) + 10 end,
 }
 
 
