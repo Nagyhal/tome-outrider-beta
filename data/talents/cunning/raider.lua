@@ -56,17 +56,17 @@ newTalent{
 	end,
 	handleStrike = function(self, t, target, hitted)
 		local eff = self:hasEffect(self.EFF_STRIKE_AT_THE_HEART)
-		if not (eff and target and hitted) then return end
+		if not (eff and target) then return end
 		--Only do this once, on the first target
 		if not eff.done then
 			game:onTickEnd(function() 
 				local eff = self:hasEffect(self.EFF_STRIKE_AT_THE_HEART)
-				for target in pairs(eff.targets) do
-					if eff.sunder>0 then
+				if hitted and eff.sunder>0 then
+					for target in pairs(eff.targets) do
 						target:setEffect(target.EFF_SUNDER_ARMOUR, 3, {power=eff.sunder, apply_power=self:combatPhysicalpower()})
 					end
 				end
-				if eff.store then eff.doUnstoreBonuses(self, eff) end
+				-- if eff.store then eff.doUnstoreBonuses(self, eff) end
 				self:removeEffect(self.EFF_STRIKE_AT_THE_HEART)
 			end)
 		end
@@ -76,23 +76,26 @@ newTalent{
 	callbackOnMove = function(self, t, moved, force, ox, oy, x, y)
 		if not ox or not oy or (ox==self.x and oy==self.y) then return end
 		local ab = self.__talent_running or (self.mount and self.mount.__talent_running); if ab and ab.is_teleport then return end
-		local lineFunction = core.fov.line(ox, oy, self.x, self.y)
 
-		lx, ly, _ = lineFunction:step(); lx, ly = (lx or x), (ly or y)
 		local stacks = core.fov.distance(ox, oy, self.x, self.y)
+
 		local found_target
-		repeat
-			local _, dx, dy = util.getDir(lx, ly, ox, oy)
-			local tg = {type="cone", start_x=ox, start_y=oy, angle=45, radius=self.sight, selffire=false}
-			local is_target
-			local filter = function(px, py, t, self)
-				local a = game.level.map(px, py, engine.Map.ACTOR) 
-				if a then found_target=true end
+		local tg = {type="ball", radius=self.sight, selfifre=false, friendlyfire=false}
+		local function getSqDist(x1, y1, x2, y2)
+			local distx = math.abs(x1-x2)
+			local disty = math.abs(y1-y2)
+			return math.max(distx, disty)
+		end
+		local fct = function(px, py, t, self)
+			local a = game.level.map(px, py, engine.Map.ACTOR) 
+			if a and self:reactionToward(a) < 0 and self:hasLOS(px, py) then
+				local dist1 = getSqDist(ox, oy, px, py)
+				local dist2 = getSqDist(self.x, self.y, px, py)
+
+				if dist2 < dist1 then found_target=true end
 			end
-			self:project(tg, lx+dx, ly+dy, filter)
-			ox, oy = lx, ly
-			lx, ly, _ = lineFunction:step()
-		until (not lx)
+		end
+		self:project(tg, self.x, self.y, fct)
 		
 		if found_target then
 			for i = 1, stacks do
@@ -138,7 +141,7 @@ newTalent{
 		local max_pct = t.getMaxPct(self, t)
 		return ([[After charging, for %d turns, the defense and movement speed components of your Strike at the Heart bonuses will persist.
 
-			Also, you gain a bonus to ranged damage against the foe struck for the duration. This bonus is dependent on the distance you gain after that attack: %d%% at 2 tiles, increasing to %d%% at 5.
+			Also, you gain a bonus to ranged damage against the foe struck for the duration. This bonus is dependent on the distance you gain after that attack: %d%% at 2 tiles, increasing to %d%% at 5 or more.
 
 			Only distance gained from the moment of your attack will count.]]):
 		format(dur, min_pct, max_pct)

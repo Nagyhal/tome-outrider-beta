@@ -156,16 +156,19 @@ newEffect{
 	on_lose = function(self, eff) return "#Target# ends the charge.", "-Strike at the Heart" end,
 	activate = function(self, eff, p)
 		eff.targets = eff.targets or {}
+		p.doStoreBonuses(self, eff)
 		self:effectTemporaryValue(eff, "movement_speed", eff.move/100)
 		self:effectTemporaryValue(eff, "combat_def", eff.def)
 		self:effectTemporaryValue(eff, "combat_atk", eff.atk)
 		self:effectTemporaryValue(eff, "combat_physcrit", eff.crit)
-		p.doStoreBonuses(self, eff)
 	end,
-	updateValues = function(self, eff)
-		for i = 1, #eff.__tmpvals do
+	removeTempValues = function(self, eff)
+		for i = #eff.__tmpvals, 1, -1 do
 			self:removeTemporaryValue(eff.__tmpvals[i][1], eff.__tmpvals[i][2])
+			eff.__tmpvals[i] = nil
 		end
+	end,
+	initiateTempValues = function(self, eff)
 		self:effectTemporaryValue(eff, "movement_speed", eff.move/100)
 		self:effectTemporaryValue(eff, "combat_def", eff.def)
 		self:effectTemporaryValue(eff, "combat_atk", eff.atk)
@@ -174,31 +177,33 @@ newEffect{
 	doStoreBonuses = function(self, eff)
 		local p = self:hasEffect(self.EFF_SPRING_ATTACK)
 		if p then
-			eff.move = math.max(0, eff.move - p.move)
-			eff.def = math.max(0, eff.def - p.def)
-			eff.store={def=math.min(p.def, eff.def), move=math.min(p.move, eff.move)}
+			stored_move = math.min(eff.move, p.move)
+			stored_def = math.min(eff.def, p.def)
+			-- print(("DEBUG: Storing %d def and %d move for Strike at the Heart"):format(stored_def, stored_move))
+			eff.move = eff.move-stored_move
+			eff.def = eff.def-stored_def
+			eff.store={def=stored_def, move=stored_move}
 		end
 		ed = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
-		ed.updateValues(self, eff)
 	end,
-	doUnstoreBonuses = function(self, eff)
+	doUnstoreBonuses = function(self, eff, on_deactivate)
+		ed = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
+		if not on_deactivate then ed.removeTempValues(self, eff) end
 		if eff.store then
 			eff.move = eff.move + eff.store.move
 			eff.def = eff.def + eff.store.def
 			eff.store=nil
-			local p = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
-			self:effectTemporaryValue(eff, "movement_speed", eff.move/100)
-			self:effectTemporaryValue(eff, "combat_def", eff.def)
 		end
+		if not on_deactivate then ed.initiateTempValues(self, eff) end
+		ed = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
 	end,
 	on_merge = function(self, old_eff, new_eff, ed)
 		new_eff.targets=old_eff.targets
-		-- self:removeEffect(self.EFF_STRIKE_AT_THE_HEART, true, true)
 		local ed = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
-		for i = 1, #old_eff.__tmpvals do
+		for i = #old_eff.__tmpvals, 1, -1 do
 			self:removeTemporaryValue(old_eff.__tmpvals[i][1], old_eff.__tmpvals[i][2])
+			old_eff.__tmpvals[i] = nil
 		end
-		ed.doUnstoreBonuses(self, old_eff)
 		ed.activate(self, new_eff, ed)
 		return new_eff
 	end,
@@ -207,7 +212,7 @@ newEffect{
 	end,
 	deactivate = function(self, eff, ed)
 		local ct = eff.ct
-		ed.doUnstoreBonuses(self, eff)
+		ed.doUnstoreBonuses(self, eff, true)
 		if self:knowTalent(self.T_SPRING_ATTACK) and #table.keys(eff.targets)>0 then
 			local t = self:getTalentFromId(self.T_SPRING_ATTACK)
 			self:setEffect(self.EFF_SPRING_ATTACK, t.getDur(self,t), {
