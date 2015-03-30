@@ -23,7 +23,8 @@ newTalent{
 	type = {"mounted/teamwork", 1},
 	require = mnt_wilcun_req1,
 	points = 5,
-	cooldown = function(self, t) return math.max(12, self:combatTalentScale(t, 25, 14)) end,
+	-- cooldown = function(self, t) return math.max(12, self:combatTalentScale(t, 25, 14)) end,
+	cooldown = 15,
 	loyalty = 5,
 	tactical = { ATTACK = 1, CLOSEIN = 1, DISABLE = { daze = 1 }  },
 	range = function(self, t) return math.min(10, self:combatTalentScale(t, 5, 9)) end,
@@ -72,7 +73,7 @@ newTalent{
 		if mount:attackTarget(target, nil, t.getDam(self, t), true) and target:canBe("stun") then
 			target:setEffect(target.EFF_DAZED, t.getDur(self, t), {})
 		end
-		mount:setEffect(mount.EFF_SET_LOOSE, t.getBuffDur(self, t), {dam=t.getDamBuff(self, t), def=t.getDefBuff(self, t)})
+		mount:setEffect(mount.EFF_SET_LOOSE, t.getBuffDur(self, t), {dam=t.getDamBuff(self, t), def=t.getDefBuff(self, t), evade=t.getEvade(self, t)})
 		return true
 	end,
 	info = function(self, t)
@@ -82,16 +83,21 @@ newTalent{
 		local buff_dur = t.getBuffDur(self, t)
 		local dam_buff = t.getDamBuff(self, t)
 		local res_buff = t.getDefBuff(self, t)
+		local evade = t.getEvade(self, t)
 		return ([[Your mount performs a rushing attack on an enemy within %d squares, dealing %d%% damage and dazing it for %d turns. If you are mounted, then using Let 'Em Loose will forcibly dismount you.
 
-			After using Let 'Em Loose, for %d turns your mount will be incensed, gaining a %d increase to defense and saves and a %d%% bonus to damage.]]):
-			format(range, dam, eff_dur, buff_dur, res_buff, dam_buff)
+			After using Let 'Em Loose, for %d turns your mount will be incensed, gaining a %d%% evasion chance and +%d to saves (scaling with your Willpower) as well as a %d%% bonus to damage (scaling with Cunning.)]]):
+			format(range, dam, eff_dur, buff_dur, evade, res_buff, dam_buff)
 	end,
 	getDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
 	getDur = function(self, t) return self:combatTalentScale(t, 2.5, 4.2, .75) end,
 	getBuffDur = function(self, t) return self:combatTalentScale(t, 3.5, 5.2, .75) end,
-	getDefBuff = function(self, t) return self:combatTalentScale(t, 8, 25) end,
-	getDamBuff = function(self, t) return self:combatTalentScale(t, 12, 20) end,
+	-- getDefBuff = function(self, t) return self:combatTalentScale(t, 3, 20.5) end,
+	getDefBuff = function(self, t) return self:combatTalentIntervalDamage(t, "wil", 5, 30, .65) end,
+	-- getDefBuff = function(self, t) return self:combatTalentStatDamage(t, "wil", 1, 35) end,
+	-- getDamBuff = function(self, t) return self:combatTalentScale(t, 3, 20.5) end,
+	getDamBuff = function(self, t) return self:combatTalentIntervalDamage(t, "cun", 1, 35, .65) end,
+	getEvade = function(self, t) return self:combatTalentIntervalDamage(t, "wil", 10, 40, .65) end,
 }
 
 

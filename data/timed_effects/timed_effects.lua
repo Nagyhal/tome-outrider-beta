@@ -980,12 +980,13 @@ newEffect{
 	type = "physical",
 	subtype = { tactic=true, morale=true },
 	status = "beneficial",
-	parameters = { dam=10, def=8 },
+	parameters = { dam=10, evade=10, def=8 },
 	on_gain = function(self, eff) return "#Target#' is set loose!", "+Set Loose" end,
 	on_lose = function(self, eff) return "#Target#' is no longer set loose!", "-Set Loose" end,
 	activate = function(self, eff)
 		self:effectTemporaryValue(eff, "inc_damage", {all=eff.dam})
-		self:effectTemporaryValue(eff, "combat_def", eff.def)
+		self:effectTemporaryValue(eff, "evasion", eff.evade)
+		-- self:effectTemporaryValue(eff, "combat_def", eff.def)
 		self:effectTemporaryValue(eff, "combat_physresist", eff.def)
 		self:effectTemporaryValue(eff, "combat_spellresist", eff.def)
 		self:effectTemporaryValue(eff, "combat_mentalresist", eff.def)
