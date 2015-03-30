@@ -21,7 +21,7 @@ newTalent{
 	short_name = "LET_EM_LOOSE",
 	name = "Let 'Em Loose!",
 	type = {"mounted/teamwork", 1},
-	require = mnt_wil_req1,
+	require = mnt_wilcun_req1,
 	points = 5,
 	cooldown = function(self, t) return math.max(12, self:combatTalentScale(t, 25, 14)) end,
 	loyalty = 5,
@@ -99,7 +99,7 @@ newTalent{
 	name = "Animal Affinity",
 	short_name = "FERAL_AFFINITY",
 	type = {"mounted/teamwork", 2},
-	require = mnt_wil_req2,
+	require = mnt_wilcun_req2,
 	mode = "passive",
 	points = 5,
 	passives = function(self, t, p)
@@ -169,7 +169,7 @@ newTalent{
 	cooldown = 6,
 	stamina = 6,
 	loyalty= 3,
-	require = mnt_wil_req3,
+	require = mnt_wilcun_req3,
 	requires_target = true,
 	tactical = { ATTACK = 2 },
 	on_pre_use = function(self, t, silent)
@@ -230,7 +230,7 @@ newTalent{
 	name = "Flanking",
 	type = {"mounted/teamwork", 4},
 	points = 5,
-	require = mnt_wil_req4,
+	require = mnt_wilcun_req4,
 	mode = "passive",
 	doCheck = function(self, t)
 		local tgts = {}

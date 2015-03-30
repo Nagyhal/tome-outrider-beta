@@ -190,7 +190,6 @@ for i = 1, 4 do
 	Talents.main_env["mnt_dexcun_req"..i] = f
 end
 
-
 for i = 1, 4 do
 	local f = function(self, t, offset)
 		local stat = "wil"
@@ -201,6 +200,27 @@ for i = 1, 4 do
 	end
 	Talents.main_env["mnt_wil_req_high"..i] = f
 end
+
+for i = 1, 4 do
+	local f = function(self, t, offset)
+		local tlev = self:getTalentLevelRaw(t.id) + (offset or 0)
+		local r  = 4+ i*8 + tlev*2
+		local special = {
+			fct = function(self, t, offset)
+				local ok = false
+				for _, stat in ipairs{"wil", "cun"} do
+					if self:getStat(stat) >= r then ok = true end
+				end
+				return ok
+			end,
+			desc=("Willpower or Cunning at %d"):format(r)
+		}
+		local level = function(level) return (i-1)*4 + (level-1)  end
+		return {special=special, level=level}
+	end
+	Talents.main_env["mnt_wilcun_req"..i] = f
+end
+
 
 for i = 1, 4 do
 	local f = function(self, t, offset)
@@ -343,22 +363,22 @@ mnt_wil_req_broad4 = {
 -- 	level = function(level) return 12 + (level-1)  end,
 -- }
 
-mnt_dexwil_req1 = {
-	stat = { dex=function(level) return 12 + (level-1) * 2 end, wil=function(level) return 12 + (level-1) * 2 end },
-	level = function(level) return 0 + (level-1)  end,
-}
-mnt_dexwil_req2 = {
-	stat = { dex=function(level) return 20 + (level-1) * 2 end, wil=function(level) return 20 + (level-1) * 2 end },
-	level = function(level) return 4 + (level-1)  end,
-}
-mnt_dexwil_req3 = {
-	stat = { dex=function(level) return 28 + (level-1) * 2 end, wil=function(level) return 28 + (level-1) * 2 end },
-	level = function(level) return 8 + (level-1)  end,
-}
-mnt_dexwil_req4 = {
-	stat = { dex=function(level) return 36 + (level-1) * 2 end, wil=function(level) return 28 + (level-1) * 2 end },
-	level = function(level) return 12 + (level-1)  end,
-}
+-- mnt_dexwil_req1 = {
+-- 	stat = { dex=function(level) return 12 + (level-1) * 2 end, wil=function(level) return 12 + (level-1) * 2 end },
+-- 	level = function(level) return 0 + (level-1)  end,
+-- }
+-- mnt_dexwil_req2 = {
+-- 	stat = { dex=function(level) return 20 + (level-1) * 2 end, wil=function(level) return 20 + (level-1) * 2 end },
+-- 	level = function(level) return 4 + (level-1)  end,
+-- }
+-- mnt_dexwil_req3 = {
+-- 	stat = { dex=function(level) return 28 + (level-1) * 2 end, wil=function(level) return 28 + (level-1) * 2 end },
+-- 	level = function(level) return 8 + (level-1)  end,
+-- }
+-- mnt_dexwil_req4 = {
+-- 	stat = { dex=function(level) return 36 + (level-1) * 2 end, wil=function(level) return 28 + (level-1) * 2 end },
+-- 	level = function(level) return 12 + (level-1)  end,
+-- }
 
 function learnTraits(self)
 	if not self.bestial_traits then return nil end

@@ -4,7 +4,7 @@ newTalent{
 	points = 5,
 	cooldown = 15,
 	-- stamina = 5,
-	require = mnt_cun_req1,
+	require = mnt_dexcun_req1,
 	no_energy = true,
 	tactical = { BUFF = { weapon = 2 }, DISABLE = { confusion = 2 } }, 
 	on_pre_use = function(self, t)
@@ -66,7 +66,7 @@ newTalent{
 newTalent{
 	name = "Impalement",
 	type = {"technique/dreadful-onset", 2},
-	require = mnt_cun_req2,
+	require = mnt_dexcun_req2,
 	points = 5,
 	cooldown = 16,
 	stamina = 15,
@@ -136,7 +136,7 @@ newTalent{
 	name = "Catch!",
 	short_name = "CATCH",
 	type = {"technique/dreadful-onset", 3},
-	require = mnt_cun_req3,
+	require = mnt_dexcun_req3,
 	points = 5,
 	random_ego = "attack",
 	cooldown = 20,
@@ -260,7 +260,7 @@ newTalent{
 newTalent{
 	name = "Living Shield",
 	type = {"technique/dreadful-onset", 4},
-	require = mnt_cun_req4,
+	require = mnt_dexcun_req4,
 	points = 5,
 	random_ego = "attack",
 	cooldown = 20,
