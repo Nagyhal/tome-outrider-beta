@@ -364,31 +364,62 @@ newTalent{
 	info = function(self, t)
 		local dam = t.getDam(self, t)
 		local num = t.getNum(self, t)
+		local will_to_health = t.getWillToHealth(self, t)
+		local will_to_loy = t.getWillToLoyaltyLoss(self, t)
 		return ([[Your hurl your fury at the wilderness, letting out a luring, primal call and intensifying every one of your senses so that you might close upon a savage ally, a steed to carry you to victory and spoil. Finding a suitable wild mount takes time and effort; you gain the "Challenge the Wilds" status with a counter of %d, and every time you slay an enemy, that counter depletes by 1. When it reaches 0, you may activate Challenge the Wilds to call forth a beast worthy of your command. The beast that is called will depend on your surroundings: either a wolf, agile and dependable; a spider, ruthless yet versatile; or a rare and mighty drake. You must subdue the beast by blade or bow; it will not come to your side immediately, but after you have asserted your dominance. Care must be taken not to slay it unwittingly, and beware- it will not arrive alone. The quality of beast will increase with talent level.
 
+			Your mount's combat prowess is affected by your own abilities of command:
+			Willpower will increase its health total (current bonus: %d%%) and reduce the rate at which damage causes it to lose loyalty (current reduction: %d%%)
+			Cunning will increase its damage, adding to the mount's Strength for purposes of damage calculation.
+
 			Levelling Bestial Dominion will also increase the physical power of your mount by %d.]])
-		:format(num, dam)
+		:format(num, will_to_health, will_to_loy, dam)
 	end,
 	getDam = function(self, t) return self:getTalentLevel(t) * 10 end,
 	getNum = function(self, t) return math.ceil(self:getTalentLevelRaw(t)*5) + 10 end,
+	getWillToHealth = function(self, t) return self:combatStatScale("wil", 0, 80) end,
+	getWillToLoyaltyLoss = function(self, t) return self:combatStatLimit("wil", 80, 0, 50) end,
 }
 
-
+--Teach mount its elementary attribute-based bonuses
+newTalent{
+	name = "Bestial Dominion (Mount)",
+	short_name = "BESTIAL_DOMINION",
+	type = {"mounted/mounted-base", 1},
+	mode = "passive",
+	hide = "always",
+	points = 1,
+	base_talent = "T_CHALLENGE_THE_WILDS",
+	passives = function(self, t, p)
+		--TODO: These need to be updated frequently
+		local owner = self.owner
+		if owner then
+			local t2 = owner:getTalentFromId(t.base_talent)
+			local val = self.max_life*t2.getWillToHealth(owner, t)/100
+			self:talentTemporaryValue(p, "max_life", val)
+			self:talentTemporaryValue(p, "loyalty_loss_coeff", t2.getWillToLoyaltyLoss(owner, t))
+		end
+	end,
+	info = function(self, t)
+		return ([[Improve the pet's health and loyalty loss when damaged in proportion to the owner's Willpower.]]
+			):format()
+	end,
+}
 
 newTalent{
 	name = "Gruesome Depredation",
 	type = {"mounted/bestial-dominion", 2},
 	require = mnt_strwil_req2,
 	points = 5,
-	cooldown = 16,
+	cooldown = 10,
 	tactical = { ATTACK = 2 }, --TODO: Complicated AI routine
 	range = 1 ,
 	requires_target = true,
 	target = function(self, t)
 		--TODO: There is actually an engine bug making keyboard targeting useless. Let's fix this!
-		local mount = self:hasMount()
+		local pet = self.outrider_pet
 		local ret = {type="hit", range=self:getTalentRange(t), friendlyfire=false, selffire=false}
-		if mount then ret.start_x, ret.start_y=mount.x, mount.y end
+		if not self:isMounted() then ret.start_x, ret.start_y=pet.x, pet.y; ret.default_target=pet end
 		return ret
 	end,
 	on_pre_use = function(self, t, silent)
@@ -400,11 +431,14 @@ newTalent{
 		if not x or not y or not target then return nil end
 		local mount = self:hasMount()
 		local hit = mount:attackTarget(target, nil, t.getDam(self, t), true)
-		if hit and target.dead then
+		if hit then
 			mount:logCombat(target, "#Source# devours the flesh of #Target#!")
 			self:attr("allow_on_heal", 1)
-			local heal = mount.max_life*t.getHeal(self, t)
+			local kill = target.dead
+			local heal = mount.max_life*t.getHeal(self, t)*(kill and 1.3 or 1)
+			local loyalty = t.getLoyalty(self, t)*(kill and 1.5 or 1)
 			mount:heal(heal)
+			self:incLoyalty(loyalty)
 			if core.shader.active(4) then
 				self:addParticles(Particles.new("shader_shield_temp", 1, {toback=false,size_factor=1.5, y=-0.3, img="healgreen", life=25}, {type="healing", time_factor=2000, beamsCount=20, noup=1.0}))
 			end
@@ -414,16 +448,26 @@ newTalent{
 		end
 		return true
 	end,
+	-- callbackOnKill = function(self, t)
+	-- 	local cur = self.__talent_running
+	-- 	if cur and cur.id == t.id then
+	-- 		self.turn_procs.gruesome_depredation_kill = true
+	-- 	end
+	-- end,
 	info = function(self, t)
 		local dam = t.getDam(self, t)*100
 		local loyalty = t.getLoyalty(self, t)
 		local heal = t.getHeal(self, t)*100
-		return ([[Your mount bites your enemy for %d%% damage. If this hits, then your mount's bite devours a great chunk of your enemy's carcass, restoring %d Loyalty and healing your mount for %d%% of its total life.]]):
-			format(dam, loyalty, heal)
+		local loyalty2, heal2 = loyalty*1.5, heal*1.3
+		return ([[Your mount bites your enemy for %d%% damage. If this hits, then your mount's bite devours a great chunk of your enemy's carcass, restoring %d Loyalty and healing your mount for %d%% of its total life. If your mount kills its target with this attack, then it instead gains %d Loyalty and %d%% of its total life.
+
+			The Loyalty gain will scale with your Cunning and talent level.]]):
+			format(dam, loyalty, heal, loyalty2, heal2)
 	end,
 	getDam = function(self, t) return self:combatTalentScale(t, 1.8, 2.5) end,
-	getLoyalty = function(self, t) return self:combatTalentScale(t, 15, 35) end,
-	getHeal = function(self, t) return self:combatTalentLimit(t, .5, .1, .35) end
+	getLoyalty = function(self, t) return self:combatTalentIntervalDamage(t, "cun", 1, 35, .65) end,
+	getHeal = function(self, t) return self:combatTalentLimit(t, .5, .1, .36	) end
+
 }
 
 newTalent{
