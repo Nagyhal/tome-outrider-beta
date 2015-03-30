@@ -252,6 +252,9 @@ newTalent{
 	callbackOnActBase = function(self, t)
 		t.doCheck(self, t)
 	end,
+	callbackOnMove = function(self, t, ...)
+		t.doCheck(self, t)
+	end,
 	info = function(self, t)
 		local def = t.getDef(self, t)
 		local crit = t.getCritChance(self, t)
@@ -260,6 +263,6 @@ newTalent{
 			format(crit, crit_dam, def)
 	end,
 	getDef = function(self, t) return self:combatTalentScale(t, 5, 12) end,
-	getCritChance = function(self, t) return self:combatTalentScale(t, 10, 25) end,
+	getCritChance = function(self, t) return self:combatTalentScale(t, 5, 15) end,
 	getCritPower = function(self, t) return self:combatTalentScale(t, 15, 35) end,
 }

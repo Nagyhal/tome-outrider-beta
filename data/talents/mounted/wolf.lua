@@ -528,6 +528,9 @@ newTalent{
 	callbackOnActBase = function(self, t)
 		t.doCheck(self, t)
 	end,
+	callbackOnMove = function(self, t, ...)
+		t.doCheck(self, t)
+	end,
 	info = function(self, t)
 		local pct = t.getPct(self, t)
 		local secondary = t.getSecondaryPct(self, t)

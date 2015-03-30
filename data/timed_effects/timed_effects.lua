@@ -444,7 +444,7 @@ newEffect{
 newEffect{
 	name = "FLANKED", image = "talents/flanking.png",
 	desc = "Flanked",
-	long_desc = function(self, eff) return ("Flanked by the outrider and its allies, the target suffers a defense decrease of %d, a %d%% increase to critical damage and all attackers gain a crit chance bonus of %d%% against it.") end,
+	long_desc = function(self, eff) return ("Flanked by the outrider and its allies, the target suffers a defense decrease of %d, a %d%% increase to critical damage and all attackers gain a crit chance bonus of %d%% against it."):format(eff.def, eff.crit_dam, eff.crit) end,
 	type = "physical",
 	subtype = { tactic=true },
 	status = "detrimental",
@@ -481,7 +481,7 @@ newEffect{
 newEffect{
 	name = "PREDATORY_FLANKING", image = "talents/predatory_flanking.png",
 	desc = "Predatory Flanking",
-	long_desc = function(self, eff) return ("Flanked by the wolf and its allies, the target suffers %d%% increased damage from the source and %d%% from its flanking allies.") end,
+	long_desc = function(self, eff) return ("Flanked by the wolf and its allies, the target suffers %d%% increased damage from the source and %d%% from its flanking allies."):format(eff.src_pct, eff.allies_pct) end,
 	type = "physical",
 	subtype = { tactic=true },
 	status = "detrimental",

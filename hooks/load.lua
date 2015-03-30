@@ -34,6 +34,18 @@ class:bindHook("Actor:move", function(self, data)
 		-- game.level:removeEntity(self.mount)
 		-- self.mount.x, self.mount.y = self.x, self.y
 	end	
+	--This is the laziest way to code over (a hook that calls a callback, seriously?)
+	--The reason I'm doing it this way is a) time and b) I am a more... shall we say
+	--a more /architectural/.solution planned.
+	--TODO: implement this solution
+	local pet = self.outrider_pet
+	if pet and pet:knowTalent(pet.T_PREDATORY_FLANKING) then
+		pet:callTalent(pet.T_PREDATORY_FLANKING, "callbackOnMove")
+	end
+	local owner = self.owner
+	if owner and owner:knowTalent(owner.T_FLANKING) then
+		owner:callTalent(owner.T_FLANKING, "callbackOnMove")
+	end
 end)	
 
 class:bindHook("DamageProjector:base", function(self, data)
@@ -68,10 +80,10 @@ class:bindHook("DamageProjector:base", function(self, data)
 		local eff = a:hasEffect(a.EFF_PREDATORY_FLANKING)
 		if eff then
 			if eff.src==self then
-				data.dam = data.dam * eff.src_pct/100
+				data.dam = data.dam + (data.dam * eff.src_pct/100)
 				ret=true
 			elseif table.reverse(eff.allies)[self] then
-				data.dam = data.dam * eff.allies_pct/100
+				data.dam = data.dam + (data.dam * eff.allies_pct/100)
 				ret=true
 			end
 		end
