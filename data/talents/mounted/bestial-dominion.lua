@@ -234,6 +234,19 @@ newTalent{
 	no_npc_use = true,
 	range = 10,
 	tactical = { BUFF = 5 },
+	shared_talent = "T_BESTIAL_DOMINION",
+	on_learn = function (self, t)
+		local pet = self.outrider_pet
+		if not pet then return end
+		shareTalentWithPet(self, pet, t)
+	end,
+	on_unlearn = function(self, t)
+		local pet = self.outrider_pet
+		if not pet then return end
+		if self:getTalentLevelRaw(t) == 0 then
+			unshareTalentWithPet(self, pet, t)
+		end
+	end,
 	on_pre_use = function(self, t, silent)
 		if self:hasMount() then if not silent then game.logPlayer(self, "Use Challenge the Wilds when you seek a mount, not when you already have one.") end return false
 		else
@@ -280,6 +293,12 @@ newTalent{
 	callbackOnLevelup = function(self, t, level)
 		local pet = self.outrider_pet
 		if pet then pet:forceLevelup(level) end
+	end,
+	callbackOnStatChange = function(self, t, stat, v)
+		local pet = self.outrider_pet
+		if pet and stat==self.STAT_WIL or stat==self.STAT_CUN then
+			pet:updateTalentPassives(t.shared_talent)
+		end
 	end,
 	action = function(self, t)
 		if self:hasEffect(self.EFF_WILD_CHALLENGE) then

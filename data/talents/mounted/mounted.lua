@@ -420,6 +420,20 @@ function shareAllTalentsWithPet(self, pet)
 	end
 end
 
+function shareTalentWithPet(self, pet, t)
+	if not pet then return end
+	if t and t.shared_talent then
+		pet:learnTalent(t.shared_talent, true, 1)
+	end
+end
+
+function unshareTalentWithPet(self, pet, t)
+	if not pet then return end
+	if t and t.shared_talent then
+		pet:unlearnTalent(t.shared_talent)
+	end
+end
+
 function unshareTalentWithOwner(self, t)
 	if not t.shared_talent then error(("No shared talent for talent %s"):format(t.id)) end
 	if self.owner then 
