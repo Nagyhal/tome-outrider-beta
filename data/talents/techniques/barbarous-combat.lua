@@ -55,6 +55,11 @@ newTalent{
 		end
 		return one_handed, free_off
 	end,
+	callbackOnCrit = function(self, t, type, dam, chance, target)
+		if not type=="physical" then return end
+		local val = t.getPhysPen(self, t)
+		target:setEffect(target.EFF_WEAKENED_DEFENSES, 3, {inc=val, max=val})
+	end,
 	activate = function(self, t)
 		-- local weapon = hasOneHandedWeapon(self)
 		-- if not weapon then
@@ -90,7 +95,6 @@ newTalent{
 						p.__tmpvals[i] = nil
 					end
 					if free_off then
-						game.log("DEBUG: melee equipped")
 						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower2(self, t))
 						self:talentTemporaryValue(p, "combat_physcrit", t.getPhysCrit2(self, t))
 						self:talentTemporaryValue(p, "combat_critical_power", t.getCritPower2(self, t))
@@ -122,20 +126,22 @@ newTalent{
 		local mindpower = t.getMindpower(self, t)
 		local mindpower2 = t.getMindpower2(self, t)
 		local phys_pen = t.getPhysPen(self, t)
-		return ([[While you prefer weapons less visibily impressive than some, the merciless precision with which you wield them makes them no less intimidating in your hands. Critical hits will reduce the physical resistance of the target by %d%% for 2 turns.
+		return ([[While you prefer weapons less visibily impressive than some, the merciless precision with which you wield them makes them no less intimidating in your hands.
 		
 		Also, while wielding a one-handed or an archery weapon, gain the following bonuses:
 		+%d mindpower
 		+%d%% physical crit chance
 		+%d%% critical power
 		+%d APR
+		Critical hits will reduce the physical resistance of the target by %d%% for 3 turns.
 
 		If you hold nothing in your off-hand, instead gain the following benefits:
 		+%d mindpower
 		+%d%% physical crit chance
 		+%d%% critical power
-		+%d APR]]):
-		format(phys_pen, mindpower, phys_crit, crit_power, apr, mindpower2, phys_crit2, crit_power2, apr2)
+		+%d APR
+		Critical hits will reduce the physical resistance of the target by %d%% for 3 turns.]]):
+		format(mindpower, phys_crit, crit_power, apr, phys_pen, mindpower2, phys_crit2, crit_power2, apr2, phys_pen)
 	end,
 	getApr = function(self, t) return self:combatTalentScale(t, 5, 12) end,
 	getApr2 = function(self, t) return self:callTalent(t.id, "getApr")*1.65 end,
@@ -159,39 +165,50 @@ newTalent{
 	tactical = { ATTACKAREA = { weapon = 3 } },
 	range = 0,
 	radius = 1,
-	getDamage = function(self, t) return self:combatTalentScale(t, 1.21, 1.94, .35) end,
-	getKnockbackRange = function(self, t) return self:combatTalentScale(t, 2.5, 4.3) end,
+	getDamage = function(self, t) return self:combatTalentScale(t, 1.11, 1.63, .35) end,
+	getKnockbackRange = function(self, t) return self:combatTalentScale(t, 1.3, 4.3) end,
 	--TODO: Could add an unusual element where knockback is a function of number of hits
 	--Or that only creatures knocked back are hit.
 	--Sounds good to me and differentiates it well from Repulsion
 	getKnockbackRadiusMounted = function(self, t) return self:combatTalentScale(t, 2, 3.8) end,
 	requires_target = true,
 	target = function(self, t)
-		return {type="ball", range=self:getTalentRange(t), selffire=false, radius=self:getTalentRadius(t)}
+		return {type="ball", range=self:getTalentRange(t), radius=self:getTalentRadius(t)}
 	end,
 	on_pre_use = function(self, t, silent) if not hasOneHandedWeapon(self) then if not silent then game.logPlayer(self, "You require a one-handed weapon to use this talent.") end return false end return true end,
 	action = function(self, t)
 		local tg = self:getTalentTarget(t)
+		local tg_base = table.clone(tg); tg_base.range=1
 		if self:isMounted() then tg.radius =  t.getKnockbackRadiusMounted(self, t) end
 
+		--Do we hit at least once?
+		local hit
+		self:project(tg, self.x, self.y, 
+			function(px, py, tg, self)
+				local target = game.level.map(px, py, engine.Map.ACTOR)
+				if target and self:reactionToward(target)<0 then
+					if self:attackTarget(target, nil, t.getDamage(self, t), true) then
+						hit = true
+					end
+				end
+			end)
+		--If so, MEGA KNOCKBACK!
+		if not hit then return true end
+		local knockback_range = t.getKnockbackRange(self, t)
 		local recursive = function(target)
+			if self:reactionToward(target)>=0 then return end
 			if self:checkHit(self:combatMindpower(), target:combatMentalResist(), 0, 95) and target:canBe("knockback") then 
 				return true
 			else
 				game.logSeen(target, "%s resists the knockback!", target.name:capitalize())
 			end
 		end
-
 		self:project(tg, self.x, self.y, 
 			function(px, py, tg, self)
-				local target = game.level.map(px, py, Map.ACTOR)
-				local dist = core.fov.distance(px, py, self.x, self.y)
+				local target = game.level.map(px, py, engine.Map.ACTOR)
 				if target and self:reactionToward(target)<0 then
-					if dist == 1 then
-						local hit = self:attackTarget(target, nil, t.getDamage(self, t), true)
-					end
 					if self:checkHit(self:combatMindpower(), target:combatMentalResist(), 0, 95) and target:canBe("knockback") then
-						target:knockback(self.x, self.y, t.getKnockbackRange(self, t), recursive)
+						target:knockback(self.x, self.y, knockback_range, recursive)
 					else
 						game.logSeen(target, "%s resists the knockback!", target.name:capitalize())
 					end
@@ -241,7 +258,7 @@ newTalent{
 		local dur = t.getDur(self, t)
 		local red = t.getReduction(self, t)
 		local buff = t.getBuff(self, t)
-		return ([[Test the mettle of your foes, sifting out the worthy from the weak. Targets who fail a mind save in a cone of radius %d face will be either panicked or provoked for %d turns. Panicked foes suffer a 50%% chance to be flee from you each turn, while provoked foes increase their damage by 20%% while reducing all resistances by 25%% and defense and armour by %d.
+		return ([[Test the mettle of your foes, sifting out the worthy from the weak. Targets who fail a mind save in a cone of radius %d face will be either panicked or provoked for %d turns. Panicked foes suffer a 50%% chance to flee from you each turn, while provoked foes increase their damage by 20%% while reducing all resistances by 25%% and defense and armour by %d.
 
 			Levelling Scatter the Unworthy past the first level will hone your powers of tactical dominance, increasing mindpower by %d and mind save by %d.]]):
 		format(r, dur, red, buff, buff)
@@ -267,25 +284,25 @@ newTalent{
 	range = 1,
 	radius = 1,
 	requires_target = true,
-	on_pre_use = function(self, t, silent) if not hasOneHandedWeapon(self) then if not silent then game.logPlayer(self, "You require a one-handed weapon to use this talent.") end return false end return true end,
+	on_pre_use = function(self, t, silent) if not hasOneHandedWeapon(self) then if not silent then game.logPlayer(self, "You require a one-hande5d weapon to use this talent.") end return false end return true end,
 	action = function(self, t)
 		local tg = {type="hit", range=self:getTalentRange(t)}
 		local x, y, target = self:getTarget(tg)
 		if not x or not y or not target then return nil end
-		if core.fov.distance(self.x, self.y, x, y) > 1 then return nil end
+		-- if core.fov.distance(self.x, self.y, x, y) > 1 then return nil end
 		local hit = self:attackTarget(target, nil, t.getDam(self, t), true)
 		--blind foes on target kill
 		if hit and target.dead then
 			local tg = {type="ball", range=self:getTalentRange(t), selffire=false, friendlyfire=false, radius=self:getTalentRadius(t)}
 			if self:isMounted() then tg.radius = t.getBlindRadiusMounted(self, t) end
 			self:project(tg, self.x, self.y, function(px, py, tg, self)
-				local target = game.level.map(px, py, Map.ACTOR)
+				local target = game.level.map(px, py, engine.Map.ACTOR)
 				if target and target ~= self and target:canBe("blinded") then
 					target:setEffect(target.EFF_BLINDED, t.getBlindDuration(self, t), {})
 				end
 			end)
-		elseif target:canBe("cut") then 
-			target:setEffect(target.EFF_CUT, 5, {power=t.getBleedPower(self, t), src=self})
+		else 
+			target:setEffect(target.EFF_CRIPPLE, 5, {speed=t.getSpeed(self, t)})
 		end
 		return true
 	end,
@@ -296,11 +313,12 @@ newTalent{
 		local bleed = t.getBleedPower(self, t)
 		return ([[You gouge your enemy for %d%% damage. If it is killed, then the horrific maiming you inflict spreads terror in all nearby foes, blinding them as they must avert their eyes for %d turns. If you are mounted, then you may raise the severed remnants of your victim high above for all to see, blinding instead all enemies in radius %d.
 
-			If you fail to slay your foe, however, then it continues to bleed for %d damage over 5 turns as it struggles to recover from your wicked wound.]]):
+			If you fail to slay your foe, however, then instead you cripple it for 5 turns, reducing melee, spellcasting and mind speed by %d%% as it struggles to recover from your wicked wound.]]):
 			format(dam, dur, radius, bleed)
 	end,
 	getDam = function(self, t) return self:combatTalentWeaponDamage(t, 1.2, 1.7) end,
 	getBlindDuration = function(self, t) return self:combatTalentScale(t, 4, 6) end,
 	getBlindRadiusMounted = function(self, t) return self:combatTalentScale(t, 2, 4) end,
 	getBleedPower = function(self, t) return self:combatTalentPhysicalDamage(t, 25, 150) end,
+	getSpeed = function(self, t) return self:combatTalentLimit(t, 80, 15, 35) end
 }

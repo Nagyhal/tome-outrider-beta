@@ -965,7 +965,15 @@ newEffect{
 	parameters = { buff=20, dam=25, red=10 },
 	on_gain = function(self, eff) return "#Target#' is provoked!", "+Provoked" end,
 	on_lose = function(self, eff) return "#Target#' is no longer provoked!", "-Provoked" end,
+	on_timeout = function(self, eff)
+		self:setTarget(eff.src)
+	end,
 	activate = function(self, eff)
+		if not eff.src then
+			self:removeEffect(self.EFF_OUTRIDER_PROVOKED)
+			error("No source sent to temporary effect Provoked.")
+		end
+		self:setTarget(eff.src)
 		self:effectTemporaryValue(eff, "inc_damage", {all=eff.buff})
 		self:effectTemporaryValue(eff, "resists", {all=-eff.dam})
 		self:effectTemporaryValue(eff, "combat_armor", -eff.red)
