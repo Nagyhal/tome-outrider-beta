@@ -187,12 +187,29 @@ newTalent{
 		end
 		return preCheckHasMountPresent(self, t, silent)
 	end,
+	target = function(self, t)
+		local pet = self.outrider_pet
+		local ret = {type="hit", range=self:getTalentRange(t), friendlyfire=false, selffire=false}
+		if not self:isMounted() then
+			ret = table.merge(ret, {start_x=pet.x, start_y=pet.y, default_target=pet, immediate_keys=false})
+		end
+		return ret
+	end,
 	action = function(self, t)
-		local mount = self:hasMount()	
+		local mount = self:hasMount()
 		local mover = self:isMounted() and self or mount
-		local tg = {type="hit", range=self:getTalentRange(t)}
-		local x, y, target = self:getTarget(tg)
+		local tg = self:getTalentTarget(t)
+		local x, y, target
+		if mover==self then
+			x, y, target = self:getTarget(tg)
+		else
+			game.target.target.x = mount.x
+			game.target.target.y = mount.y
+			x, y, target = autoPetTarget(self, mount)
+			if not target then x, y, target = game:targetGetForPlayer(tg) end
+		end
 		if not x or not y or not target then return nil end
+		if core.fov.distance(mount.x, mount.y, x, y) > 1 then return nil end
 
 		local tx, ty, sx, sy = target.x, target.y, mount.x, mount.y
 		local hitted = mount:attackTarget(target, nil, 0, true)
@@ -205,7 +222,7 @@ newTalent{
 			if not target.dead then
 				target:move(sx, sy, true)
 			end
-			if mover==self then
+			if core.fov.distance(self.x, self.y, target.x, target.y)==1 then
 				local buff = t.getCrit(self, t)
 				self.combat_physcrit = self.combat_physcrit+buff
 				if self:hasArcheryWeapon() then
@@ -224,7 +241,7 @@ newTalent{
 	info = function(self, t)
 		local dam = t.getDam(self, t)*100
 		local crit = t.getCrit(self, t)
-		return ([[Your mount rears up and attacks your target for %d%% damage, while moving into its space; your mount and your foe will exchange places. If you are mounted you follow up with a crushing strike or a focused shot with a %d%% increased critical modifier. You may also call upon your mount to use this while dismounted; this does not cost stamina.]]):
+		return ([[Your mount rears up and attacks your target for %d%% damage, while moving into its space; your mount and your foe will exchange places. If you are mounted, or adjacent to the target when the movement completes, then you follow up with a crushing strike or a focused shot with a %d%% increased critical modifier. You may also call upon your mount to use this while dismounted; this does not cost stamina.]]):
 			format(dam, crit)
 	end,
 	getDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.8) end,

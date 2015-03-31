@@ -390,7 +390,7 @@ newTalent{
 	hide = "always",
 	points = 1,
 	base_talent = "T_CHALLENGE_THE_WILDS",
-	passives = function(self, t, p)
+	passives = function(self, t, p) 
 		--TODO: These need to be updated frequently
 		local owner = self.owner
 		if owner then
@@ -419,7 +419,9 @@ newTalent{
 		--TODO: There is actually an engine bug making keyboard targeting useless. Let's fix this!
 		local pet = self.outrider_pet
 		local ret = {type="hit", range=self:getTalentRange(t), friendlyfire=false, selffire=false}
-		if not self:isMounted() then ret.start_x, ret.start_y=pet.x, pet.y; ret.default_target=pet end
+		if not self:isMounted() then
+			ret = table.merge(ret, {start_x=pet.x, start_y=pet.y, default_target=pet, immediate_keys=false})
+		end
 		return ret
 	end,
 	on_pre_use = function(self, t, silent)
@@ -427,9 +429,18 @@ newTalent{
 	end, 
 	action = function(self, t)
 		local tg = self:getTalentTarget(t)
-		local x, y, target = self:getTarget(tg)
-		if not x or not y or not target then return nil end
+		local x, y, target
 		local mount = self:hasMount()
+		if self:isMounted() then
+			x, y, target = self:getTarget(tg)
+		else
+			game.target.target.x = mount.x
+			game.target.target.y = mount.y
+			x, y, target = autoPetTarget(self, mount)
+			if not target then x, y, target = game:targetGetForPlayer(tg) end
+		end
+		if not x or not y or not target then return nil end
+		if core.fov.distance(mount.x, mount.y, x, y) > 1 then return nil end
 		local hit = mount:attackTarget(target, nil, t.getDam(self, t), true)
 		if hit then
 			mount:logCombat(target, "#Source# devours the flesh of #Target#!")

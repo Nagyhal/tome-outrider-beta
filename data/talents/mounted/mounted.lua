@@ -463,6 +463,20 @@ function unshareTalentWithOwner(self, t)
 	end
 end
 
+function autoPetTarget(self, pet)
+	local foes = {}
+	for _, c in pairs(util.adjacentCoords(pet.x, pet.y)) do
+			local target = game.level.map(c[1], c[2], Map.ACTOR)
+			if target and self:reactionToward(target) < 0 then foes[#foes+1] = target end
+		end
+		if #foes == 1 then
+		game.target.target.entity = foes[1]
+		game.target.target.x = foes[1].x
+		game.target.target.y = foes[1].y
+		return game.target.target.x, game.target.target.y, game.target.target.entity
+	end
+end
+
 --- Finds free grids within a given area
 -- This will return a random grid. If the coordinates for the region's "epicentre" are given, then it will try to find a square as close to that as possible
 -- @param grids the grids in which to search, given as the usual nested tables
