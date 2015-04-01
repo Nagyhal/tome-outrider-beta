@@ -4,10 +4,14 @@ newTalent{
 	points = 5,
 	require = mnt_dex_req1,
 	mode = "passive",
-	getStatBoost = function(self, t) return self:getTalentLevelRaw(t) * 2 end,
+	getStatBoost = function(self, t) return self:getTalentLevelRaw(t) * 4 end,
 	getDefense = function(self, t) return self:getTalentLevelRaw(t) *5 end,
-	getSaves = function(self, t) return self:getTalentLevelRaw(t) * 3 end,
-	getPerception = function(self, t) return self:combatTalentScale(t, 5, 20) end,
+	getSaves = function(self, t) return self:getTalentLevelRaw(t) * 7 end,
+	getPerception = function(self, t)
+		local val1 = self:combatTalentIntervalDamage(t, "dex", 5, 50)
+		local val2 = self:combatTalentIntervalDamage(t, "cun", 5, 50)
+		return (val1+val2)/2
+	end,
 	passives = function(self, t, p)
 		self:talentTemporaryValue(p, "inc_stats",  {[self.STAT_DEX] = t.getStatBoost(self, t)})
 		self:talentTemporaryValue(p, "inc_stats",  {[self.STAT_CUN] = t.getStatBoost(self, t)})
@@ -33,7 +37,7 @@ newTalent{
 		local perception = t.getPerception(self, t)
 		return ([[The wolf gains a %d bonus to Dexterity and Cunning, a %d bonus to defense and a %d bonus to physical and spell saves.
 
-			A wolf levelled in Sly Senses serves as an aid to perception for its owner, granting a bonus of %d to checks to see through stealth and invisibility.]]):
+			A wolf levelled in Sly Senses serves as an aid to perception for its owner, granting a bonus of %d to checks to see through stealth and invisibility, scaling with talent level, Dexterity and Cunning.]]):
 			format(stat, def, saves, perception)
 	end,
 }
@@ -60,151 +64,12 @@ newTalent{
 	end,
 }
 
-newTalent{
-	name = "Go for the Throat",
-	type = {"wolf/tenacity", 2},
-	require = mnt_dex_req2,
-	points = 5,
-	cooldown = 8,
-	stamina = 12,
-	requires_target = true,
-	tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} },
-	getDamage = function (self, t) return self:combatTalentWeaponDamage(t, 0.9, 1.4) end,
-	range = function (self, t) return 2 + math.floor(self:getTalentLevel(t) / 3) end,
-	shared_talent = "T_GO_FOR_THE_THROAT_COMMAND",
-	on_learn = function(self, t)
-		shareTalentWithOwner(self, t)
-	end,
-	on_unlearn = function(self, t, p)
-		if self:getTalentLevelRaw(t) == 0 then
-			unshareTalentWithOwner(self, t)
-		end
-	end,
-	on_pre_use = function(self, t, silent)
-		local tg = {type="ball", radius=self:getTalentRange(t), 0}
-		local tgs = {}
-		local tg_vulnerable = false
-		self:project(tg, self.x, self.y,
-			function(px, py, tg, self)
-				local target = game.level.map(px, py, Map.ACTOR)
-				if target and self:reactionToward(target)<0 then 
-					tgs[#tgs+1] = target
-				end
-			end)
-		for _, target in pairs(tgs) do
-			for eff_id, _ in pairs(target.tmp) do
-				local e = target.tempeffect_def[eff_id]
-				if e.type == "stun" or "pin" then
-					tg_vulnerable = true
-				end
-			end
-		end
-		if not tg_vulnerable then 
-			if not silent then 
-				game.logPlayer(self, "There must be a stunned or pinned enemy within talent range!")
-			end
-			return false 
-		end
-		return true
-	end,
-	action = function(self, t)
-		local tg = {type="hit", range=self:getTalentRange(t)}
-		if self:attr("never_move") then tg.range=1 end
-		local x, y, target = self:getTarget(tg)
-		if not x or not y or not target then return nil end
-		if core.fov.distance(self.x, self.y, x, y) > self:getTalentRange(t) then return nil end
-		--TODO: Maybe use something more mount-centric than self.rider:isMounted()
-		local ret = t.doAttack(self, t, self, target)
-		local owner = self.owner
-		if ret and owner then owner:startTalentCooldown(owner.T_GO_FOR_THE_THROAT_COMMAND) end
-		return ret
-	end,
-	--Modular action function so can be invoked by either mount or rider
-	doAttack = function(self, t, mover, target)
-		local x, y = target.x, target.y
-		local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", mover) end
-		local l = mover:lineFOV(x, y, block_actor)
-		if not is_corner_blocked and not game.level.map:checkAllEntities(lx, ly, "block_move", mover) then
-			local tx, ty = self.x, self.y
-			lx, ly, is_corner_blocked = l:step()
-			while lx and ly do
-				if is_corner_blocked or game.level.map:checkAllEntities(lx, ly, "block_move", mover) then break end
-				tx, ty = lx, ly
-				lx, ly, is_corner_blocked = l:step()
-			end
-
-			local ox, oy = self.x, self.y
-			mover:move(tx, ty)
-			if config.settings.tome.smooth_move > 0 then
-				self:resetMoveAnim()
-				self:setMoveAnim(ox, oy, 8, 5)
-			end
-		end
-		--rush end
-		local bonus_multipler = nil
-		if core.fov.distance(self.x, self.y, x, y) > 1 then return true end
-		local speed, hit = self:attackTarget(target, nil, t.getDamage(self, t), true)
-		if hit then 
-			if target:canBe("cut") then target:setEffect(target.EFF_CUT, 5, {power=t.getDamage(self, t)*12, src=self}) end
-		end
-		return true
-	end,
-	info = function(self, t)
-		return ([[The wolf dashes forward to make a ferocious crippling blow against a stunned or pinned enemy for %d%% damage; if this hits, it also causes bleeding for 60%% of this damage over 5 turns.
-
-			This talent may also be controlled by the wolf's owner.]]):
-		format(100 * t.getDamage(self, t))
-	end
-}
-
-newTalent{
-	name = "Command: Go for the Throat",
-	short_name = "GO_FOR_THE_THROAT_COMMAND", image = "talents/go_for_the_throat.png",
-	type = {"mounted/mounted-base", 1},
-	points = 1,
-	cooldown = 8,
-	requires_target = true,
-	base_talent = "T_GO_FOR_THE_THROAT",
-	tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} },
-	-- tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} }, --TODO: Decide on how summon controls are handled tactically
-	getDamage = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_GO_FOR_THE_THROAT, "getDamage") end,
-	range = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_GO_FOR_THE_THROAT, "range") end,
-	targetTry = function(self, t)
-		return {type="ball", radius=self:getTalentRange(t), 0}
-	end,
-	on_pre_use = function(self, t)
-		local mount = self.outrider_pet
-		return mount and mount:callTalent(mount.T_GO_FOR_THE_THROAT, "on_pre_use") or false
-	end,
-	action = function(self, t)
-		local mount = self.outrider_pet
-		local t2 = mount:getTalentFromId(mount.T_GO_FOR_THE_THROAT)
-
-		local tg = {type="hit", start_x=mount.x, start_y=mount.y, range=mount:getTalentRange(t2)}
-		if self:attr("never_move") then tg.range=1 end
-		local x, y, target = self:getTarget(tg)
-		if not x or not y or not target then return nil end
-		if core.fov.distance(mount.x, mount.y, x, y) > self:getTalentRange(t2) then return nil end
-
-		local mover
-		if self:isMounted() then mover = self else mover = mount end
-		local ret = mount:callTalent(mount.T_GO_FOR_THE_THROAT, "doAttack", mover, target)
-		if ret then mount:startTalentCooldown(mount.T_GO_FOR_THE_THROAT) end
-		return ret
-	end,
-	info = function(self, t)
-		if not self.outrider_pet then return [[Without a wolf, you cannot use Command: Go For The Throat.]]
-		else return ([[The wolf dashes forward to make a ferocious crippling blow against a stunned, pinned or disabled enemy for %d%% damage; if this hits, it also causes bleeding for 60%% of this damage over 5 turns.]]):
-			format(100 * t.getDamage(self, t))
-		end
-	end
-}
 
 newTalent{
 	name = "Uncanny Tenacity",
-	type = {"wolf/tenacity", 3},
+	type = {"wolf/tenacity", 2},
 	points = 5,
-	require = mnt_dex_req3,
+	require = mnt_dex_req2,
 	mode = "passive",
 	cooldown = function(self, t) return self:combatTalentLimit(t, 8, 20, 10) end,
 	callbackOnActBase = function(self, t)
@@ -232,6 +97,130 @@ newTalent{
 	getImmediateRes = function (self, t) return math.round(t.getRes(self, t)*2.5) end,
 	getDur = function (self, t) return math.round(self:combatTalentScale(t, 3, 6)) end,
 	getBuff = function (self, t) return math.round(self:combatTalentScale(t, 5, 15)) end,
+}
+
+newTalent{
+	name = "Go for the Throat",
+	type = {"wolf/tenacity", 3},
+	require = mnt_dex_req3,
+	points = 5,
+	cooldown = 8,
+	stamina = 12,
+	requires_target = true,
+	tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3 } },
+	-- getDamage = function (self, t) return self:combatTalentWeaponDamage(t, 0.7, 1.2) end,
+	getDamage = function (self, t) return self:combatTalentScale(t, 0.7, 1.2) end,
+	getDamInc = function (self, t) return self:combatTalentScale(t, .15, .25, .85) end,
+	range = function (self, t) return self:combatTalentScale(t, 2, 4) end,
+	shared_talent = "T_GO_FOR_THE_THROAT_COMMAND",
+	on_learn = function(self, t)
+		shareTalentWithOwner(self, t)
+	end,
+	on_unlearn = function(self, t, p)
+		if self:getTalentLevelRaw(t) == 0 then
+			unshareTalentWithOwner(self, t)
+		end
+	end,
+	on_pre_use = function(self, t)
+		-- if self:hasEffect(self.EFF_RIDDEN) then return false end
+		if self.owner and not self.player then return false end
+	end,
+	action = function(self, t)
+		local tg = {type="hit", range=self:getTalentRange(t)}
+		if self:attr("never_move") then tg.range=1 end
+		local x, y, target = self:getTarget(tg)
+		if not x or not y or not target then return nil end
+		if core.fov.distance(self.x, self.y, x, y) > self:getTalentRange(t) then return nil end
+		--TODO: Maybe use something more mount-centric than self.rider:isMounted()
+		local ret = t.doAttack(self, t, self, target)
+		local owner = self.owner
+		if ret and owner then owner:startTalentCooldown(owner.T_GO_FOR_THE_THROAT_COMMAND) end
+		return ret
+	end,
+	--Modular action function so can be invoked by either mount or rider
+	doAttack = function(self, t, mover, target)
+		local x, y = target.x, target.y
+		-- local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", mover) end
+		-- local l = mover:lineFOV(x, y, block_actor)
+		local l = mover:lineFOV(x, y)
+		local tx, ty = self.x, self.y
+		local lx, ly, is_corner_blocked
+		if not is_corner_blocked and not game.level.map:checkAllEntities(lx, ly, "block_move", mover) then
+			lx, ly, is_corner_blocked = l:step()
+			while lx and ly do
+				if is_corner_blocked or game.level.map:checkAllEntities(lx, ly, "block_move", mover) then break end
+				tx, ty = lx, ly
+				lx, ly, is_corner_blocked = l:step()
+			end
+
+			local ox, oy = self.x, self.y
+			mover:move(tx, ty)
+			if config.settings.tome.smooth_move > 0 then
+				self:resetMoveAnim()
+				self:setMoveAnim(ox, oy, 8, 5)
+			end
+		end
+		--rush end
+		local bonus_multipler = nil
+		if core.fov.distance(self.x, self.y, x, y) > 1 then return end
+		local dam, dam_inc = t.getDamage(self, t), t.getDamInc(self, t)
+		dam = dam + dam_inc * #target:effectsFilter({ subtype = { pin=true, stun=true }, status = "detrimental" })
+		for i = 1, 3 do
+			local speed, hit = self:attackTarget(target, nil, dam, strue)
+		end
+		return true
+	end,
+	info = function(self, t)
+		local dam_pct = 100 * t.getDamage(self, t)
+		local dam_inc = 100 * t.getDamInc(self, t)
+		return ([[The wolf dashes forward, ravaging a single enemy with three attacks that hit for %d%% damage. For each stun or pin affect inflicting it, the damage is increased by a further %d%%
+
+			This talent is a command and must be controlled by the wolf's owner.]]):
+		format(dam_pct, dam_inc)
+	end
+}
+
+newTalent{
+	name = "Command: Go for the Throat",
+	short_name = "GO_FOR_THE_THROAT_COMMAND", image = "talents/go_for_the_throat.png",
+	type = {"mounted/mounted-base", 1},
+	points = 1,
+	cooldown = 8,
+	requires_target = true,
+	base_talent = "T_GO_FOR_THE_THROAT",
+	tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} },
+	-- tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} }, --TODO: Decide on how summon controls are handled tactically
+	getDamage = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_GO_FOR_THE_THROAT, "getDamage") end,
+	range = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_GO_FOR_THE_THROAT, "range") end,
+	targetTry = function(self, t)
+		return {type="ball", radius=self:getTalentRange(t), 0}
+	end,
+	on_pre_use = function(self, t)
+		local mount = self.outrider_pet
+		return mount and true or false
+	end,
+	action = function(self, t)
+		local mount = self.outrider_pet
+		local t2 = mount:getTalentFromId(mount.T_GO_FOR_THE_THROAT)
+
+		local tg = {type="hit", start_x=mount.x, start_y=mount.y, range=mount:getTalentRange(t2)}
+		if self:attr("never_move") then tg.range=1 end
+		local x, y, target = self:getTarget(tg)
+		if not x or not y or not target then return nil end
+		if core.fov.distance(mount.x, mount.y, x, y) > mount:getTalentRange(t2) then return nil end
+
+		local mover
+		if self:isMounted() then mover = self else mover = mount end
+		local ret = mount:callTalent(mount.T_GO_FOR_THE_THROAT, "doAttack", mover, target)
+		if ret then mount:startTalentCooldown(mount.T_GO_FOR_THE_THROAT) end
+		return ret
+	end,
+	info = function(self, t)
+		if not self.outrider_pet then return [[Without a wolf, you cannot use Command: Go For The Throat.]]
+		else return ([[The wolf dashes forward to make a ferocious crippling blow against a stunned, pinned or disabled enemy for %d%% damage; if this hits, it also causes bleeding for 60%% of this damage over 5 turns.]]):
+			format(100 * t.getDamage(self, t))
+		end
+	end
 }
 
 newTalent{
@@ -372,9 +361,9 @@ newTalent{
 	points = 5,
 	require = mnt_cun_req1,
 	mode = "passive",
-	getStatBoost = function(self, t) return self:getTalentLevelRaw(t) * 2 end,
-	getRegen = function(self, t) return math.round(self:combatTalentScale(t, .2, 1.5, .35), .5)  end,
-	getSaves = function(self, t) return self:getTalentLevelRaw(t) * 3 end,
+	getStatBoost = function(self, t) return self:getTalentLevelRaw(t) * 4 end,
+	getRegen = function(self, t) return self:getTalentLevelRaw(t)*.2  end,
+	getSaves = function(self, t) return self:getTalentLevelRaw(t) * 7 end,
 	passives = function(self, t, p)
 		self:talentTemporaryValue(p, "inc_stats",  {[self.STAT_WIL] = t.getStatBoost(self, t)})
 		self:talentTemporaryValue(p, "inc_stats",  {[self.STAT_CUN] = t.getStatBoost(self, t)})
@@ -501,11 +490,7 @@ newTalent{
 	mode = "passive",
 	getPct = function(self, t) return 15 + (self:getTalentLevel(t) + self:getTalentLevelRaw(t))/2 * 10 end,
 	getSecondaryPct = function(self, t)
-		--shift property of combatTalentScale doesn't really work
-		local shifted_tl = self:getTalentLevel(t)-1
-		--0 at TL1 ; 5 at TL2 ; 12 at TL5
-		local val = shifted_tl>=1 and self:combatScale(shifted_tl, 5, 1,  12, 4, .5) or 0
-		return math.round(val, .5)
+		return math.round(self:combatTalentScale(t, 5, 15), .5)
 	end,
 	--Might want to do this as often as possible
 	doCheck = function(self, t)
