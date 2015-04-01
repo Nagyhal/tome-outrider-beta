@@ -43,13 +43,18 @@ newTalent{
 				_, _, tg = self:getTarget(target)
 			end
 		end
-		if not tg then 
-			game.logPlayer(self, "Your mount cannot be mounted right now!") return nil
+		if not tg then
+			return
+			-- game.logPlayer(self, "Your mount cannot be mounted right now!") return nil
 		elseif not self:mountTarget(tg) then
 			if self:canMount(tg) then 
 				game.logPlayer(self, "Your mount cannot be mounted right now!") return nil
 			else
-				game.logPlayer(self, "That cannot be mounted!") return nil 
+				if tg:hasEffect(tg.EFF_UNBRIDLED_FEROCITY) then
+					game.logPlayer(self, "Your mount's ferocity prevents you from riding it!")
+				else	
+					game.logPlayer(self, "That cannot be mounted!") return nil 
+				end
 			end
 		else return true
 		end

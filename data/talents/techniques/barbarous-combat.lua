@@ -310,11 +310,11 @@ newTalent{
 		local dam = t.getDam(self, t) * 100
 		local dur = t.getBlindDuration(self, t)
 		local radius = t.getBlindRadiusMounted(self, t)
-		local bleed = t.getBleedPower(self, t)
+		local speed = t.getSpeed(self, t)
 		return ([[You gouge your enemy for %d%% damage. If it is killed, then the horrific maiming you inflict spreads terror in all nearby foes, blinding them as they must avert their eyes for %d turns. If you are mounted, then you may raise the severed remnants of your victim high above for all to see, blinding instead all enemies in radius %d.
 
 			If you fail to slay your foe, however, then instead you cripple it for 5 turns, reducing melee, spellcasting and mind speed by %d%% as it struggles to recover from your wicked wound.]]):
-			format(dam, dur, radius, bleed)
+			format(dam, dur, radius, speed)
 	end,
 	getDam = function(self, t) return self:combatTalentWeaponDamage(t, 1.2, 1.7) end,
 	getBlindDuration = function(self, t) return self:combatTalentScale(t, 4, 6) end,

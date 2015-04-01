@@ -117,6 +117,18 @@ newTalent{
 		end
 	end,
 	shared_talent = "T_FERAL_AFFINITY_MOUNT",
+	on_learn = function (self, t)
+		local pet = self.outrider_pet
+		if not pet then return end
+		shareTalentWithPet(self, pet, t)
+	end,
+	on_unlearn = function(self, t)
+		local pet = self.outrider_pet
+		if not pet then return end
+		if self:getTalentLevelRaw(t) == 0 then
+			unshareTalentWithPet(self, pet, t)
+		end
+	end,
 	info = function(self, t)
 		local res = t.getResistPct(self, t)
 		local save = t.getSavePct(self, t)

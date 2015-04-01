@@ -189,16 +189,14 @@ end)
 class:bindHook("Actor:takeHit", function(self, data)
 	local owner = self.owner
 	if owner and owner.loyalty then
-		local coeff = data.mount_data and data.mount_data.loyalty_loss_coeff or 1
-		if coeff then
-			local pct = data.value / self.max_life * 100
-			local loyalty_loss = pct / 3 * coeff
-			if self:hasEffect(self.EFF_UNBRIDLED_FEROCITY) then
-				--Increase rather than decrease
-				owner:incLoyalty(loyalty_loss)
-			else
-				owner:incLoyalty(-loyalty_loss)
-			end
+		local coeff = self.loyalty_loss_coeff or 1
+		local pct = data.value / self.max_life * 100
+		local loyalty_loss = pct / 3
+		if self:hasEffect(self.EFF_UNBRIDLED_FEROCITY) then
+			--Increase rather than decrease
+			owner:incLoyalty(loyalty_loss)
+		else
+			owner:incLoyalty(-loyalty_loss * coeff)
 		end
 	end
 	local eff = self:hasEffect(self.EFF_RIDDEN) or self:hasEffect(self.EFF_MOUNT	)
