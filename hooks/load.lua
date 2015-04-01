@@ -91,6 +91,13 @@ class:bindHook("DamageProjector:base", function(self, data)
 	return ret
 end)
 
+class:bindHook("Actor:actBase:Effects", function(self, data)
+	if self.life>=self.max_life*.95 and self.outrider_bloodied then
+		--The 95% threshold is a kind of catch-all for any weird effects that prevent life reaching maximum
+		self.outrider_bloodied = nil
+	end
+end)
+
 class:bindHook("DamageProjector:final", function(self, data)
 	--Does the source actually exist? (a useful check!)
 	if not self.x then return nil end

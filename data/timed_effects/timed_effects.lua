@@ -1000,3 +1000,41 @@ newEffect{
 		self:effectTemporaryValue(eff, "combat_mentalresist", eff.def)
 	end,
 }
+
+
+newEffect{
+	name = "TERROR_STUNNED", image = "effects/madness_stunned.png",
+	desc = "Stunned by terror",
+	long_desc = function(self, eff) return ("The target has been stunned by the Outrider's brutal combat methods, reducing damage by 70%%, putting random talents on cooldown and reducing movement speed by 50%%. While stunned talents do not cooldown."):format() end,
+	type = "mental",
+	subtype = { morale=true, stun=true },
+	status = "detrimental",
+	parameters = {},
+	on_gain = function(self, err) return "#F53CBE##Target# is stunned from the terror!", "+Stunned" end,
+	on_lose = function(self, err) return "#Target# overcomes the terror", "-Stunned" end,
+	activate = function(self, eff)
+		eff.particle = self:addParticles(engine.Particles.new("gloom_slow", 1))
+
+		eff.tmpid = self:addTemporaryValue("stunned", 1)
+		eff.tcdid = self:addTemporaryValue("no_talents_cooldown", 1)
+		eff.speedid = self:addTemporaryValue("movement_speed", -0.5)
+
+		local tids = {}
+		for tid, lev in pairs(self.talents) do
+			local t = self:getTalentFromId(tid)
+			if t and not self.talents_cd[tid] and t.mode == "activated" and not t.innate and util.getval(t.no_energy, self, t) ~= true then tids[#tids+1] = t end
+		end
+		for i = 1, 4 do
+			local t = rng.tableRemove(tids)
+			if not t then break end
+			self.talents_cd[t.id] = 1 -- Just set cooldown to 1 since cooldown does not decrease while stunned
+		end
+	end,
+	deactivate = function(self, eff)
+		self:removeParticles(eff.particle)
+
+		self:removeTemporaryValue("stunned", eff.tmpid)
+		self:removeTemporaryValue("no_talents_cooldown", eff.tcdid)
+		self:removeTemporaryValue("movement_speed", eff.speedid)
+	end,
+}

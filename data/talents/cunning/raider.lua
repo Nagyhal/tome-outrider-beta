@@ -1,21 +1,73 @@
+function hasNonTwoHander(self)
+	if self:attr("disarmed") then
+		return nil, "disarmed"
+	end
+
+	if not self:getInven("MAINHAND") then return end
+	local weapon = self:getInven("MAINHAND")[1]
+	if not weapon or weapon.twohanded or weapon.archery then
+		return nil
+	end
+	return weapon
+end
+
+function hasFreeOffhand(self)
+	local mainhand = self:getInven("MAINHAND")[1]
+	if mainhand and (mainhand.twohanded or mainhand.archery) then return nil end
+	if not (self:getInven("OFFHAND") and self:getInven("OFFHAND")[1]) then return true else return nil end
+end
+
 newTalent{
 	name = "Orchestrator of Dismay",
 	type = {"cunning/raider", 1},
 	mode = "passive",
 	points = 5,
 	require = mnt_dexcun_req1,
-	info = function(self, t)
-		local fatigue_pct = t.getFatiguePct(self, t)
-		local counter_pct = t.getCounterPct(self, t)
-		return ([[Your advanced training in the pinciples of psychological warfare allows you to inflict terror and devastation with the most humdrum of tools.
-			You can treat one-handed weapons as two-handed for the purposes of talent prerequites, allowing you to use them while mounted in your saddle with ease; however, doing so increases your effective fatigue by %d%% for each such ability.
-			Also, scattering your enemies and sundering their armour now exposes opportunity that would go unnoticed by less honed combatants. Gain a %d%% chance to apply the counterattack debuff for each enemy who attacks you while they are under any such effect (sunder, confusion, or fear).]])
-		:format(fatigue_pct, counter_pct)
+	radius = function(self, t) return self:combatTalentScale(t, 3, 4.5) end,
+	target = function(self, t) return {type="ball", radius=self:getTalentRadius(t)} end,
+	shared_talent = "T_ORCHESTRATOR_OF_DISMAY_SHARED",
+	on_learn = function (self, t)
+		local pet = self.outrider_pet
+		if not pet then return end
+		shareTalentWithPet(self, pet, t)
+	end,
+	on_unlearn = function(self, t)
+		local pet = self.outrider_pet
+		if not pet then return end
+		if self:getTalentLevelRaw(t) == 0 then
+			unshareTalentWithPet(self, pet, t)
+		end
+	end,
+	doTrigger = function(self, t, src)
+		local tg = self:getTalentTarget(t)
+		local acts = {}
+		self:project(tg, src.x, src.y, function(px, py)
+			local a = game.level.map(px, py, engine.Map.ACTOR)
+			if a and self:reactionToward(a) < 0 and a~=src then
+				if a:hasEffect(a.EFF_TERROR_STUNNED) then return end
+				acts[#acts+1] = a
+			end
+		end)
+		local target = rng.table(acts)
+		if target and target:canBe("stun") then 
+			target:setEffect(target.EFF_TERROR_STUNNED, t.getFearDur(self, t), {apply_power=self:combatMindpower()})
+		end
+	end,
+	callbackOnDealDamage = function(self, t, val, target, dead, death_note)
+		if not hasFreeOffhand(self) or target.outrider_bloodied then return end
+		if target.life < target.max_life*.5 then
+			t.doTrigger(self, t, target)
+			target.outrider_bloodied = true
+		end
+	end,
+	callbackOnKill = function(self, t, victim, death_note)
+		if not hasNonTwoHander(self) then return end
+		t.doTrigger(self, t, victim)
 	end,
 	doCounterCheck = function(self, t, src)
 		if not rng.percent(t.getCounterPct(self, t)) then return end
 		local effs = src:effectsFilter{ subtype = { confusion=true, fear=true, sunder=true }, status = "detrimental" }
-		if #effs>0 then src:setEffect(src.EFF_COUNTERSTRIKE, 2, {src=self, power=0}) end
+		if #effs>0 or src:hasEffect(src.EFF_TERROR_STUNNED) then src:setEffect(src.EFF_COUNTERSTRIKE, 2, {src=self, power=0}) end
 	end,
 	callbackOnMeleeHit = function(self, t, src, dam)
 		t.doCounterCheck(self, t, src)
@@ -23,9 +75,43 @@ newTalent{
 	callbackOnMeleeMiss = function(self, t, src, dam)
 		t.doCounterCheck(self, t, src)
 	end,
-	getFatiguePct = function(self, t) return self:combatTalentScale(t, 70, 35) end,
-	getCounterPct = function(self, t) return self:combatTalentScale(t, 15, 50) end
+	info = function(self, t)
+		local fear_dur = t.getFearDur(self, t)
+		local fear_radius = self:getTalentRadius(t)
+		local counter_pct = t.getCounterPct(self, t)
+		return ([[Your advanced training in the pinciples of psychological warfare allows you to inflict terror and devastation with the most humdrum of tools.
+
+			Killing any foe while wielding a one-handed or an archery weapon will stun one random opponent in a radius of %d from the victim (that is not already afflicted). This stun is a mental effect that will last %d turns, and also counts as a fear effect for the purpose of this talent. If you have nothing in your off-hand, this will also trigger a second time when the enemy is reduced to 50%% health (or the first time you strike it below 50%% health).
+			
+			Also, scattering your enemies and sundering their armour now exposes opportunity that would go unnoticed by less honed combatants. Gain a %d%% chance to apply the counterattack debuff for each enemy who attacks you while they are under any such effect (sunder, confusion, or fear).]])
+		:format(fear_radius, fear_dur, counter_pct)	
+	end,
+	getCounterPct = function(self, t) return self:combatTalentLimit(t, 65, 15, 46) end,
+	getFearDur = function(self, t) return self:combatTalentScale(t, 2.8, 4.2) end
 }
+
+
+newTalent{
+	name = "Orchestrator of Dismay (Shared)",
+	type = {"mounted/mounted-base", 1},
+	hide = "always",
+	mode = "passive",
+	points = 1,
+	base_talent = "T_ORCHESTRATOR_OF_DISMAY",
+	short_name = "ORCHESTRATOR_OF_DISMAY_SHARED",
+	callbackOnDealDamage = function(self, t, val, target, dead, death_note)
+		local owner = self.owner; if not owner then return end
+		owner:callTalent(t.base_talent, "callbackOnDealDamage", val, target, dead, death_note)
+	end,
+	callbackOnKill = function(self, t, victim, death_note)
+		local owner = self.owner; if not owner then return end
+		owner:callTalent(t.base_talent, "callbackOnKill", victim, death_note)
+	end,
+	info = function(self, t)
+		return [[Share the effects of Orchestrator of Dismay with your mount.]]
+	end,
+}
+
 
 newTalent{
 	name = "Strike at the Heart",
