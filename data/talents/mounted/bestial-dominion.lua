@@ -24,7 +24,7 @@ local mounts_list = {
 		name = "wolf",
 		display = "C", color=colors.LIGHT_DARK, image = "npc/summoner_wardog.png",
 		combat = { dam=resolvers.levelup(10, 1, 1.2), atk=10, apr=4, dammod={str=.6}}, --{ dam=resolvers.levelup(resolvers.mbonus(45, 20), 1, 1), atk=15, apr=10, dammod={str=0.8} },
-		body = { INVEN = 10},
+		body = { NECK = 1},
 		life_rating = 12,
 		rank = 1,
 		size_category = 2,
@@ -40,6 +40,7 @@ local mounts_list = {
 		level_range = {1, nil}, exp_worth = 0,
 		combat_armor = 1, combat_def = 3,
 		talents_types = {
+			["race/beast-training"] = true,
 			["wolf/tenacity"] = true,
 			["wolf/pack-hunter"] = true,
 		},
@@ -214,6 +215,7 @@ function mountSetupSummon(self, m, x, y, no_control)
 	m.forceLevelup = function(self) if self.summoner then return mod.class.Actor.forceLevelup(self, self.summoner.level) end end
 	m.no_points_on_levelup = function(self)
 		self.unused_stats = self.unused_stats + (self.level % 2==0  and 3 or 2)
+		self.unused_generics = self.unused_generics + (self.level % 5==0 and 1 or 0)
 		if self.level >= 2 and (self.level % 2 == 0) then self.unused_talents = self.unused_talents + 1 end
 	end
 	mod.class.Actor.forceLevelup(m, self.level)	
@@ -296,7 +298,7 @@ newTalent{
 	end,
 	callbackOnStatChange = function(self, t, stat, v)
 		local pet = self.outrider_pet
-		if pet and stat==self.STAT_WIL or stat==self.STAT_CUN then
+		if pet and (stat==self.STAT_WIL or stat==self.STAT_CUN) then
 			pet:updateTalentPassives(t.shared_talent)
 		end
 	end,

@@ -77,15 +77,15 @@ local change_name = function(npc, player)
 end
 
 local ans = {
-	{"I want to change your equipment.", action=change_inven},
+	{"I want to change your amulet.", action=change_inven},
 	{"I want to change your inscriptions.", action=change_inscriptions},
 	{"I want to change your talents.", action=change_talents},
 	{"I want to change your tactics.", action=change_tactics},
-	{"I want to take direct control.", action=change_control},
 	{"I want to change your name.", action=change_name},
 	{"Nothing, let's go."},
 }
 
+if player:hasEffect(player.EFF_BOND_BEYOND_BLOOD) then table.insert(ans, 4,d {"I want to take direct control.", action=change_control}) end
 if player:knowTalent(player.T_PRIMAL_BOND) then table.insert(ans, 4, {"I want to train your bestial traits", action=change_traits}) end
 
 newChat{ id="welcome",
