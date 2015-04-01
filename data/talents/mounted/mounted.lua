@@ -48,6 +48,7 @@ local sort_traits = function(dialog, node)
 	end)
 end
 newTalentType{ allow_random=true, type="race/traits", name = "bestial traits", description = "Even the most mundane of beasts, when handled with wisdom, can reveal hidden traits that make it appear prodigious when compared to its natural kin.", sort=sort_traits}
+newTalentType{ allow_random=true, type="race/beast-training", name = "beast training", generic=true, description = "Develop the natural talents of your beast."}
 
 
 --Mount talents
@@ -531,6 +532,7 @@ load("/data-outrider/talents/mounted/teamwork.lua")
 -- load("/data-outrider/talents/mounted/shock-tactics.lua")
 load("/data-outrider/talents/mounted/beast-heart.lua")
 load("/data-outrider/talents/race/traits.lua")
+load("/data-outrider/talents/race/beast-training.lua")
 
 --technique and cunning
 load("/data-outrider/talents/techniques/barbarous-combat.lua")

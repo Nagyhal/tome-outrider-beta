@@ -32,6 +32,8 @@ newTalent{
 		if not self:hasMount() then game.logPlayer(self, "You have no mount!") return nil end
 		local m_list = self:getMountList()
 		local tg = nil
+		--TODO: I don't even know what this is about. Let's kill it
+		--At least the message log output is half-sane now.
 		if m_list then
 			if #m_list == 1 then
 				local m = m_list[1]
