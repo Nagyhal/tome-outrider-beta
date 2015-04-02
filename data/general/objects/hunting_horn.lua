@@ -29,13 +29,7 @@ newEntity{base = "BASE_TOOL_MISC",
 	material_level = 1,
 	rarity = false,
 	encumberance = 0,
-	special_desc = function(self) return [[During your Wild Challenge:
-		+5 attack
-		+5 physical power
-
-While in control of a wild beast:
-		beast gains +5 attack
-		beast gains +5 physical power]] end,
+	special_desc = function(self) return "During your Wild Challenge:\n  +5 attack\n  +5 physical power\n\nWhile in control of a wild beast:\n  beast gains +5 attack\n  beast gains +5 physical power" end,
 	wielder = {
 		challenge_the_wilds_boost = 5
 	},

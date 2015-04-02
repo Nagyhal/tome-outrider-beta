@@ -294,10 +294,7 @@ class:bindHook("UISet:Minimalist:Resources", function(self, data)
 		dt[1]:toScreenFull(2+x+144, 2+y+10 + (shat[7]-dt[7])/2, dt[6], dt[7], dt[2], dt[3], 0, 0, 0, 0.7 * a)
 		dt[1]:toScreenFull(x+144, y+10 + (shat[7]-dt[7])/2, dt[6], dt[7], dt[2], dt[3], 1, 1, 1, a)
 
-		TOOLTIP_LOYALTY =  [[#GOLD#Magic#LAST#
-		Loyalty represents the devotion of an ally to you - devotion that can be lost should you disabuse it.
-		In the case of a mount, at less than 50% Loyalty there is a chance it will struggle to obey orders when under threat. At less than 25% Loyalty, you will have to treat it with great care to keep it under your control.
-		]]
+		TOOLTIP_LOYALTY =  "#GOLD#Loyalty#LAST#\nLoyalty represents the devotion of an ally to you - devotion that can be lost should you disabuse it.\nIn the case of a mount, at less than 50% Loyalty there is a chance it will struggle to obey orders when under threat. At less than 25% Loyalty, you will have to treat it with great care to keep it under your control."
 		local front = fshat_loyalty_dark
 		if src.loyalty >= src.max_loyalty then front = fshat_loyalty end
 		front[1]:toScreenFull(x, y, front[6], front[7], front[2], front[3], 1, 1, 1, a)
@@ -307,4 +304,5 @@ class:bindHook("UISet:Minimalist:Resources", function(self, data)
 		game.mouse:unregisterZone("res:loyalty") 
 	end
 	data.x, data.y = x, y
+	return data
 end)
