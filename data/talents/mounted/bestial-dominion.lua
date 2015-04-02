@@ -260,6 +260,7 @@ newTalent{
 	end,
 	callbackOnSummonDeath = function(self, t, summon, src, death_note)
 		if summon ~= self.outrider_pet then return end
+		self:dismountTarget(summon)
 		for tid, nb in pairs(summon.talents) do
 			local t2 = summon:getTalentFromId(tid)
 			if t2.shared_talent then

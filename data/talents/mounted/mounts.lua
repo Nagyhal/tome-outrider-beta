@@ -73,21 +73,6 @@ newTalent{
 				end
 			end
 		end
-		--Looks like our attempt was successful.
-		--Now to switch this talent to Dismount.
-		if self.hotkey and self.isHotkeyBound then
-			local pos = self:isHotkeyBound("talent", self.T_MOUNT)
-			if pos then
-				self.hotkey[pos] = {"talent", self.T_DISMOUNT}
-			end
-		end
-
-		if not self:knowTalent(self.T_DISMOUNT) then
-			local ohk = self.hotkey
-			self.hotkey = nil -- Prevent assigning hotkey, we just did
-			self:learnTalent(self.T_DISMOUNT, true, 1, {no_unlearn=true})
-			self.hotkey = ohk
-		end
 		return true
 	end,
 	info=function(self, t)
@@ -132,13 +117,6 @@ newTalent{
 				self:startTalentCooldown(self.T_MOUNTED_ACROBATICS)
 			end
 		end
-		if self.hotkey and self.isHotkeyBound then
-			local pos = self:isHotkeyBound("talent", self.T_DISMOUNT)
-			if pos then
-				self.hotkey[pos] = {"talent", self.T_MOUNT}
-			end
-		end
-
 		return true
 	end,
 	info = function(self, t)

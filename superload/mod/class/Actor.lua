@@ -91,6 +91,21 @@ function _M:mountTarget(target)
 		target:setEffect(self.EFF_RIDDEN, 100, {rider=self})
 		game.logSeen(self, "%s mounts %s!", self.name:capitalize(), target.name:capitalize())
 		target:fireTalentCheck("callbackOnMounted")
+		--Looks like our attempt was successful.
+		--Now to switch the talent icon to Dismount.
+		if self.hotkey and self.isHotkeyBound then
+			local pos = self:isHotkeyBound("talent", self.T_MOUNT)
+			if pos then
+				self.hotkey[pos] = {"talent", self.T_DISMOUNT}
+			end
+		end
+
+		if not self:knowTalent(self.T_DISMOUNT) then
+			local ohk = self.hotkey
+			self.hotkey = nil -- Prevent assigning hotkey, we just did
+			self:learnTalent(self.T_DISMOUNT, true, 1, {no_unlearn=true})
+			self.hotkey = ohk
+		end
 		return true
 	else return false end
 end
@@ -120,6 +135,12 @@ function _M:dismountTarget(target, x, y)
 		target.changed = true
 		self.changed = true
 		target:fireTalentCheck("callbackOnDismounted")
+		if self.hotkey and self.isHotkeyBound then
+			local pos = self:isHotkeyBound("talent", self.T_DISMOUNT)
+			if pos then
+				self.hotkey[pos] = {"talent", self.T_MOUNT}
+			end
+		end
 		return true
 	else return nil end
 end
