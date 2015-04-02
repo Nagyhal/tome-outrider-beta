@@ -421,7 +421,7 @@ newTalent{
 		--TODO: There is actually an engine bug making keyboard targeting useless. Let's fix this!
 		local pet = self.outrider_pet
 		local ret = {type="hit", range=self:getTalentRange(t), friendlyfire=false, selffire=false}
-		if not self:isMounted() then
+		if pet and not self:isMounted() then
 			ret = table.merge(ret, {start_x=pet.x, start_y=pet.y, default_target=pet, immediate_keys=false})
 		end
 		return ret
