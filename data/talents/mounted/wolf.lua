@@ -413,7 +413,7 @@ newTalent{
 newTalent{
 	name = "Together, Forever",
 	short_name = "TOGETHER_FOREVER",
-	type = {"wolf/pack-hunter", 1},
+	type = {"wolf/pack-hunter", 2},
 	points = 5,
 	require = mnt_cun_req2,
 	mode = "passive",
@@ -484,7 +484,7 @@ newTalent{
 
 newTalent{
 	name = "Predatory Flanking",
-	type = {"wolf/pack-hunter", 2},
+	type = {"wolf/pack-hunter", 3},
 	points = 5,
 	require = mnt_cun_req3,
 	mode = "passive",
@@ -526,7 +526,7 @@ newTalent{
 
 newTalent{
 	name = "Howl to the Moon",
-	type = {"wolf/pack-hunter", 1},
+	type = {"wolf/pack-hunter", 4},
 	points = 5,
 	require = mnt_cun_req4,
 	cooldown = 50,
