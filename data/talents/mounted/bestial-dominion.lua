@@ -341,12 +341,12 @@ newTalent{
 		--TODO: Make this not crash if not enough room.
 		local first = true
 		for i=1, rng.range(6, 8) do
+			if not coords[i] then return end
 			if first then 
 				local mount = makeBestialMount(self, self:getTalentLevel(t))
 				mountSetupSummon(self, mount, coords[i][1], coords[i][2], true)
 				mount:setEffect(mount.EFF_WILD_CHALLENGER, 2, {src=self})
 			else
-				if not coords[i] then return end
 				local base_list=require("mod.class.NPC"):loadList("data/general/npcs/canine.lua")
 				local filter = {base_list=base_list
 				}

@@ -50,7 +50,7 @@ function _M:hasMount()
 	--Truly simple placeholder function intended for Outrider use only
 	--TODO: Make it accept any kind of mount
 	local mount = self.outrider_pet
-	if mount and not mount.dead and game.level then return game.level:hasEntity(mount) end
+	if mount and not mount.dead and game.level then return (game.level:hasEntity(mount) or self.mount) end
 end
 
 function _M:hasMountPresent()

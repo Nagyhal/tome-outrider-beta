@@ -66,7 +66,7 @@ While in control of a wild beast:
 			pet:learnTalent(pet.T_HUNTING_HORN_BUFF, true, 1)
 			self.current_buff_target = pet
 		elseif not pet and old then
-			old:unlearnTalent(old.T_HUNTING_HORN_BUFF, true)
+			old:unlearnTalentFull(old.T_HUNTING_HORN_BUFF)
 		end
 	end,
 }
