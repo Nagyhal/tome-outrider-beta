@@ -37,7 +37,7 @@ newTalent{
 		if m_list then
 			if #m_list == 1 then
 				local m = m_list[1]
-				if  core.fov.distance(m.x, m.y, self.x, self.y) <= self:getTalentRange(t) then tg = m end
+				if core.fov.distance(m.x, m.y, self.x, self.y) <= self:getTalentRange(t) then tg = m end
 			else
 				target = {type="hit", range=self:getTalentRange(t), talent=t, first_target="friend", default_target=(#m_list==1 and m_list[1])or nil}
 				_, _, tg = self:getTarget(target)
@@ -56,8 +56,23 @@ newTalent{
 					game.logPlayer(self, "That cannot be mounted!") return nil 
 				end
 			end
-		else return true
 		end
+		--Looks like our attempt was successful.
+		--Now to switch this talent to Dismount.
+		if self.hotkey and self.isHotkeyBound then
+			local pos = self:isHotkeyBound("talent", self.T_MOUNT)
+			if pos then
+				self.hotkey[pos] = {"talent", self.T_DISMOUNT}
+			end
+		end
+
+		if not self:knowTalent(self.T_DISMOUNT) then
+			local ohk = self.hotkey
+			self.hotkey = nil -- Prevent assigning hotkey, we just did
+			self:learnTalent(self.T_DISMOUNT, true, 1, {no_unlearn=true})
+			self.hotkey = ohk
+		end
+		return true
 	end,
 	info=function(self, t)
 		return ([[Climb atop your mount.]])
@@ -100,8 +115,15 @@ newTalent{
 				self:callTalent(self.T_MOUNTED_ACROBATICS, "doAttack", ox, oy, x, y)
 				self:startTalentCooldown(self.T_MOUNTED_ACROBATICS)
 			end
-			return true
 		end
+		if self.hotkey and self.isHotkeyBound then
+			local pos = self:isHotkeyBound("talent", self.T_DISMOUNT)
+			if pos then
+				self.hotkey[pos] = {"talent", self.T_MOUNT}
+			end
+		end
+
+		return true
 	end,
 	info = function(self, t)
 		return ([[Get down from your mount to a square within range %d]]):

@@ -86,7 +86,7 @@ function _M:mountTarget(target)
 		self.mount.rider = self
 		local old_x, old_y = target.x, target.y  -- not sure this is necessary, test
 		game.level:removeEntity(target)
-		self:move(old_x, old_y, force)
+		self:move(old_x, old_y, true)
 		self:setEffect(self.EFF_MOUNT, 100, {mount=target})
 		target:setEffect(self.EFF_RIDDEN, 100, {rider=self})
 		game.logSeen(self, "%s mounts %s!", self.name:capitalize(), target.name:capitalize())
@@ -160,7 +160,6 @@ function _M:learnPool(t)
 	if t.loyalty or t.sustain_loyalty then
 		self:checkPool(t.id, self.T_LOYALTY_POOL)
 		self:checkPool(t.id, self.T_MOUNT)
-		self:checkPool(t.id, self.T_DISMOUNT)
 	end
 	base_learnPool(self,t)
 end
