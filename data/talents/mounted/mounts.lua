@@ -4,8 +4,24 @@ newTalent{
 	info = "Allows you to have a Loyalty pool. Loyalty is tied to another party member and allows you to command it.",
 	mode = "passive",
 	hide = "always",
-
 	no_unlearn_last = true,
+	-- callbackOnRest = function (self, t, type)
+	-- 	if type=="check" then
+ -- 			local mount = self:hasMount()
+	-- 		if mount then
+	-- 			if mount.air_regen < 0 then
+	-- 				game.log(self.resting.past:capitalize().." for %d turns (stop reason: mount losing breath!).", self.resting.cnt, msg)
+	-- 				return false
+	-- 			end
+	-- 				-- false, "mount losing breath!" end
+	-- 			if mount.life_regen <= 0 then return false, "mount losing health!" end
+	--  			if mount.life < mount.max_life and mount.life_regen>0 then return true end
+	--  			local effs = mount:effectsFilter({status="detrimental"})
+	--  			if #effs > 0 then return true end
+	--  		end
+ -- 			if self.loyalty < self.max_loyalty and self.loyalty_regen > 0 and not self:attr("no_loyalty_regen") then return true end
+	-- 	end
+	-- end,
 }
 
 newTalent{
