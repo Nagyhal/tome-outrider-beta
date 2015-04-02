@@ -58,7 +58,7 @@ newTalent{
 	callbackOnCrit = function(self, t, type, dam, chance, target)
 		if not type=="physical" then return end
 		local val = t.getPhysPen(self, t)
-		target:setEffect(target.EFF_WEAKENED_DEFENSES, 3, {inc=val, max=val})
+		target:setEffect(target.EFF_WEAKENED_DEFENSES, 3, {inc=-val, max=-val})
 	end,
 	activate = function(self, t)
 		-- local weapon = hasOneHandedWeapon(self)
