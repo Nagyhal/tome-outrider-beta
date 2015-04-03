@@ -410,7 +410,7 @@ newTalent{
 	points = 5,
 	cooldown = function(self, t) return self:combatTalentLimit(t, 8, 10, 12) end,
 	stamina = 20,
-	range = function(self, t) return self:combatTalentLimit(t, 8, 5, 2) end,
+	range = function(self, t) return self:combatTalentLimit(t, 8, 2, 5) end,
 	tactical = { DISABLE = {slow = 1, pin = 1}, CLOSEIN = 2 },
 	requires_target = true,
 	speed = "combat",
@@ -456,8 +456,8 @@ newTalent{
 			Webs have a %d%% chance to slow and a %d%% chance to pin for a duration of 5 turns.]]):
 		format(slow_chance, pin_chance)
 	end,
-	getSlowChance = function(self,t) return self:combatTalentLimit(t, 100, 50, 25) end,
-	getPinChance = function(self,t) return self:combatTalentLimit(t, 100, 25, 10) end,
+	getSlowChance = function(self,t) return self:combatTalentLimit(t, 100, 25, 50) end,
+	getPinChance = function(self,t) return self:combatTalentLimit(t, 100, 10, 25) end,
 	-- getDur = function(self, t) return math.floor(self:combatTalentScale(t, 2, 6)) end,
 }
 
@@ -466,7 +466,7 @@ newTalent{
 	type = {"spider/weaver-of-woes", 2},
 	points = 5,
 	mode = "passive",
-	radius = function(self, t) return self:combatTalentLimit(5, 1, 3) end,
+	radius = function(self, t) return self:combatTalentLimit(t, 5, 1, 3) end,
 	passives = function(self, t, p)
 		local Stats = require "engine.interface.ActorStats"
 		self:talentTemporaryValue(p, "inc_stats",  {[Stats.STAT_STR]=t.getMag(self, t)})
@@ -481,13 +481,14 @@ newTalent{
 	end,
 	info = function(self, t)
 		local mag = t.getMag(self, t)
-		local save = t.getSpellSave(self, t)
+		local save = t.getSave(self, t)
 		local res = t.getRes(self, t)
-		local dam = t2.getPerception(mount, t2)
+		local dam = t.getDam(self, t)
+		local radius = self:getTalentRadius(t)
 		return ([[Increase your Magic by %d, spell save by %d, and arcane, temporal blight and darkness resistance by %d%%.
 
 			Using runes will grant a single-turn aura that deals %d arcane and darkness damage to attackers within a %d radius, scaling with your spellpower as well as your owner's spellpower.]]):
-		format(mag, save, res)
+		format(mag, save, res, dam, radius)
 	end,
 	getMag = function(self, t) return self:combatTalentScale(t, 3, 15) end,
 	getSave = function(self, t) return self:combatTalentScale(t, 5, 25) end,
@@ -555,7 +556,7 @@ newTalent{
 		return true
 	end,
 	info = function(self, t)
-		local dam = t.getDam(self, t)
+		local dam = t.getPoison(self, t)
 		local dur = t.getDur(self, t)
 		local reduction = t.getReduction(self, t)
 		return ([[Any time the spider attacks a pinned target, it infuses it with a numbing serum that prepares it for digestion.
