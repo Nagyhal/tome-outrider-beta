@@ -179,7 +179,7 @@ local base_learnPool = _M.learnPool
 
 function _M:learnPool(t)
 	if t.loyalty or t.sustain_loyalty then
-		self:checkPool(t.id, self.T_LOYALTY_POOL)
+		-- self:checkPool(t.id, self.T_LOYALTY_POOL)
 		self:checkPool(t.id, self.T_MOUNT)
 	end
 	base_learnPool(self,t)
@@ -253,7 +253,7 @@ function  _M:projected(tx, ty, who, t, x, y, damtype, dam, particles)
 		end)
 		self.impunity_no_recur = false
 		local a = rng.tableRemove(actors_list)
-		if a then 
+		if a then
 			game.level.map:remove(a.x, a.y, engine.Map.ACTOR)
 			local ox, oy = self.x, self.y
 			self:move(a.x, a.y, true)
@@ -270,7 +270,7 @@ function  _M:projected(tx, ty, who, t, x, y, damtype, dam, particles)
 		if not self.turn_procs.vestigial_magicks_targets then
 			self.turn_procs.vestigial_magicks_targets = {}
 		end
-		local uids = self.turn_procs.vestigial_magicks_targets 
+		local uids = self.turn_procs.vestigial_magicks_targets
 		uids[target.uid] = uids[target.uid] or {}
 		if not uids[target.uid][cur] then
 			self:callTalent(self.T_VESTIGIAL_MAGICKS, "doDamage", src)
@@ -282,7 +282,7 @@ end
 local base_on_project_acquire = _M.on_project_acquire
 function _M:on_project_acquire(tx, ty, who, t, x, y, damtype, dam, particles, is_projectile, mods)
 	--Living Shield
-	local eff = self:hasEffect(self.EFF_LIVING_SHIELDED); if eff and is_projectile and rng.percent(eff.chance) then 
+	local eff = self:hasEffect(self.EFF_LIVING_SHIELDED); if eff and is_projectile and rng.percent(eff.chance) then
 		eff.trgt:logCombat(who, "#Source# becomes the target of #target#'s' projectile!")
 		mods.x = eff.trgt.x-self.x
 		mods.y = eff.trgt.x-self.x
@@ -290,7 +290,7 @@ function _M:on_project_acquire(tx, ty, who, t, x, y, damtype, dam, particles, is
 
 	--Handle Impunity of Warlords
 	if type(dam)=="table" then dam = dam.dam end
-	if self:isTalentActive(self.T_IMPUNITY_OF_WARLORDS) and not self.impunity_no_recur1 and self:reactionToward(who)<0 and dam and dam>0 then 
+	if self:isTalentActive(self.T_IMPUNITY_OF_WARLORDS) and not self.impunity_no_recur1 and self:reactionToward(who)<0 and dam and dam>0 then
 		self.impunity_no_recur_pre = true
 		self.impunity_avoid_grids = who:project(t, x, y, function() end)
 		self.impunity_no_recur_pre = false
@@ -304,7 +304,7 @@ function _M:knockback(srcx, srcy, dist, recursive, on_terrain)
 	base_knockback(self, srcx, srcy, dist, recursive, on_terrain)
 	if self:isMounted() and self.x~=ox or self.y~=oy then
 		if rng.percent(25) then
-			local mount = self:hasMount()	
+			local mount = self:hasMount()
 			self:dismountTarget(mount)
 		end
 	end
