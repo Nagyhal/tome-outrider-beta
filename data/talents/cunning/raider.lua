@@ -18,100 +18,140 @@ function hasFreeOffhand(self)
 end
 
 newTalent{
-	name = "Orchestrator of Dismay",
+	name = "Master of Brutality",
 	type = {"cunning/raider", 1},
-	mode = "passive",
-	points = 5,
 	require = mnt_dexcun_req1,
-	radius = function(self, t) return self:combatTalentScale(t, 3, 4.5) end,
-	target = function(self, t) return {type="ball", radius=self:getTalentRadius(t)} end,
-	shared_talent = "T_ORCHESTRATOR_OF_DISMAY_SHARED",
-	on_learn = function (self, t)
-		local pet = self.outrider_pet
-		if not pet then return end
-		shareTalentWithPet(self, pet, t)
-	end,
-	on_unlearn = function(self, t)
-		local pet = self.outrider_pet
-		if not pet then return end
-		if self:getTalentLevelRaw(t) == 0 then
-			unshareTalentWithPet(self, pet, t)
-		end
-	end,
-	doTrigger = function(self, t, src)
-		local tg = self:getTalentTarget(t)
-		local acts = {}
-		self:project(tg, src.x, src.y, function(px, py)
-			local a = game.level.map(px, py, engine.Map.ACTOR)
-			if a and self:reactionToward(a) < 0 and a~=src then
-				if a:hasEffect(a.EFF_TERROR_STUNNED) then return end
-				acts[#acts+1] = a
+	points = 5,
+	mode = "sustained",
+	cooldown = 30,
+	sustain_stamina = 40,
+	tactical = { BUFF = 2 },
+	on_pre_use = function(self, t, silent)
+		-- if not hasOneHandedWeapon(self) then
+		if not t.checkBothWeaponSets(self, t) then
+			if not silent then
+				game.logPlayer(self, "You require a one-handed weapon to use this talent.")
 			end
-		end)
-		local target = rng.table(acts)
-		if target and target:canBe("stun") then 
-			target:setEffect(target.EFF_TERROR_STUNNED, t.getFearDur(self, t), {apply_power=self:combatMindpower()})
+			return false
+		end
+		return true
+	end,
+	--TODO: This code is virtually nonsensical at this stage, let's delete most of it.
+	checkBothWeaponSets = function(self, t)
+		local mains = {main=self:getInven("MAINHAND") and self:getInven("MAINHAND")[1],
+			qs = self:getInven("QS_MAINHAND") and self:getInven("QS_MAINHAND")[1]}
+		local offhands = {main=self:getInven("OFFHAND") and self:getInven("OFFHAND")[1],
+			qs = self:getInven("QS_OFFHAND") and self:getInven("QS_OFFHAND")[1]}
+		local one_handed = false
+		local free_off = false
+		for _, set in ipairs{"main"} do
+			local main = mains[set]
+			if main and not main.twohanded then--and not main.archery then
+				one_handed = true
+				free_off = true
+				if offhands[set] or main.archery then free_off = false end
+			end
+		end
+		return one_handed, free_off
+	end,
+	callbackOnCrit = function(self, t, type, dam, chance, target)
+		if not type=="physical" then return end
+		local val = t.getPhysPen(self, t)
+		target:setEffect(target.EFF_WEAKENED_DEFENSES, 3, {inc=-val, max=-val})
+	end,
+	activate = function(self, t)
+		-- local weapon = hasOneHandedWeapon(self)
+		-- if not weapon then
+		-- 	game.logPlayer(self, "You cannot use Master of Brutality without a one-handed weapon!")
+		-- 	return false
+		-- end
+
+		local ret = {free_off=false}
+		if hasFreeOffhand(self) then
+				self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower2(self, t))
+				self:talentTemporaryValue(ret, "combat_physcrit", t.getPhysCrit2(self, t))
+				self:talentTemporaryValue(ret, "combat_critical_power", t.getCritPower2(self, t))
+				self:talentTemporaryValue(ret, "combat_apr", t.getApr2(self, t))
+				free_off=true
+		else
+			self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower(self, t))
+			self:talentTemporaryValue(ret, "combat_physcrit", t.getPhysCrit(self, t))
+			self:talentTemporaryValue(ret, "combat_critical_power", t.getCritPower(self, t))
+			self:talentTemporaryValue(ret, "combat_apr", t.getApr(self, t))
+		end
+		return ret
+	end,
+	callbackOnWear  = function(self, t, o, bypass_set) t.checkWeapons(self, t, o, bypass_set) end,
+	callbackOnTakeoff  = function(self, t, o, bypass_set) t.checkWeapons(self, t, o, bypass_set) end,
+	checkWeapons = function(self, t, o, bypass_set)
+		if o.type and o.type=="weapon" then
+			game:onTickEnd(function()
+				local one_handed, free_off = t.checkBothWeaponSets(self, t)
+				if one_handed then
+					local p = self:isTalentActive(t.id); if not p then return end
+					for i = #p.__tmpvals, 1, -1  do
+						self:removeTemporaryValue(p.__tmpvals[i][1], p.__tmpvals[i][2])
+						p.__tmpvals[i] = nil
+					end
+					if free_off then
+						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower2(self, t))
+						self:talentTemporaryValue(p, "combat_physcrit", t.getPhysCrit2(self, t))
+						self:talentTemporaryValue(p, "combat_critical_power", t.getCritPower2(self, t))
+						self:talentTemporaryValue(p, "combat_apr", t.getApr2(self, t))
+						p.free_off=true
+					else
+						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower(self, t))
+						self:talentTemporaryValue(p, "combat_physcrit", t.getPhysCrit(self, t))
+						self:talentTemporaryValue(p, "combat_critical_power", t.getCritPower(self, t))
+						self:talentTemporaryValue(p, "combat_apr", t.getApr(self, t))
+						p.free_off=false
+					end
+				else
+					self:forceUseTalent(t.id, {no_energy=true})
+				end
+			end)
 		end
 	end,
-	callbackOnDealDamage = function(self, t, val, target, dead, death_note)
-		if not hasFreeOffhand(self) or target.outrider_bloodied then return end
-		if target.life < target.max_life*.5 then
-			t.doTrigger(self, t, target)
-			target.outrider_bloodied = true
-		end
-	end,
-	callbackOnKill = function(self, t, victim, death_note)
-		if not hasNonTwoHander(self) then return end
-		t.doTrigger(self, t, victim)
-	end,
-	doCounterCheck = function(self, t, src)
-		if not rng.percent(t.getCounterPct(self, t)) then return end
-		local effs = src:effectsFilter{ subtype = { confusion=true, fear=true, sunder=true }, status = "detrimental" }
-		if #effs>0 or src:hasEffect(src.EFF_TERROR_STUNNED) then src:setEffect(src.EFF_COUNTERSTRIKE, 2, {src=self, power=0}) end
-	end,
-	callbackOnMeleeHit = function(self, t, src, dam)
-		t.doCounterCheck(self, t, src)
-	end,
-	callbackOnMeleeMiss = function(self, t, src, dam)
-		t.doCounterCheck(self, t, src)
+	deactivate = function(self, t, p)
+		return true
 	end,
 	info = function(self, t)
-		local fear_dur = t.getFearDur(self, t)
-		local fear_radius = self:getTalentRadius(t)
-		local counter_pct = t.getCounterPct(self, t)
-		return ([[Your advanced training in the pinciples of psychological warfare allows you to inflict terror and devastation with the most humdrum of tools.
+		local apr = t.getApr(self, t)
+		local apr2 = t.getApr2(self, t)
+		local crit_power = t.getCritPower(self, t)
+		local crit_power2 = t.getCritPower2(self, t)
+		local phys_crit = t.getPhysCrit(self, t)
+		local phys_crit2 = t.getPhysCrit2(self, t)
+		local mindpower = t.getMindpower(self, t)
+		local mindpower2 = t.getMindpower2(self, t)
+		local phys_pen = t.getPhysPen(self, t)
+		return ([[While you prefer weapons less visibily impressive than some, the merciless precision with which you wield them makes them no less intimidating in your hands.
 
-			Killing any foe while wielding a one-handed or an archery weapon will stun one random opponent in a radius of %d from the victim (that is not already afflicted). This stun is a mental effect that will last %d turns, and also counts as a fear effect for the purpose of this talent. If you have nothing in your off-hand, this will also trigger a second time when the enemy is reduced to 50%% health (or the first time you strike it below 50%% health).
-			
-			Also, scattering your enemies and sundering their armour now exposes opportunity that would go unnoticed by less honed combatants. Gain a %d%% chance to apply the counterattack debuff for each enemy who attacks you while they are under any such effect (sunder, confusion, or fear).]])
-		:format(fear_radius, fear_dur, counter_pct)	
+		Also, while wielding a one-handed or an archery weapon, gain the following bonuses:
+		+%d mindpower
+		+%d%% physical crit chance
+		+%d%% critical power
+		+%d APR
+		Critical hits will reduce the physical resistance of the target by %d%% for 3 turns.
+
+		If you hold nothing in your off-hand, instead gain the following benefits:
+		+%d mindpower
+		+%d%% physical crit chance
+		+%d%% critical power
+		+%d APR
+		Critical hits will reduce the physical resistance of the target by %d%% for 3 turns.]]):
+		format(mindpower, phys_crit, crit_power, apr, phys_pen, mindpower2, phys_crit2, crit_power2, apr2, phys_pen)
 	end,
-	getCounterPct = function(self, t) return self:combatTalentLimit(t, 65, 15, 46) end,
-	getFearDur = function(self, t) return self:combatTalentScale(t, 2.8, 4.2) end
+	getApr = function(self, t) return self:combatTalentScale(t, 5, 12) end,
+	getApr2 = function(self, t) return self:callTalent(t.id, "getApr")*1.65 end,
+	getPhysCrit = function(self, t) return self:combatTalentScale(t, 3, 7) end,
+	getPhysCrit2 = function(self, t) return self:callTalent(t.id, "getPhysCrit")*1.85 end,
+	getCritPower = function(self, t) return self:combatTalentScale(t, 15, 30) end,
+	getCritPower2 = function(self, t) return self:callTalent(t.id, "getCritPower")*1.65 end,
+	getMindpower = function(self, t) return self:combatTalentScale(t, 6, 15) end,
+	getMindpower2 = function(self, t) return self:callTalent(t.id, "getMindpower")*1.65 end,
+	getPhysPen = function(self, t) return self:combatTalentScale(t, 15, 35) end,
 }
-
-
-newTalent{
-	name = "Orchestrator of Dismay (Shared)",
-	type = {"mounted/mounted-base", 1},
-	hide = "always",
-	mode = "passive",
-	points = 1,
-	base_talent = "T_ORCHESTRATOR_OF_DISMAY",
-	short_name = "ORCHESTRATOR_OF_DISMAY_SHARED",
-	callbackOnDealDamage = function(self, t, val, target, dead, death_note)
-		local owner = self.owner; if not owner then return end
-		owner:callTalent(t.base_talent, "callbackOnDealDamage", val, target, dead, death_note)
-	end,
-	callbackOnKill = function(self, t, victim, death_note)
-		local owner = self.owner; if not owner then return end
-		owner:callTalent(t.base_talent, "callbackOnKill", victim, death_note)
-	end,
-	info = function(self, t)
-		return [[Share the effects of Orchestrator of Dismay with your mount.]]
-	end,
-}
-
 
 newTalent{
 	name = "Strike at the Heart",

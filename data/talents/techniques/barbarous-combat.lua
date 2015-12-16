@@ -19,139 +19,43 @@ function hasFreeOffhand(self)
 end
 
 newTalent{
-	name = "Master of Brutality",
+	name = "Brazen Lunge",
 	type = {"technique/barbarous-combat", 1},
 	require = mnt_strcun_req1,
 	points = 5,
-	mode = "sustained",
-	cooldown = 30,
-	sustain_stamina = 40,
-	tactical = { BUFF = 2 },
-	on_pre_use = function(self, t, silent)
-		-- if not hasOneHandedWeapon(self) then
-		if not t.checkBothWeaponSets(self, t) then
-			if not silent then
-				game.logPlayer(self, "You require a one-handed weapon to use this talent.")
-			end
-			return false
+	random_ego = "attack",
+	--stamina = 0,
+	cooldown = 8,
+	tactical = { ATTACK = 2 },
+	requires_target = true,
+	range = function(self, t) return 2 + math.floor(self:getTalentLevel(t)/3 - 0.35) end,
+	getDamage = function(self, t) return self:combatTalentWeaponDamage(t, 1.5, 2.1) end,
+	getStamina = function(self, t) return self:combatTalentMindDamage(t, 20, 28) end,
+	getDuration = function(self, t) return math.floor(math.max(4 - self:getTalentLevel(t)/3, 1)) end,
+	getSlowPower = function(self, t) return math.max(0, (50 - (self:getTalentLevel(t) - self:getTalentMastery(t)) * 8 )) end,
+	action = function(self, t)
+		local tg = {type="bolt", range=self:getTalentRange(t), talent=t}
+		local x, y = self:getTarget(tg)
+		if not x or not y then return nil end
+		local _ _, x, y = self:canProject(tg, x, y)
+		local target = game.level.map(x, y, Map.ACTOR)
+		if not target then return end
+		local hit = self:attackTarget(target, nil, t.getDamage(self, t), true)
+		if hit then
+			self:setEffect(self.EFF_REGAIN_POISE, 3, {regen=t.getStamina(self, t), slow=t.getSlowPower(self, t)})
+		else self:setEffect(self.EFF_REGAIN_POISE, 3, {regen=0, slow=t.getSlowPower(self, t), cause="reckless assault"})
 		end
-		return true
-	end,
-	--TODO: This code is virtually nonsensical at this stage, let's delete most of it.
-	checkBothWeaponSets = function(self, t)
-		local mains = {main=self:getInven("MAINHAND") and self:getInven("MAINHAND")[1],
-			qs = self:getInven("QS_MAINHAND") and self:getInven("QS_MAINHAND")[1]}
-		local offhands = {main=self:getInven("OFFHAND") and self:getInven("OFFHAND")[1],
-			qs = self:getInven("QS_OFFHAND") and self:getInven("QS_OFFHAND")[1]}
-		local one_handed = false
-		local free_off = false
-		for _, set in ipairs{"main"} do
-			local main = mains[set]
-			if main and not main.twohanded then--and not main.archery then
-				one_handed = true
-				free_off = true
-				if offhands[set] or main.archery then free_off = false end
-			end
-		end
-		return one_handed, free_off
-	end,
-	callbackOnCrit = function(self, t, type, dam, chance, target)
-		if not type=="physical" then return end
-		local val = t.getPhysPen(self, t)
-		target:setEffect(target.EFF_WEAKENED_DEFENSES, 3, {inc=-val, max=-val})
-	end,
-	activate = function(self, t)
-		-- local weapon = hasOneHandedWeapon(self)
-		-- if not weapon then
-		-- 	game.logPlayer(self, "You cannot use Master of Brutality without a one-handed weapon!")
-		-- 	return false
-		-- end
-
-		local ret = {free_off=false}
-		if hasFreeOffhand(self) then
-				self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower2(self, t))
-				self:talentTemporaryValue(ret, "combat_physcrit", t.getPhysCrit2(self, t))
-				self:talentTemporaryValue(ret, "combat_critical_power", t.getCritPower2(self, t))
-				self:talentTemporaryValue(ret, "combat_apr", t.getApr2(self, t))
-				free_off=true
-		else 
-			self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower(self, t))
-			self:talentTemporaryValue(ret, "combat_physcrit", t.getPhysCrit(self, t))
-			self:talentTemporaryValue(ret, "combat_critical_power", t.getCritPower(self, t))
-			self:talentTemporaryValue(ret, "combat_apr", t.getApr(self, t))
-		end
-		return ret
-	end,
-	callbackOnWear  = function(self, t, o, bypass_set) t.checkWeapons(self, t, o, bypass_set) end,
-	callbackOnTakeoff  = function(self, t, o, bypass_set) t.checkWeapons(self, t, o, bypass_set) end,
-	checkWeapons = function(self, t, o, bypass_set)
-		if o.type and o.type=="weapon" then
-			game:onTickEnd(function()
-				local one_handed, free_off = t.checkBothWeaponSets(self, t)
-				if one_handed then
-					local p = self:isTalentActive(t.id); if not p then return end
-					for i = #p.__tmpvals, 1, -1  do
-						self:removeTemporaryValue(p.__tmpvals[i][1], p.__tmpvals[i][2])
-						p.__tmpvals[i] = nil
-					end
-					if free_off then
-						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower2(self, t))
-						self:talentTemporaryValue(p, "combat_physcrit", t.getPhysCrit2(self, t))
-						self:talentTemporaryValue(p, "combat_critical_power", t.getCritPower2(self, t))
-						self:talentTemporaryValue(p, "combat_apr", t.getApr2(self, t))
-						p.free_off=true
-					else
-						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower(self, t))
-						self:talentTemporaryValue(p, "combat_physcrit", t.getPhysCrit(self, t))
-						self:talentTemporaryValue(p, "combat_critical_power", t.getCritPower(self, t))
-						self:talentTemporaryValue(p, "combat_apr", t.getApr(self, t))
-						p.free_off=false
-					end
-				else
-					self:forceUseTalent(t.id, {no_energy=true})
-				end
-			end)
-		end
-	end,
-	deactivate = function(self, t, p)
 		return true
 	end,
 	info = function(self, t)
-		local apr = t.getApr(self, t)
-		local apr2 = t.getApr2(self, t)
-		local crit_power = t.getCritPower(self, t)
-		local crit_power2 = t.getCritPower2(self, t)
-		local phys_crit = t.getPhysCrit(self, t)
-		local phys_crit2 = t.getPhysCrit2(self, t)
-		local mindpower = t.getMindpower(self, t)
-		local mindpower2 = t.getMindpower2(self, t)
-		local phys_pen = t.getPhysPen(self, t)
-		return ([[While you prefer weapons less visibily impressive than some, the merciless precision with which you wield them makes them no less intimidating in your hands.
-		
-		Also, while wielding a one-handed or an archery weapon, gain the following bonuses:
-		+%d mindpower
-		+%d%% physical crit chance
-		+%d%% critical power
-		+%d APR
-		Critical hits will reduce the physical resistance of the target by %d%% for 3 turns.
-
-		If you hold nothing in your off-hand, instead gain the following benefits:
-		+%d mindpower
-		+%d%% physical crit chance
-		+%d%% critical power
-		+%d APR
-		Critical hits will reduce the physical resistance of the target by %d%% for 3 turns.]]):
-		format(mindpower, phys_crit, crit_power, apr, phys_pen, mindpower2, phys_crit2, crit_power2, apr2, phys_pen)
+		return ([[You attack for %d%% weapon damage with a range of 2, but the massive momentum you attain leaves you disarmed for %d turns and also slowed by %d%%. While recovering, you regain stamina (%d per turn) for so long as you avoid damage. If you are mounted, this will also hit up to two nearby creatures for 50%% of its full damage.]]):
+		format(
+		t.getDamage(self, t)*100,
+		t.getDuration(self, t),
+		t.getSlowPower(self, t),
+		t.getStamina(self, t)
+		)
 	end,
-	getApr = function(self, t) return self:combatTalentScale(t, 5, 12) end,
-	getApr2 = function(self, t) return self:callTalent(t.id, "getApr")*1.65 end,
-	getPhysCrit = function(self, t) return self:combatTalentScale(t, 3, 7) end,
-	getPhysCrit2 = function(self, t) return self:callTalent(t.id, "getPhysCrit")*1.85 end,
-	getCritPower = function(self, t) return self:combatTalentScale(t, 15, 30) end,
-	getCritPower2 = function(self, t) return self:callTalent(t.id, "getCritPower")*1.65 end,
-	getMindpower = function(self, t) return self:combatTalentScale(t, 6, 15) end,
-	getMindpower2 = function(self, t) return self:callTalent(t.id, "getMindpower")*1.65 end,
-	getPhysPen = function(self, t) return self:combatTalentScale(t, 15, 35) end,
 }
 
 newTalent{

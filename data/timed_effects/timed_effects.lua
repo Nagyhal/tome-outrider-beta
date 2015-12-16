@@ -1001,40 +1001,31 @@ newEffect{
 	end,
 }
 
-
 newEffect{
-	name = "TERROR_STUNNED", image = "effects/madness_stunned.png",
-	desc = "Stunned by terror",
-	long_desc = function(self, eff) return ("The target has been stunned by the Outrider's brutal combat methods, reducing damage by 70%%, putting random talents on cooldown and reducing movement speed by 50%%. While stunned talents do not cooldown."):format() end,
-	type = "mental",
-	subtype = { morale=true, stun=true },
-	status = "detrimental",
-	parameters = {},
-	on_gain = function(self, err) return "#F53CBE##Target# is stunned from the terror!", "+Stunned" end,
-	on_lose = function(self, err) return "#Target# overcomes the terror", "-Stunned" end,
+	name = "SILENT_KILLER", --image = "effects/madness_stunned.png",
+	desc = "Silent Killer",
+	long_desc = function(self, eff) return ("The spider is stealthed (power %d) and benefits from a passive crit bonus while stealthed of %d%%"):format() end,
+	type = "physical",
+	subtype = { morale=true }, --TODO: Better, extant subtypes
+	status = "beneficial",
+	parameters = {stealth=10, crit=0},
+	on_gain = function(self, err) return "#Target# stalks the shadows!", "+Silent Killer" end,
+	on_lose = function(self, err) return "#Target# exits the shadows.", "-Silent Killer" end,
 	activate = function(self, eff)
-		eff.particle = self:addParticles(engine.Particles.new("gloom_slow", 1))
+		if not self.break_with_stealth then self.break_with_stealth = {} end
+		table.insert(self.break_with_stealth, eff.effect_id)
 
-		eff.tmpid = self:addTemporaryValue("stunned", 1)
-		eff.tcdid = self:addTemporaryValue("no_talents_cooldown", 1)
-		eff.speedid = self:addTemporaryValue("movement_speed", -0.5)
+		self:effectTemporaryValue(eff, "stealth", eff.stealth)
+		self:effectTemporaryValue(eff, "lite", -1000)
+		self:effectTemporaryValue(eff, "infravision", 1)
 
-		local tids = {}
-		for tid, lev in pairs(self.talents) do
-			local t = self:getTalentFromId(tid)
-			if t and not self.talents_cd[tid] and t.mode == "activated" and not t.innate and util.getval(t.no_energy, self, t) ~= true then tids[#tids+1] = t end
-		end
-		for i = 1, 4 do
-			local t = rng.tableRemove(tids)
-			if not t then break end
-			self.talents_cd[t.id] = 1 -- Just set cooldown to 1 since cooldown does not decrease while stunned
-		end
+		self:resetCanSeeCacheOf()
+		if self.updateMainShader then self:updateMainShader() end
 	end,
 	deactivate = function(self, eff)
-		self:removeParticles(eff.particle)
+		table.removeFromList(self.break_with_stealth, eff.effect_id)
 
-		self:removeTemporaryValue("stunned", eff.tmpid)
-		self:removeTemporaryValue("no_talents_cooldown", eff.tcdid)
-		self:removeTemporaryValue("movement_speed", eff.speedid)
+		self:resetCanSeeCacheOf()
+		if self.updateMainShader then self:updateMainShader() end
 	end,
 }

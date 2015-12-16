@@ -19,13 +19,13 @@ function _M:combatMovementSpeed(x, y)
 	end
 end
 
-function _M:hasTwoHandedWeapon()
-	if self:knowTalent(self.T_ORCHESTRATOR_OF_DISMAY) then
-		local weaponry = self:getInven("MAINHAND") or {}
-		return weaponry[1]
-	end
-	return base_hasTwoHandedWeapon(self)
-end
+-- function _M:hasTwoHandedWeapon()
+-- 	if self:knowTalent(self.T_ORCHESTRATOR_OF_DISMAY) then
+-- 		local weaponry = self:getInven("MAINHAND") or {}
+-- 		return weaponry[1]
+-- 	end
+-- 	return base_hasTwoHandedWeapon(self)
+-- end
 
 function _M:combatPhysicalpower(mod, weapon, add)
 	--TODO: Replace this with getOwner or somesuch
