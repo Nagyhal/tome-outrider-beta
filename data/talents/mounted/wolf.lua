@@ -301,7 +301,7 @@ newTalent{
 		local dur = t.getDur(self, t)
 		local reduction = t.getReduction(self, t)
 		local bonus_pct = t.getBonusPct(self, t)
-		return ([[The wolf attempts to grab an enemy of up to 1 size category larger than itself, ravaging it within its jaws for %d damage, and reducing its attack and defense by %d. If it succeeds, it will drag its target to its owner over a period of %d turns, granting a %d%% increase in damage when the owner first attacks it within melee range.
+		return ([[The wolf attempts to grab an enemy of up to 1 size category larger than itself, ravening it within its jaws for %d damage, and reducing its attack and defense by %d. If it succeeds, it will drag its target to its owner over a period of %d turns, granting a %d%% increase in damage when the owner first attacks it within melee range.
 
 			The wolf will only use this ability at the command of its owner, and only then when not mounted.]]):
 		format(dam, reduction, dur, bonus_pct)

@@ -1,111 +1,25 @@
-idea for clinging to underside of the mount and using it as a shield
-idea for an ability that provides a bonus after using a "command" (party option) on a mount. This also serves a design purpose, that of reinforcing the player's awareness that you can do this sort of thing. Well, that design purpose is negated by the fact that commands are now learnt talents, but I still like the basic idea.
+Outrider beta : What do we need to release?
 
-Spider
+The basic plan would be to
+<>  Cut out some of the crappy talents
+<>  Clear out and simplify much of the flavour text
+<>  Make the mount / Challenge / etc. experience really cool
+<>  Add some very primitive stuff toward choosing a mount encounter from an area--then make them all choose WOLF
+<>  Basic disobedience
 
-ICONS
-	Sketch designs for *everything*
+What the ULTIMATE RELEASE would look like
 
-COMMANDS
-	COMMAND TALENTS THAT DON'T GO OFF WHILE RIDING 
-	Expend energy when used
+<>  Millions of amazing mounts, from Elk to Crystal Beasts to Great Wyrms (via a prodigy!)
+<>  Multiple other prodigies to choose from
+<>  Numerous special artifacts and items
+<>  Special flavour text drops
+<>  An Outrider settlement you can visit (don't forget your gay lover Sven)
+<>  Stables
+<>  A special Outrider zone or two -- maybe a starter zone, a "special" zone or encounter, and a higher level zone (Maybe one of the prides could be "overwritten" or given an Outrider variant?)
+<>  Roaming Outrider warbands
+<>  Really polished, fun, finished talent trees
+<>  Complete mounted character tile artwork
 
-POLISH AND TIDY UP:
-	"#Source# is knocked from #target#!"
-	Make mounted abilities use the mount's attack voice samples when used
-	Get a solid tactical function array in place for each ability, you might need a function to check if the mount is mounted or not.
-	Move algorithmic stuff (like that found in the wolf talents) into a separate location. Talent files shouldn't be a place where you find lots of horrific number work
-	Add move anims to all rush-like effects, plus Steamroller compatibility
-
-CHALLENGE THE WILDS (for post-release)
-	Make it decide on animal type to summon
-
-LINKED EFFECTS
-	Probably impement some kind of cross-actor effect linking (for things like the retaliatory psibeam)
-
-FEARS FUNCTION WHILE RIDING
-IDEA (and this is extremely ridiculous)
-	When the player attempts to move and is riding instead it sends a command to the mount, and a stash of new energy with which it can perform this action. Only when the mount successfully moves is the rider taken along with it.
-
-
-----Community ideas!----
-grayswandir76: If an enemy heavily wounds you (>40%-20% max life), they get a two turn debuff. If you kill them with this on, you get a massive heal and an area-wide fear effect.
-
-grayswandir76: Passive: Whenever you deal a melee hit, any enemy that has less than that much life within radius X must pass a mental save or die. :)
-
-grayswandir76: Whenever you deal a melee hit, any enemy that has less than that much life within radius X must pass a mental save or die. :)
-
---Starting Artefact!--
-
-Hunter's Horn
-When you have Challenge the Wilds activated, gain a +5 bonus to attack, physical, mental and spell power.
-
-OR MAYBE... some kind of defensive benefit? e.g.
-
-
-
-At all other times, your beast gains a +5 bonus to attack, physical, mental and spell power.
-
-Ideas spawned in a long car journey from Cornwall:
-	AFFINITYNIMAL AFFINITY-
-		share things like:
-			attack
-
-		grant things like
-			confusion resist
-			fear resist
-			mind resist
-	TWIN THREAT-
-		talent granted could instead be a party command
-	SUBDUE THE BEAST-
-		remove infusion bonus, give it at levels 20 / 30
-	LIVING SHIELD-
-		consider having a "drag target to square" option
-	UNCANNY TENACITY-
-		FINISH what you have started - proc the effect
-	SCUTTLE-
-		should knock back foes 1-2 squares perpendicular to the line and reduce damage
-	DRIPPING WITH VENOM / NUMBING ICHOR-
-		should be merged
-	NEW TALENT
-		either a biting fangs attack or a strong passive
-	COBWEB
-		should perform scuttle on enemies in range (maybe sans knockback?)
-
-------------------------
-Stat usage: 
-
-CHALLENGE THE WILDS
-
-Willpower:
-	Reduce loyalty lost as the mount suffers damage (currently %d per 10 life)
-	Reduce cost of loyalty-using abilities (current discount: %d%%)
-
-Cunning:
-	Mount damage scales with 60%% of mount Strength and 60%% of owner's Cunning
-	Mount regains %d Loyalty on kill
-
-ANIMAL AFFINITY
-	Increase mount's accuracy by %d%% of owner accuracy
-	Increase mount defense by %d%% of owner defense
-	Increase mount mental save by %d%% of owner  mental save
-
-------------------------
-What's in store for Outriders v1.0?
-
-The ability to tame giant spiders and wild drakes of 5 seperate energy types!
-Mounted character artwork
-More Loyalty effects (disobedience will need to be taken seriously!)
-2 new unlockable trees, one for long-range skirmish tactics, the other granting devastating cavalry charge attacks!
-Gruesome sound effects for Barbarous Combat, Dreadful Onset, and all beast attacks
-New, improved and redesigned talents - all based on your feedback!
-True, multi-character tile handling
-
-Meanwhile, bugs, typos and balance issues will be "hotfixed" out of the v0.0 release
-I'll also add, before v1.0 proper:
-	Better AI handling of talents
-	Some more Loyalty effects
-	Some interface polish (e.g condense Mount / Dismount into 1 talent)
-
-
-though you never knew what was so 'noble' and 'civilized' about writhing on the floor, dead
+Norse Projects Sweatshirt in Merino Blend (Black) Small / S may fit M, not Vagn
+Norse Projects Sweatshirt in Merino Blend (Black) Size Small S may fit M, not Vagn
+Lee Women's Jeans "Jade", solid blue, 31"/31", stretchy/skinny w/ classic cut

@@ -181,8 +181,7 @@ function befriendMount(self, m)
 	end
 	m:resetToFull()
 	--Loyalty
-	if not self.base_max_loyalty then self.base_max_loyalty=100 end
-	self.max_loyalty = self.max_loyalty + (m.mount_data.base_loyalty-self.base_max_loyalty)
+	self.max_loyalty = self.max_loyalty + m.mount_data.loyalty_mod
 	--Quest complete
 	if self:isQuestStatus("outrider-start", engine.Quest.PENDING) then
 		self:setQuestStatus("outrider-start", engine.Quest.COMPLETED)
@@ -192,7 +191,7 @@ end
 function mountSetupSummon(self, m, x, y, no_control)
 	m.can_mount = true
 	m.mount_data = {
-	base_loyalty = 100,
+	loyalty_mod = 0,
 	loyalty_loss_coeff = 1,
 	loyalty_regen_coeff = 1,
 	share_damage = 50
@@ -237,6 +236,7 @@ newTalent{
 	range = 10,
 	tactical = { BUFF = 5 },
 	shared_talent = "T_BESTIAL_DOMINION",
+	no_unlearn_last = true,
 	on_learn = function (self, t)
 		local pet = self.outrider_pet
 		if not pet then return end
@@ -278,7 +278,7 @@ newTalent{
 		end
 		--Unset pet
 		self.outrider_pet = nil
-		self.max_loyalty = self.max_loyalty + (self.base_max_loyalty-summon.mount_data.base_loyalty)
+		self.max_loyalty = self.max_loyalty - summon.mount_data.loyalty_mod
 	end,
 	--Handle sharing of inscriptions here.
 	callbackOnTalentPost = function(self, t, ab, ret, silent)

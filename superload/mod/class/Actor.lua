@@ -8,7 +8,7 @@ function _M:init(t, no_default)
 	t.mount = nil
 	t.can_mount = t.can_mount or false
 	t.mount_data = t.mount_data or {
-		base_loyalty = 100 and t.can_mount or 0,
+		loyalty_mod = 0,
 		loyalty_loss_coeff = 1 and t.can_mount or 0,
 		loyalty_regen_coeff = 1 and t.can_mount or 0,
 		share_damage = 50 and t.can_mount or 0
@@ -179,7 +179,6 @@ local base_learnPool = _M.learnPool
 
 function _M:learnPool(t)
 	if t.loyalty or t.sustain_loyalty then
-		-- self:checkPool(t.id, self.T_LOYALTY_POOL)
 		self:checkPool(t.id, self.T_MOUNT)
 	end
 	base_learnPool(self,t)
@@ -361,16 +360,6 @@ function _M:loyaltyCheck(pet, silent)
 		end
 		return true
 	end
-end
-
-local previous_incLoyalty = _M.incLoyalty
-function _M:incLoyalty(loyalty)
-	local eff = self:hasEffect(self.EFF_BOND_BEYOND_BLOOD)
-	if eff and loyalty < 0 then
-		loyalty = loyalty - loyalty*eff.loyalty_discount/100
-	end
-
-	return previous_incLoyalty(self, loyalty)
 end
 
 _M.sustainCallbackCheck.callbackOnMounted = "talents_on_mounted"

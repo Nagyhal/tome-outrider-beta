@@ -32,6 +32,7 @@ newTalent{
 		local life = t.getLife(self, t)
 
 		local total = math.max(0, self:getStat("str") - 10) + math.max(0, self:getStat("con") - 10)
+
 		local total_armour = t.getArmour(self, t)*total
 		local total_armour_hardiness = t.getArmourHardiness(self, t)*total
 		local total_save = t.getSave(self, t)*total
@@ -39,12 +40,13 @@ newTalent{
 
 		return ([[Gain %.2f points of armour, %.2f%% armour hardiness and %.2f points of physical and spell save for each point of Constituion and Strength above 10.
 
-			Current values:
+			%s:
 			Armour +%d
 			Armour Hardiness: +%.1f%%
 			Physical Save: +%d
 			Spell Save: +%d]]):
 		format(armour, armour_hardiness, save,
+			self:knowTalent(t) and "Values at level 1" or "Current Values",
 				total_armour, total_armour_hardiness, total_save, total_save)
 	end,
 	getArmour = function(self, t) return self:combatTalentScale(t, .5, 1) end,
@@ -101,12 +103,13 @@ newTalent{
 		return ([[Increase physical resistance penetration by %.2f%%, critical chance by %.2f%% and critical damage by %.2f%% for each point of Dexterity and Cunning above 10.
 			Levelling Cunning above 10 also increases APR by %.2f%% for each point.
 
-			Current values:
+			%s:
 			Physical Resistance Penetration: +%d%%
 			Critical Chance: +%d%%
 			Criticial Power: +%d%%
 			APR: +%d]]):
 		format(phys_pen, crit_chance, crit_power, apr,
+				self:knowTalent(t) and "Values at level 1" or "Current Values",
 				total_phys_pen, total_crit_chance, total_crit_power, total_apr)
 	end,
 	getPhysPen = function(self, t) return self:combatTalentScale(t, .45, .7) end,
@@ -155,11 +158,12 @@ newTalent{
 		return ([[Increase resist all by %.2f%%, and reduce chance to be critically hit by %.2f%% for each point of Willpower and Constitution above 10.
 			Levelling Constitution also grants %.1f additional life.
 
-			Current values:
+			%s:
 			Resist All +%.1f%%
 			Crit Shrug Off Chance: +%.1f%%
 			Max Life: +%d]]):
 		format(resist_all, shrugoff_chance, life,
+				self:knowTalent(t) and "Values at level 1" or "Current Values",
 				total_resist_all, total_shrugoff_chance, total_life)
 	end,
 	getShrugoffChance = function(self, t) return self:combatTalentScale(t, .3, .5) end,
@@ -202,12 +206,13 @@ newTalent{
 
 		return ([[Gain %.1f%% stun resist, %.1f%% pin resist, %.1f%% knockback resist and %.1f%% fear resist for each point of Strength and Dexterity above 10.
 
-			Current values:
+			%s:
 			Stun Resist: +%.1f%%
 			Pin Resist: +%.1f%%
 			Knockback Resist: +%.1f%%
 			Fear Resist: +%.1f%%]]):
 		format(res, res, res, res,
+				self:knowTalent(t) and "Values at level 1" or "Current Values",
 				total_res, total_res, total_res, total_res)
 	end,
 	getRes = function(self, t) return self:combatTalentScale(t, .5, 1) end,

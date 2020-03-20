@@ -148,7 +148,7 @@ newTalent{
 		local reduction = t.getReduction(self, t)*100
 		local min = t.getMin(self, t)
 		local turns = ("%d turn"..(min>1 and "s" or "")):format(min)
-		return ([[Each time you use Rush, Overrun, or any similar movement ability, deal %d%% damage to enemies at the side of your path as you trample them with your many legs. This damage increases with your movement speed; at 200%% move speed the base damage will be %d%%.
+		return ([[Each time you use Rush, Run Them Down, or any similar movement ability, deal %d%% damage to enemies at the side of your path as you trample them with your many legs. This damage increases with your movement speed; at 200%% move speed the base damage will be %d%%.
 
 			Scuttle also decreases the duration of stuns, slows and pins by %d%% (minimum %s.)]]):
 		format(dam, dam2, reduction, turns)

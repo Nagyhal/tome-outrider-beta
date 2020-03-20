@@ -17,7 +17,7 @@
 -- Nicolas Casalini "DarkGod"
 -- darkgod@te4.org
 
-local overrun_block_path = function(typ, lx, ly, for_highlights)
+local rundown_block_path = function(typ, lx, ly, for_highlights)
 	if not game.level.map:isBound(lx, ly) then
 		return true, false, false
 	elseif not typ.no_restrict then
@@ -50,7 +50,7 @@ local overrun_block_path = function(typ, lx, ly, for_highlights)
 end
 
 newTalent{
-	name = "Overrun",
+	name = "Run Them Down",
 	type = {"mounted/mounted-mobility", 1},
 	require = mnt_strdex_req1,
 	points = 5,
@@ -58,7 +58,7 @@ newTalent{
 	cooldown = 15,
 	requires_target = true,
 	target = function(self, t)
-		return {type="beam", range=self:getTalentRange(t), friendlyfire=false, nolock=true, talent=t, block_path=overrun_block_path}
+		return {type="beam", range=self:getTalentRange(t), friendlyfire=false, nolock=true, talent=t, block_path=rundown_block_path}
 	end,
 	range = function(self, t) return math.floor(self:getTalentLevel(t) + 2) end,
 	getDamageMultiplier = function(self, t) return self:combatTalentScale(t, 1.5, 2.25) end,

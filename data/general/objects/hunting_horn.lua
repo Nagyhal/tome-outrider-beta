@@ -55,7 +55,7 @@ newEntity{base = "BASE_TOOL_MISC",
 		local old = self.current_buff_target
 		if pet and (not old or old~=pet) then
 			if old then
-				old:unlearnTalent(old.T_HUNTING_HORN_BUFF, true)
+				old:unlearnTalentFull(old.T_HUNTING_HORN_BUFF)
 			end
 			pet:learnTalent(pet.T_HUNTING_HORN_BUFF, true, 1)
 			self.current_buff_target = pet

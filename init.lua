@@ -20,7 +20,7 @@
 long_name = "Outrider (Beta)"
 short_name = "outrider"
 for_module = "tome"
-version = {1,3,0}
+version = {1,6,7}
 weight = 100
 author = { "nagyhal", "nagyhal@zoho.com" }
 homepage = "http://te4.org/users/nagyhal"
