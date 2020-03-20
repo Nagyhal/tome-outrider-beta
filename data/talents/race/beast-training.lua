@@ -1,5 +1,5 @@
 newTalent{
-	name = "Staying Power",
+	name = "Fortitude",
 	-- short_name = "",
 	type = {"race/beast-training", 1},
 	mode = "passive",
@@ -19,7 +19,7 @@ newTalent{
 	on_unlearn = function(self, t, p)
 	end,
 	callbackOnStatChange = function(self, t, stat, v)
-		if stat == self.STAT_STR or stat == self.STAT_CON then
+		if stat == self.STAT_CON or stat == self.STAT_WIL then
 			self:updateTalentPassives(t.id)
 			-- t.on_unlearn(self, t, p)
 			-- t.on_learn(self, t)
@@ -29,30 +29,39 @@ newTalent{
 		local armour = t.getArmour(self, t)
 		local armour_hardiness = t.getArmourHardiness(self, t)
 		local save = t.getSave(self, t)
-		local life = t.getLife(self, t)
+
+		local armour_inc = t.getArmourInc(self, t)
+		local armour_hardiness_inc = t.getArmourHardinessInc(self, t)
+		local save_inc = t.getSaveInc(self, t)
 
 		local total = math.max(0, self:getStat("str") - 10) + math.max(0, self:getStat("con") - 10)
 
-		local total_armour = t.getArmour(self, t)*total
-		local total_armour_hardiness = t.getArmourHardiness(self, t)*total
-		local total_save = t.getSave(self, t)*total
-		local total_life = t.getLife(self, t)*math.max(0, self:getStat("con") - 10)
+		local total_armour = armour_inc*total
+		local total_armour_hardiness = armour_hardiness_inc*total
+		local total_save = save_inc*total
 
-		return ([[Gain %.2f points of armour, %.2f%% armour hardiness and %.2f points of physical and spell save for each point of Constituion and Strength above 10.
+		return ([[Constant battle has honed your beast's powers of resilience, allowing it stay in the fight for longer. Gain %d points of armour, %d%% armour hardiness and %d points of physical and spell save.
+
+			Also, Consitution above 10 will now increase armour by %.2f.
+			Willpower above 10 will improve physical and spell save by %.2f.
 
 			%s:
 			Armour +%d
-			Armour Hardiness: +%.1f%%
 			Physical Save: +%d
 			Spell Save: +%d]]):
 		format(armour, armour_hardiness, save,
-			self:knowTalent(t) and "Values at level 1" or "Current Values",
-				total_armour, total_armour_hardiness, total_save, total_save)
+			armour_inc, save_inc,
+			self:knowTalent(t) and "Bonuses at level 1" or "Current Bonuses",
+				total_armour, total_save, total_save)
 	end,
-	getArmour = function(self, t) return self:combatTalentScale(t, .5, 1) end,
-	getArmourHardiness = function(self, t) return self:combatTalentScale(t, .7, 1) end,
-	getSave = function(self, t) return self:combatTalentScale(t, .75, 1.25) end,
-	getLife = function(self, t) return self:combatTalentScale(t, 1, 6) end,
+	getArmour = function(self, t) return self:combatTalentScale(t, 10, 25, 0.35) end,
+	getArmourHardiness = function(self, t) return self:combatTalentLimit(t, 50, 30, 45) end,
+	getSave = function(self, t) return self:combatTalentScale(t, 7, 27) end,
+
+	getArmourInc = function(self, t) return self:combatTalentScale(t, .5, 1) end,
+	getArmourHardinessInc = function(self, t) return self:combatTalentScale(t, .7, 1) end,
+	getSaveInc = function(self, t) return self:combatTalentScale(t, .25, .4) end,
+	getLifeInc = function(self, t) return self:combatTalentScale(t, 1, 4) end,
 }
 
 newTalent{
@@ -94,32 +103,40 @@ newTalent{
 		local crit_power = t.getCritPower(self, t)
 		local apr = t.getAPR(self, t)
 
-		local total = math.max(0, self:getStat("dex") - 10) + math.max(0, self:getStat("cun") - 10)
-		local total_phys_pen = t.getPhysPen(self, t)*total
-		local total_crit_chance = t.getCritChance(self, t)*total
-		local total_crit_power = t.getCritPower(self, t)*total
-		local total_apr = t.getAPR(self, t)*math.max(0, self:getStat("cun") - 10)
+		local phys_pen_inc = t.getPhysPenInc(self, t)
+		local crit_chance_inc = t.getCritChanceInc(self, t)
+		local crit_power_inc = t.getCritPowerInc(self, t)
+		local apr_inc = t.getAPRInc(self, t)
 
-		return ([[Increase physical resistance penetration by %.2f%%, critical chance by %.2f%% and critical damage by %.2f%% for each point of Dexterity and Cunning above 10.
-			Levelling Cunning above 10 also increases APR by %.2f%% for each point.
+		local total = math.max(0, self:getStat("dex") - 10) + math.max(0, self:getStat("cun") - 10)
+		local total_phys_pen = phys_pen_inc*total
+		local total_crit_chance = crit_chance_inc*total
+		local total_crit_power = crit_power_inc *total
+		local total_apr = apr_inc*math.max(0, self:getStat("cun") - 10)
+
+		return ([[By tooth or claw, your beast learns to take down its mark. Increase your beast's physical resistance penetration by %d%% and armour penetration by %d.
+
+			Also, Cunning above 10 will now increase critical power by %.2f%%
 
 			%s:
-			Physical Resistance Penetration: +%d%%
-			Critical Chance: +%d%%
-			Criticial Power: +%d%%
-			APR: +%d]]):
-		format(phys_pen, crit_chance, crit_power, apr,
-				self:knowTalent(t) and "Values at level 1" or "Current Values",
-				total_phys_pen, total_crit_chance, total_crit_power, total_apr)
+			Critical Power: +%d%%]]):
+		format(phys_pen, apr, crit_power_inc,
+				self:knowTalent(t) and "Bonuses at level 1" or "Current Bonuses",
+				total_crit_power)
 	end,
-	getPhysPen = function(self, t) return self:combatTalentScale(t, .45, .7) end,
+	getPhysPen = function(self, t) return self:combatTalentLimit(t, 75, 20, 50) end,
+	getAPR = function(self, t) return self:combatTalentScale(t, 7, 25) end,
 	getCritChance = function(self, t) return self:combatTalentScale(t, .1, .2) end,
 	getCritPower = function(self, t) return self:combatTalentScale(t, .3, .5) end,
-	getAPR = function(self, t) return self:combatTalentScale(t, .75, 1) end,
+
+	getPhysPenInc = function(self, t) return self:combatTalentScale(t, .45, .7) end,
+	getCritChanceInc = function(self, t) return self:combatTalentScale(t, .1, .2) end,
+	getCritPowerInc = function(self, t) return self:combatTalentScale(t, .3, .5) end,
+	getAPRInc = function(self, t) return self:combatTalentScale(t, .75, 1) end,
 }
 
 newTalent{
-	name = "Fortitude",
+	name = "Staying Power",
 	-- short_name = "	",
 	type = {"race/beast-training", 1},
 	mode = "passive",
@@ -132,7 +149,7 @@ newTalent{
 		self:talentTemporaryValue(p, "resists", {all = t.getResistAll(self, t)*total})
 		self:talentTemporaryValue(p, "ignore_direct_crits", t.getShrugoffChance(self, t)*total)
 
-		self:talentTemporaryValue(p, "max_life", t.getLife(self, t)*con)
+		self:talentTemporaryValue(p, "max_life", t.getLifeInc(self, t)*con)
 	end,
 	on_learn = function(self, t)
 	end,
@@ -148,27 +165,24 @@ newTalent{
 	info = function(self, t)
 		local resist_all = t.getResistAll(self, t)
 		local shrugoff_chance = t.getShrugoffChance(self, t)
-		local life = t.getLife(self, t)
+		local life_inc = t.getLifeInc(self, t)
 
-		local total = math.max(0, self:getStat("con") - 10) + math.max(0, self:getStat("wil") - 10)
-		local total_resist_all = resist_all*total
-		local total_shrugoff_chance = shrugoff_chance*total
-		local total_life = life*math.max(0, self:getStat("con") - 10) 
+		local total = math.max(0, self:getStat("con") - 10)
+		local total_life = life_inc*total 
 
-		return ([[Increase resist all by %.2f%%, and reduce chance to be critically hit by %.2f%% for each point of Willpower and Constitution above 10.
-			Levelling Constitution also grants %.1f additional life.
+		return ([[Increase resist all by %d%%, and reduce chance to be critically hit by %d%%.
+
+			Also, levelling Constitution grants %.1f additional life.
 
 			%s:
-			Resist All +%.1f%%
-			Crit Shrug Off Chance: +%.1f%%
 			Max Life: +%d]]):
-		format(resist_all, shrugoff_chance, life,
-				self:knowTalent(t) and "Values at level 1" or "Current Values",
-				total_resist_all, total_shrugoff_chance, total_life)
+		format(resist_all, shrugoff_chance, life_inc,
+				self:knowTalent(t) and "Bonuses at level 1" or "Current Bonuses",
+				total_life)
 	end,
-	getShrugoffChance = function(self, t) return self:combatTalentScale(t, .3, .5) end,
-	getResistAll = function(self, t) return self:combatTalentScale(t, .2, .35) end,
-	getLife = function(self, t) return self:combatTalentScale(t, 1, 8) end,
+	getShrugoffChance = function(self, t) return self:combatTalentLimit(t, 50, 20, 35) end,
+	getResistAll = function(self, t) return self:combatTalentLimit(t, 35, 6.5, 20) end,
+	getLifeInc = function(self, t) return self:combatTalentScale(t, 1, 4) end,
 }
 
 newTalent{
@@ -201,19 +215,19 @@ newTalent{
 	info = function(self, t)
 		local res = t.getRes(self, t)
 
-		local total = math.max(0, self:getStat("str") - 10) + math.max(0, self:getStat("dex") - 10)
-		local total_res = res*total
+		-- local total = math.max(0, self:getStat("str") - 10) + math.max(0, self:getStat("dex") - 10)
+		-- local total_res = res*total
 
-		return ([[Gain %.1f%% stun resist, %.1f%% pin resist, %.1f%% knockback resist and %.1f%% fear resist for each point of Strength and Dexterity above 10.
+		return ([[Gain %d%% stun resist, %d%% pin resist, %d%% knockback resist and %d%% fear resist.]]):
 
-			%s:
-			Stun Resist: +%.1f%%
-			Pin Resist: +%.1f%%
-			Knockback Resist: +%.1f%%
-			Fear Resist: +%.1f%%]]):
-		format(res, res, res, res,
-				self:knowTalent(t) and "Values at level 1" or "Current Values",
-				total_res, total_res, total_res, total_res)
+			-- %s:
+			-- Stun Resist: +%.1f%%
+			-- Pin Resist: +%.1f%%
+			-- Knockback Resist: +%.1f%%
+			-- Fear Resist: +%.1f%%]]):
+		format(res, res, res, res)
+				-- self:knowTalent(t) and "Values at level 1" or "Current Values",
+				-- total_res, total_res, total_res, total_res)
 	end,
-	getRes = function(self, t) return self:combatTalentScale(t, .5, 1) end,
+	getRes = function(self, t) return self:combatTalentLimit(t, 100, 20, 65) end,
 }
