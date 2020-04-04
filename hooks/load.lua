@@ -17,6 +17,7 @@ class:bindHook("ToME:load", function(self, data)
 	})
 	--ActorInventory:defineInventory("MOUNT", "Mount", false, "Your mount.")
 	ActorTemporaryEffects:loadDefinition("/data-outrider/timed_effects/timed_effects.lua")
+	-- ActorTemporaryEffects:loadDefinition("/data-outrider/timed_effects/disobedience.lua")
 	ActorInventory:defineInventory("MOUNT", "Ridden", true, "Trained characters may ride atop a mount", nil)
 	DamageType:loadDefinition("data-outrider/damage_types.lua")
 	ActorAI:loadDefinition("/data-outrider/ai/")
@@ -42,12 +43,12 @@ class:bindHook("Actor:move", function(self, data)
 	--a more /architectural/.solution planned.
 	--TODO: implement this solution
 	local pet = self.outrider_pet
-	if pet and pet:knowTalent(pet.T_PREDATORY_FLANKING) then
-		pet:callTalent(pet.T_PREDATORY_FLANKING, "callbackOnMove")
+	if pet and pet:knowTalent(pet.T_OUTRIDER_PREDATORY_FLANKING) then
+		pet:callTalent(pet.T_OUTRIDER_PREDATORY_FLANKING, "callbackOnMove")
 	end
 	local owner = self.owner
-	if owner and owner:knowTalent(owner.T_FLANKING) then
-		owner:callTalent(owner.T_FLANKING, "callbackOnMove")
+	if owner and owner:knowTalent(owner.T_OUTRIDER_FLANKING) then
+		owner:callTalent(owner.T_OUTRIDER_FLANKING, "callbackOnMove")
 	end
 end)
 
@@ -59,7 +60,7 @@ class:bindHook("DamageProjector:base", function(self, data)
 	local a = game.level.map(self.x, self.y, engine.Map.ACTOR)
 	if not a or a~=self then return ret end
 
-	local eff = self.hasEffect and self:hasEffect(self.EFF_SPRING_ATTACK)
+	local eff = self.hasEffect and self:hasEffect(self.EFF_OUTRIDER_SPRING_ATTACK)
 	if eff then
 		local dist = core.fov.distance(self.x, self.y, data.x, data.y)
 		if dist >= 2 then
@@ -70,9 +71,9 @@ class:bindHook("DamageProjector:base", function(self, data)
 		end
 	end
 	local a = game.level.map(data.x, data.y, engine.Map.ACTOR)
-	if self:knowTalent(self.T_TRAIT_OPPORTUNISTIC) then
+	if self:knowTalent(self.T_OUTRIDER_TRAIT_OPPORTUNISTIC) then
 		if a.life <= a.max_life*.25 then
-			local p = self;getTalentFromId(self.T_TRAIT_OPPORTUNISTIC)
+			local p = self;getTalentFromId(self.T_OUTRIDER_TRAIT_OPPORTUNISTIC)
 			local pct = p.getPct(self, t)
 			data.dam = data.dam * pct/100
 		end
@@ -80,7 +81,7 @@ class:bindHook("DamageProjector:base", function(self, data)
 
 	local target = game.level.map(data.x, data.y, engine.Map.ACTOR)
 	if target then
-		local eff = a:hasEffect(a.EFF_PREDATORY_FLANKING)
+		local eff = a:hasEffect(a.EFF_OUTRIDER_PREDATORY_FLANKING)
 		if eff then
 			if eff.src==self then
 				data.dam = data.dam + (data.dam * eff.src_pct/100)
@@ -131,15 +132,15 @@ class:bindHook("DamageProjector:final", function(self, data)
 	end
 
 	if target then
-		if target:knowTalent(target.T_UNCANNY_TENACITY) then
+		if target:knowTalent(target.T_OUTRIDER_UNCANNY_TENACITY) then
 			if data.dam > self.max_life*.15 then
-				if not target:isTalentCoolingDown(target.T_UNCANNY_TENACITY) then
-					local res_pct= target:callTalent(target.T_UNCANNY_TENACITY, "getImmediateRes")
+				if not target:isTalentCoolingDown(target.T_OUTRIDER_UNCANNY_TENACITY) then
+					local res_pct= target:callTalent(target.T_OUTRIDER_UNCANNY_TENACITY, "getImmediateRes")
 					local true_res =  data.dam*res_pct
 					data.dam = data.dam - true_res
 					game.logSeen(target, "#CRIMSON#%s overcomes %d of the damage!", target.name:capitalize(), true_res)
-					target:callTalent(target.T_UNCANNY_TENACITY, "setEffect")
-					target:startTalentCooldown(target.T_UNCANNY_TENACITY)
+					target:callTalent(target.T_OUTRIDER_UNCANNY_TENACITY, "setEffect")
+					target:startTalentCooldown(target.T_OUTRIDER_UNCANNY_TENACITY)
 				end
 			end
 		end
@@ -195,14 +196,14 @@ class:bindHook("Actor:takeHit", function(self, data)
 		local coeff = self.loyalty_loss_coeff or 1
 		local pct = data.value / self.max_life * 100
 		local loyalty_loss = pct / 3
-		if self:hasEffect(self.EFF_UNBRIDLED_FEROCITY) then
+		if self:hasEffect(self.EFF_OUTRIDER_UNBRIDLED_FEROCITY) then
 			--Increase rather than decrease
 			owner:incLoyalty(loyalty_loss)
 		else
 			owner:incLoyalty(-loyalty_loss * coeff)
 		end
 	end
-	local eff = self:hasEffect(self.EFF_RIDDEN) or self:hasEffect(self.EFF_MOUNT	)
+	local eff = self:hasEffect(self.EFF_OUTRIDER_RIDDEN) or self:hasEffect(self.EFF_OUTRIDER_MOUNT)
 	rider = (eff and eff.rider) or ((eff and eff.mount) and self)
 	if rider and data.value / self.max_life > .1 then
 		--Maybe do a getDismountChance() so Loyalty can be factored in?
@@ -223,8 +224,8 @@ end)
 -- end)
 
 class:bindHook("Combat:attackTargetWith", function(self, data)
-	if self:hasEffect(self.EFF_STRIKE_AT_THE_HEART) then
-		self:callTalent(self.T_STRIKE_AT_THE_HEART, "handleStrike", data.target, data.hitted)
+	if self:hasEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART) then
+		self:callTalent(self.T_OUTRIDER_STRIKE_AT_THE_HEART, "handleStrike", data.target, data.hitted)
 	end
 	return data
 end)
@@ -232,18 +233,18 @@ end)
 class:bindHook("Combat:attackTarget", function(self, data)
 	local target = data.target
 	--TODO: Make this also functional for attackTargetWith!
-	if self:isTalentActive(self.T_DIVE_BOMB) or self:isTalentActive("T_COMMAND:_DIVE_BOMB") then
+	if self:isTalentActive(self.T_OUTRIDER_DIVE_BOMB) or self:isTalentActive("T_OUTRIDER_COMMAND_DIVE_BOMB") then
 		if not self:attr("never_move") then self:flyOver(target.x, target.y, 5) end
 		data.hit = false
 		data.stop = true
 	end
-	if target:isTalentActive(target.T_DIVE_BOMB) or self:isTalentActive("T_COMMAND:_DIVE_BOMB") then
+	if target:isTalentActive(target.T_OUTRIDER_DIVE_BOMB) or self:isTalentActive("T_OUTRIDER_COMMAND_DIVE_BOMB") then
 		data.hit = false
 		data.stop = true
 	end
 
-	if self:hasEffect(self.EFF_STRIKE_AT_THE_HEART) then 
-		self:callTalent(self.T_STRIKE_AT_THE_HEART, "handleStrike", data.target, data.hitted)
+	if self:hasEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART) then 
+		self:callTalent(self.T_OUTRIDER_STRIKE_AT_THE_HEART, "handleStrike", data.target, data.hitted)
 	end
 	return data
 end)

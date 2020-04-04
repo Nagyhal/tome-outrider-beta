@@ -18,8 +18,7 @@
 -- darkgod@te4.org
 
 newTalent{
-	short_name = "LET_EM_LOOSE",
-	name = "Let 'Em Loose!",
+	name = "Let 'Em Loose!", short_name = "OUTRIDER_LET_EM_LOOSE", image = "talents/let_em_loose.png",
 	type = {"mounted/teamwork", 1},
 	require = mnt_wilcun_req1,
 	points = 5,
@@ -73,7 +72,7 @@ newTalent{
 		if mount:attackTarget(target, nil, t.getDam(self, t), true) and target:canBe("stun") then
 			target:setEffect(target.EFF_DAZED, t.getDur(self, t), {})
 		end
-		mount:setEffect(mount.EFF_SET_LOOSE, t.getBuffDur(self, t), {dam=t.getDamBuff(self, t), def=t.getDefBuff(self, t), evade=t.getEvade(self, t)})
+		mount:setEffect(mount.EFF_OUTRIDER_SET_LOOSE, t.getBuffDur(self, t), {dam=t.getDamBuff(self, t), def=t.getDefBuff(self, t), evade=t.getEvade(self, t)})
 		return true
 	end,
 	info = function(self, t)
@@ -102,8 +101,7 @@ newTalent{
 
 
 newTalent{
-	name = "Animal Affinity",
-	short_name = "FERAL_AFFINITY",
+	name = "Animal Affinity", short_name = "OUTRIDER_FERAL_AFFINITY", image="talents/feral_affinity.png",
 	type = {"mounted/teamwork", 2},
 	require = mnt_wilcun_req2,
 	mode = "passive",
@@ -116,7 +114,7 @@ newTalent{
 			end
 		end
 	end,
-	shared_talent = "T_FERAL_AFFINITY_MOUNT",
+	shared_talent = "T_OUTRIDER_FERAL_AFFINITY_MOUNT",
 	on_learn = function (self, t)
 		local pet = self.outrider_pet
 		if not pet then return end
@@ -144,8 +142,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Animal Affinity (Mount)",
-	short_name = "FERAL_AFFINITY_MOUNT",
+	name = "Animal Affinity (Mount)", short_name = "OUTRIDER_FERAL_AFFINITY_MOUNT", image = "talents/feral_affinity.png",
 	type = {"technique/other", 1},
 	mode = "passive",
 	points = 1,
@@ -153,8 +150,8 @@ newTalent{
 		--TODO: These need to be updated frequently
 		local owner = self.summoner
 		if owner then
-			local save_pct = owner:callTalent(owner.T_FERAL_AFFINITY, "getSavePct")/100
-			local resist_pct = owner:callTalent(owner.T_FERAL_AFFINITY, "getResistPct")/100
+			local save_pct = owner:callTalent(owner.T_OUTRIDER_FERAL_AFFINITY, "getSavePct")/100
+			local resist_pct = owner:callTalent(owner.T_OUTRIDER_FERAL_AFFINITY, "getResistPct")/100
 			local save = owner:combatMindpower()*save_pct
 			self:talentTemporaryValue(p, "combat_mentalresist", save)
 			local confusion = (owner:attr("confusion_immune") or 0) * resist_pct
@@ -180,7 +177,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Rearing Assault",
+	name = "Rearing Assault", short_name = "READING_ASSAULT", image = "talents/rearing_assault.png",
 	type = {"mounted/teamwork", 3},
 	points = 5,
 	random_ego = "defensive",
@@ -262,7 +259,7 @@ newTalent{
 
 
 newTalent{
-	name = "Flanking",
+	name = "Flanking", short_name = "OUTRIDER_FLANKING", image = "talents/flanking.png",
 	type = {"mounted/teamwork", 4},
 	points = 5,
 	require = mnt_wilcun_req4,
@@ -279,7 +276,7 @@ newTalent{
 				local target2 = game.level.map(c[1], c[2], Map.ACTOR)
 				if target2 and self:reactionToward(target2) >= 0 and core.fov.distance(self.x, self.y, target2.x, target2.y)>1 then allies[#allies+1] = target2 end
 				if #allies>=1 then
-					target:setEffect(target.EFF_FLANKED, 2, {src=self, allies=allies, crit=t.getCritChance(self, t), crit_dam=t.getCritPower(self, t)})
+					target:setEffect(target.EFF_OUTRIDER_FLANKED, 2, {src=self, allies=allies, crit=t.getCritChance(self, t), crit_dam=t.getCritPower(self, t)})
 				end --We run the check to see if we are no longer flanking from within the enemy's temp effect.
 			end
 		end

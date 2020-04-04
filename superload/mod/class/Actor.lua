@@ -32,7 +32,7 @@ end
 --New mount functions
 function _M:isMounted()
 	local mount = self:hasMount()
-	if mount and self:hasEffect(self.EFF_MOUNT) then return true else return false end
+	if mount and self:hasEffect(self.EFF_OUTRIDER_MOUNT) then return true else return false end
 end
 
 function _M:getMount()
@@ -40,7 +40,7 @@ function _M:getMount()
 end
 
 function _M:canMount(mount)
-	if mount.can_mount and mount.summoner == self and not mount:hasEffect(mount.EFF_UNBRIDLED_FEROCITY) then
+	if mount.can_mount and mount.summoner == self and not mount:hasEffect(mount.EFF_OUTRIDER_UNBRIDLED_FEROCITY) then
 		return true
 	else return false
 	end
@@ -87,23 +87,23 @@ function _M:mountTarget(target)
 		local old_x, old_y = target.x, target.y  -- not sure this is necessary, test
 		game.level:removeEntity(target)
 		self:move(old_x, old_y, true)
-		self:setEffect(self.EFF_MOUNT, 100, {mount=target})
-		target:setEffect(self.EFF_RIDDEN, 100, {rider=self})
+		self:setEffect(self.EFF_OUTRIDER_MOUNT, 100, {mount=target})
+		target:setEffect(self.EFF_OUTRIDER_RIDDEN, 100, {rider=self})
 		game.logSeen(self, "%s mounts %s!", self.name:capitalize(), target.name:capitalize())
 		target:fireTalentCheck("callbackOnMounted")
 		--Looks like our attempt was successful.
 		--Now to switch the talent icon to Dismount.
 		if self.hotkey and self.isHotkeyBound then
-			local pos = self:isHotkeyBound("talent", self.T_MOUNT)
+			local pos = self:isHotkeyBound("talent", self.T_OUTRIDER_MOUNT)
 			if pos then
-				self.hotkey[pos] = {"talent", self.T_DISMOUNT}
+				self.hotkey[pos] = {"talent", self.T_OUTRIDER_DISMOUNT}
 			end
 		end
 
-		if not self:knowTalent(self.T_DISMOUNT) then
+		if not self:knowTalent(self.T_OUTRIDER_DISMOUNT) then
 			local ohk = self.hotkey
 			self.hotkey = nil -- Prevent assigning hotkey, we just did
-			self:learnTalent(self.T_DISMOUNT, true, 1, {no_unlearn=true})
+			self:learnTalent(self.T_OUTRIDER_DISMOUNT, true, 1, {no_unlearn=true})
 			self.hotkey = ohk
 		end
 		return true
@@ -122,8 +122,8 @@ function _M:dismountTarget(target, x, y)
 		-- game.zone:addEntity(game.level, target, "actor", target.x, target.y)
 		local ox, oy = self.x, self.y
 		local ok = self:move(x, y, true)
-		self:removeEffect(self.EFF_MOUNT, false, true)
-		target:removeEffect(self.EFF_RIDDEN, false, true)
+		self:removeEffect(self.EFF_OUTRIDER_MOUNT, false, true)
+		target:removeEffect(self.EFF_OUTRIDER_RIDDEN, false, true)
 		game.logSeen(self, "%s dismounts from %s", self.name:capitalize(), target.name:capitalize())
 		game.level:addEntity(self)
 		-- game.zone:addEntity(game.level, self, "actor", self.x, self.y)
@@ -136,9 +136,9 @@ function _M:dismountTarget(target, x, y)
 		self.changed = true
 		target:fireTalentCheck("callbackOnDismounted")
 		if self.hotkey and self.isHotkeyBound then
-			local pos = self:isHotkeyBound("talent", self.T_DISMOUNT)
+			local pos = self:isHotkeyBound("talent", self.T_OUTRIDER_DISMOUNT)
 			if pos then
-				self.hotkey[pos] = {"talent", self.T_MOUNT}
+				self.hotkey[pos] = {"talent", self.T_OUTRIDER_MOUNT}
 			end
 		end
 		return true
@@ -179,7 +179,7 @@ local base_learnPool = _M.learnPool
 
 function _M:learnPool(t)
 	if t.loyalty or t.sustain_loyalty then
-		self:checkPool(t.id, self.T_MOUNT)
+		self:checkPool(t.id, self.T_OUTRIDER_MOUNT)
 	end
 	base_learnPool(self,t)
 end
@@ -239,10 +239,10 @@ local base_projected = _M.projected
 function  _M:projected(tx, ty, who, t, x, y, damtype, dam, particles)
 	local grids = self.impunity_avoid_grids
 	local ret = false
-	if grids and not self.impunity_no_recur and rng.percent(self:callTalent(self.T_IMPUNITY_OF_WARLORDS, "getChance")) then
+	if grids and not self.impunity_no_recur and rng.percent(self:callTalent(self.T_OUTRIDER_IMPUNITY_OF_WARLORDS, "getChance")) then
 		self.impunity_no_recur = true
 		local actors_list = {}
-		local t =self:getTalentFromId(self.T_IMPUNITY_OF_WARLORDS)
+		local t =self:getTalentFromId(self.T_OUTRIDER_IMPUNITY_OF_WARLORDS)
 		local tg = {type="ball", radius=self:getTalentRange(t), talent=t}
 		self:project(tg, self.x, self.y, function(px, py)
 			--Don't switch with enemies in the danger grids
@@ -265,14 +265,14 @@ function  _M:projected(tx, ty, who, t, x, y, damtype, dam, particles)
 	--Handle Vestigial Magicks
 	local cur_t = who.__talent_running
 	local true_dam = (type(dam)=="table" and dam.dam) or (type(dam)=="number" and dam or 0)
-	if cur_t and true_dam>0 and self:hasEffect(self.EFF_VESTIGIAL_MAGICKS) then
+	if cur_t and true_dam>0 and self:hasEffect(self.EFF_OUTRIDER_VESTIGIAL_MAGICKS) then
 		if not self.turn_procs.vestigial_magicks_targets then
 			self.turn_procs.vestigial_magicks_targets = {}
 		end
 		local uids = self.turn_procs.vestigial_magicks_targets
 		uids[target.uid] = uids[target.uid] or {}
 		if not uids[target.uid][cur] then
-			self:callTalent(self.T_VESTIGIAL_MAGICKS, "doDamage", src)
+			self:callTalent(self.T_OUTRIDER_VESTIGIAL_MAGICKS, "doDamage", src)
 		end
 	end
 	return base_projected(self, tx, ty, who, t, x, y, damtype, dam, particles) or ret
@@ -281,7 +281,7 @@ end
 local base_on_project_acquire = _M.on_project_acquire
 function _M:on_project_acquire(tx, ty, who, t, x, y, damtype, dam, particles, is_projectile, mods)
 	--Living Shield
-	local eff = self:hasEffect(self.EFF_LIVING_SHIELDED); if eff and is_projectile and rng.percent(eff.chance) then
+	local eff = self:hasEffect(self.EFF_OUTRIDER_LIVING_SHIELDED); if eff and is_projectile and rng.percent(eff.chance) then
 		eff.trgt:logCombat(who, "#Source# becomes the target of #target#'s' projectile!")
 		mods.x = eff.trgt.x-self.x
 		mods.y = eff.trgt.x-self.x
@@ -289,7 +289,7 @@ function _M:on_project_acquire(tx, ty, who, t, x, y, damtype, dam, particles, is
 
 	--Handle Impunity of Warlords
 	if type(dam)=="table" then dam = dam.dam end
-	if self:isTalentActive(self.T_IMPUNITY_OF_WARLORDS) and not self.impunity_no_recur1 and self:reactionToward(who)<0 and dam and dam>0 then
+	if self:isTalentActive(self.T_OUTRIDER_IMPUNITY_OF_WARLORDS) and not self.impunity_no_recur1 and self:reactionToward(who)<0 and dam and dam>0 then
 		self.impunity_no_recur_pre = true
 		self.impunity_avoid_grids = who:project(t, x, y, function() end)
 		self.impunity_no_recur_pre = false

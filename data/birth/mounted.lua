@@ -70,11 +70,11 @@ newBirthDescriptor{
 	},
 
 	talents = {
-		[ActorTalents.T_CHALLENGE_THE_WILDS] = 1,
+		[ActorTalents.T_OUTRIDER_CHALLENGE_THE_WILDS] = 1,
 		[ActorTalents.T_BOW_MASTERY] = 1,
 		[ActorTalents.T_WEAPON_COMBAT] = 1,
 		[ActorTalents.T_WEAPONS_MASTERY] = 1,
-		[ActorTalents.T_RUN_THEM_DOWN] = 1,
+		[ActorTalents.T_OUTRIDER_RUN_THEM_DOWN] = 1,
 		[ActorTalents.T_SHOOT] = 1
 	},
 	

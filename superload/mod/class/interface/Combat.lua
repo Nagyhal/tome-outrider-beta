@@ -20,7 +20,7 @@ function _M:combatMovementSpeed(x, y)
 end
 
 -- function _M:hasTwoHandedWeapon()
--- 	if self:knowTalent(self.T_ORCHESTRATOR_OF_DISMAY) then
+-- 	if self:knowTalent(self.T_OUTRIDER_ORCHESTRATOR_OF_DISMAY) then
 -- 		local weaponry = self:getInven("MAINHAND") or {}
 -- 		return weaponry[1]
 -- 	end
@@ -31,9 +31,9 @@ function _M:combatPhysicalpower(mod, weapon, add)
 	--TODO: Replace this with getOwner or somesuch
 	local summoner = self.summoner
 	if summoner and summoner.outrider_pet and summoner.outrider_pet == self then
-		if summoner:knowTalent(summoner.T_CHALLENGE_THE_WILDS) then
+		if summoner:knowTalent(summoner.T_OUTRIDER_CHALLENGE_THE_WILDS) then
 			if not add then add=0 end
-			add = add + summoner:callTalent(summoner.T_CHALLENGE_THE_WILDS, "getDam")
+			add = add + summoner:callTalent(summoner.T_OUTRIDER_CHALLENGE_THE_WILDS, "getDam")
 		end
 	end
 	return base_combatPhysicalpower(self, mod, weapon, add)
@@ -41,7 +41,7 @@ end
 
 local base_attackTargetWith = _M.attackTargetWith
 function _M:attackTargetWith(target, weapon, damtype, mult, force_dam)
-	local eff = target:hasEffect(target.EFF_LIVING_SHIELDED)
+	local eff = target:hasEffect(target.EFF_OUTRIDER_LIVING_SHIELDED)
 	if eff and not self.living_shield_bypass then
 		if rng.percent(eff.chance) and self~=eff.trgt then
 			target:logCombat(eff.trgt, "#Target# becomes the target of %s's attack!", self.name)
@@ -55,7 +55,7 @@ end
 local base_physicalCrit = _M.physicalCrit
 function _M:physicalCrit(dam, weapon, target, atk, def, add_chance, crit_power_add)
 	crit_power_add = crit_power_add or 0
-	local eff = target:hasEffect(target.EFF_FLANKING)
+	local eff = target:hasEffect(target.EFF_OUTRIDER_FLANKING)
 	if eff then
 		crit_power_add = crit_power_add + eff.crit_dam
 	end
@@ -64,7 +64,7 @@ end
 
 local base_attackTarget = _M.attackTarget
 function _M:attackTarget(target, damtype, mult, noenergy, force_unharmed)
-	local eff = target:hasEffect(target.EFF_LIVING_SHIELDED)
+	local eff = target:hasEffect(target.EFF_OUTRIDER_LIVING_SHIELDED)
 	if eff then
 		self.living_shield_bypass=true
 		if rng.percent(eff.chance) and self~=eff.trgt then
@@ -94,7 +94,7 @@ function _M:combatDamage(weapon, adddammod)
 	end
 	--handle owner bonus to damage
 	local owner = self.owner
-	if owner and owner:knowTalent(owner.T_CHALLENGE_THE_WILDS) then
+	if owner and owner:knowTalent(owner.T_OUTRIDER_CHALLENGE_THE_WILDS) then
 		totstat = totstat + owner:getStat("cun") *.6
 	end
 

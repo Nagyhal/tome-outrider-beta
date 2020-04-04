@@ -1,5 +1,5 @@
 newTalent{
-	name = "Wailing Weapon",
+	name = "Wailing Weapon", short_name = "OUTRIDER_WAILING_WEAPON", image="talents/wailing_weapon.png",
 	type = {"technique/dreadful-onset", 1},
 	points = 5,
 	cooldown = 15,
@@ -14,7 +14,7 @@ newTalent{
 	radius = function(self, t) return math.round(self:combatTalentScale(t, 2, 3)) end,
 	action = function(self, t)
 		local eff_id
-		if self:hasArcheryWeapon() then eff_id = self.EFF_HOWLING_ARROWS else eff_id = self.EFF_SHRIEKING_STRIKES end
+		if self:hasArcheryWeapon() then eff_id = self.EFF_OUTRIDER_HOWLING_ARROWS else eff_id = self.EFF_OUTRIDER_SHRIEKING_STRIKES end
 		self:setEffect(eff_id, t.getDur(self, t), {power=t.getConfusePower(self, t)})
 		return true
 	end,
@@ -31,8 +31,8 @@ newTalent{
 			target2:setEffect(target.EFF_CONFUSED, t.getConfuseDur(self, t), {power=t.getConfusePower(self, t)})
 			local eff = target2:hasEffect(target2.EFF_CONFUSED)
 			if eff then
-				if self:hasEffect(self.EFF_HOWLING_ARROWS) then self:logCombat(target2, "#Source#'s howling arrows confuse #target#!") end
-				if self:hasEffect(self.EFF_SHRIEKING_STRIKES) then self:logCombat(target2, "#Source#'s shrieking strikes confuse #target#!") end
+				if self:hasEffect(self.EFF_OUTRIDER_HOWLING_ARROWS) then self:logCombat(target2, "#Source#'s howling arrows confuse #target#!") end
+				if self:hasEffect(self.EFF_OUTRIDER_SHRIEKING_STRIKES) then self:logCombat(target2, "#Source#'s shrieking strikes confuse #target#!") end
 			end
 		end
 		self.turn_procs.done_wailing_weapon = true
@@ -64,7 +64,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Impalement",
+	name = "Impalement", short_name = "OUTRIDER_IMPALEMENT", image="talents/impalement.png",
 	type = {"technique/dreadful-onset", 2},
 	require = mnt_dexcun_req2,
 	points = 5,
@@ -97,7 +97,7 @@ newTalent{
 		local ter = game.level.map(tx, ty, engine.Map.TERRAIN)
 		if ter and ter.does_block_move then
 			if target:canBe("pin") then
-				target:setEffect(target.EFF_PINNED_TO_THE_WALL, t.getDuration(self, t), {tile={x=tx, y=ty}, ox=target.x, oy=target.y, apply_power=self:combatAttack()})
+				target:setEffect(target.EFF_OUTRIDER_PINNED_TO_THE_WALL, t.getDuration(self, t), {tile={x=tx, y=ty}, ox=target.x, oy=target.y, apply_power=self:combatAttack()})
 			else
 				game.logSeen(target, "%s resists!", target.name:capitalize())
 			end
@@ -133,8 +133,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Catch!",
-	short_name = "CATCH",
+	name = "Catch!", short_name = "OUTRIDER_CATCH", image="talents/catch.png",
 	type = {"technique/dreadful-onset", 3},
 	require = mnt_dexcun_req3,
 	points = 5,
@@ -149,13 +148,13 @@ newTalent{
 		return {type="ball", radius=self:getTalentRadius(t), range=self:getTalentRange(t), talent=t, friendlyfire=false, selffire=false}
 	end,
 	on_learn = function(self, t)
-		if not self:knowTalent(self.T_CATCH_PASSIVE) then self:learnTalent(self.T_CATCH_PASSIVE, true) end
+		if not self:knowTalent(self.T_OUTRIDER_CATCH_PASSIVE) then self:learnTalent(self.T_OUTRIDER_CATCH_PASSIVE, true) end
 	end,
 	on_unlearn = function(self, t)
-		if self:getTalentLevel(t) == 0 and self:knowTalent(self.T_CATCH_PASSIVE) then self:unlearnTalentFull(self.T_CATCH_PASSIVE) end
+		if self:getTalentLevel(t) == 0 and self:knowTalent(self.T_OUTRIDER_CATCH_PASSIVE) then self:unlearnTalentFull(self.T_OUTRIDER_CATCH_PASSIVE) end
 	end,
 	on_pre_use = function(self, t, silent)
-		if not self:hasEffect(self.EFF_CATCH) then
+		if not self:hasEffect(self.EFF_OUTRIDER_CATCH) then
 			if not silent then
 				game.logPlayer(self, "You must have recently slain an aenemy wih a critical hit to use Catch!")
 			end
@@ -171,7 +170,7 @@ newTalent{
 	callbackOnKill = function(self, t, target, death_note)
 			if not (self.turn_procs and self.turn_procs.truephyscrit) then return end
 			if core.fov.distance(target.x, target.y, self.x, self.y)>1 then return end
-		self:setEffect(self.EFF_CATCH, t.getUsageWindow(self, t), {})
+		self:setEffect(self.EFF_OUTRIDER_CATCH, t.getUsageWindow(self, t), {})
 	end,
 	action = function(self, t)
 		local tg = self:getTalentTarget(t)
@@ -207,15 +206,14 @@ newTalent{
 }
 
 newTalent{
-	name = "Catch! (Passive)",
-	short_name = "CATCH_PASSIVE",
+	name = "Catch! (Passive)", short_name = "OUTRIDER_CATCH_PASSIVE", image="talents/catch.png",
 	type = {"technique/other", 1},
 	hide = "always",
 	points = 1,
-	cooldown = function(self, t) return self:callTalent(self.T_CATCH, "getPassiveCooldown")end,
+	cooldown = function(self, t) return self:callTalent(self.T_OUTRIDER_CATCH, "getPassiveCooldown")end,
 	callbackOnAct = function(self, t)
 		if self:isTalentCoolingDown(t.id) then return false end
-		local t2 = self:getTalentFromId(self.T_CATCH)
+		local t2 = self:getTalentFromId(self.T_OUTRIDER_CATCH)
 		--I'm only doing it as callbackOnAct so I can use this lazy methodology :P
 		--(fov.actors_dist will not work if it isn't the user's turn.)
 		local foes = {}
@@ -258,7 +256,7 @@ newTalent{
 
 
 newTalent{
-	name = "Living Shield",
+	name = "Living Shield", short_name = "OUTRIDER_LIVING_SHIELD", image="talents/living_shield.png",
 	type = {"technique/dreadful-onset", 4},
 	require = mnt_dexcun_req4,
 	points = 5,
@@ -302,8 +300,8 @@ newTalent{
 
 		if hit and eff then
 			eff.dur=duration
-			target:setEffect(target.EFF_LIVING_SHIELD, duration, {src=self, chance=t.getTransferChance(self, t), def=t.getDef(self, t)})
-			self:setEffect(target.EFF_LIVING_SHIELDED, duration, {trgt=target, chance=t.getTransferChance(self, t)})
+			target:setEffect(target.EFF_OUTRIDER_LIVING_SHIELD, duration, {src=self, chance=t.getTransferChance(self, t), def=t.getDef(self, t)})
+			self:setEffect(target.EFF_OUTRIDER_LIVING_SHIELDED, duration, {trgt=target, chance=t.getTransferChance(self, t)})
 			return true
 		end
 	end,

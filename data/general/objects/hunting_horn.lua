@@ -38,16 +38,16 @@ newEntity{base = "BASE_TOOL_MISC",
 		if pet then
 			if self.current_buff_target then
 				local old_pet = self.current_buff_target 
-				old_pet:unlearnTalent(old_pet.T_HUNTING_HORN_BUFF, true)
+				old_pet:unlearnTalent(old_pet.T_OUTRIDER_HUNTING_HORN_BUFF, true)
 			end
-			pet:learnTalent(pet.T_HUNTING_HORN_BUFF, true, 1)
+			pet:learnTalent(pet.T_OUTRIDER_HUNTING_HORN_BUFF, true, 1)
 			self.current_buff_target = pet
 		end
 	end,
 	on_takeoff = function(self, who)
 		local pet = self.current_buff_target
 		if pet then
-			pet:unlearnTalentFull(pet.T_HUNTING_HORN_BUFF)
+			pet:unlearnTalentFull(pet.T_OUTRIDER_HUNTING_HORN_BUFF)
 		end
 	end,
 	callbackOnActBase = function(self, who)
@@ -55,12 +55,12 @@ newEntity{base = "BASE_TOOL_MISC",
 		local old = self.current_buff_target
 		if pet and (not old or old~=pet) then
 			if old then
-				old:unlearnTalentFull(old.T_HUNTING_HORN_BUFF)
+				old:unlearnTalentFull(old.T_OUTRIDER_HUNTING_HORN_BUFF)
 			end
-			pet:learnTalent(pet.T_HUNTING_HORN_BUFF, true, 1)
+			pet:learnTalent(pet.T_OUTRIDER_HUNTING_HORN_BUFF, true, 1)
 			self.current_buff_target = pet
 		elseif not pet and old then
-			old:unlearnTalentFull(old.T_HUNTING_HORN_BUFF)
+			old:unlearnTalentFull(old.T_OUTRIDER_HUNTING_HORN_BUFF)
 		end
 	end,
 }

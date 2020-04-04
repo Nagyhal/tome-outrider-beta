@@ -1,7 +1,7 @@
 infoRiderCommand = function() return "\n\nWhen ridden as a mount, this talent is controlled by the rider." end
 
 newTalent{
-	name = "Dripping with Venom",
+	name = "Dripping with Venom",  short_name = "OUTRIDER_DRIPPING_WITH_VENOM", image = "talents/dripping_with_venom.png",
 	type = {"spider/stalker-in-the-shadows", 1},
 	points = 5,
 	stamina = 10,
@@ -20,10 +20,10 @@ newTalent{
 		if val<8 then return math.floor(self:combatLimit(val, 6, 7, 6.5, 8, 8)) else return val end
 	end,
 	on_learn = function(self, t)
-		if not self:knowTalent(self.T_DRIPPING_WITH_VENOM2) then self:learnTalent(self.T_DRIPPING_WITH_VENOM2, true) end
+		if not self:knowTalent(self.T_OUTRIDER_DRIPPING_WITH_VENOM2) then self:learnTalent(self.T_OUTRIDER_DRIPPING_WITH_VENOM2, true) end
 	end,
 	on_unlearn = function(self, t)
-		if self:getTalentLevel(t) == 0 and self:knowTalent(self.T_DRIPPING_WITH_VENOM2) then self:unlearnTalentFull(self.T_DRIPPING_WITH_VENOM2) end
+		if self:getTalentLevel(t) == 0 and self:knowTalent(self.T_OUTRIDER_DRIPPING_WITH_VENOM2) then self:unlearnTalentFull(self.T_OUTRIDER_DRIPPING_WITH_VENOM2) end
 	end,
 	doPoison = function(self, t, target)
 		local tl = self:getTalentLevelRaw(t)
@@ -67,13 +67,12 @@ newTalent{
 }
 
 newTalent{
-	name = "Dripping with Venom (passive)",
-	short_name = "DRIPPING_WITH_VENOM2",
+	name = "Dripping with Venom (passive)", short_name = "DRIPPING_WITH_VENOM2", image = "talents/dripping_with_venom.png",
 	type = {"spider/stalker-in-the-shadows", 0},
 	points = 1,
 	hide = "always",
 	mode = "passive",
-	cooldown = function(self, t) return self:getTalentCooldown(self:getTalentFromId(self.T_DRIPPING_WITH_VENOM)) end,
+	cooldown = function(self, t) return self:getTalentCooldown(self:getTalentFromId(self.T_OUTRIDER_DRIPPING_WITH_VENOM)) end,
 	callbackOnActBase = function(self, t)
 		local allies = {}
 		self:project({type="ball", radius=1, selffire=false}, self.x, self.y, function()
@@ -89,13 +88,13 @@ newTalent{
 				done = true
 			end
 		end
-		if done then self:startTalentCooldown(self.T_DRIPPING_WITH_VENOM2) end
+		if done then self:startTalentCooldown(self.T_OUTRIDER_DRIPPING_WITH_VENOM2) end
 	end,
 	info = function(self, t) return "Passive talent taught by Spider with its own cooldown." end,
 }
 
 newTalent{
-	name = "Scuttle",
+	name = "Scuttle", short_name = "OUTRIDER_SCUTTLE", image = "talents/scuttle.png",
 	type = {"spider/stalker-in-the-shadows", 2},
 	require = cuns_req2,
 	points = 5,
@@ -164,7 +163,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Blinding Spittle",
+	name = "Blinding Spittle", short_name = "OUTRIDER_BLINDING_SPITTLE", image = "talents/blinding_spittle.png",
 	type = {"spider/stalker-in-the-shadows", 3},
 	require = cuns_req3,
 	points = 5,
@@ -197,7 +196,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Shadow Walk",
+	name = "Shadow Walk", short_name = "OUTRIDER_SHADOW_WALK", image = "talents/shadow_walk.png",
 	type = {"spider/stalker-in-the-shadows", 4},
 	points = 5,
 	cooldown = 15,
@@ -214,17 +213,17 @@ newTalent{
 		return true
 	end,
  	on_learn = function(self, t)
-		if not self:knowTalent(self.T_ONE_WITH_SHADOWS) then
-			self:learnTalent(self.T_ONE_WITH_SHADOWS, true, 1)
+		if not self:knowTalent(self.T_OUTRIDER_ONE_WITH_SHADOWS) then
+			self:learnTalent(self.T_OUTRIDER_ONE_WITH_SHADOWS, true, 1)
  		end
 	end,
  	on_unlearn = function(self, t)
-		if not self:knowTalent(self.T_SHADOW_WALK) then
-			self:unlearnTalent(self.T_ONE_WITH_SHADOWS)
+		if not self:knowTalent(self.T_OUTRIDER_SHADOW_WALK) then
+			self:unlearnTalent(self.T_OUTRIDER_ONE_WITH_SHADOWS)
  		end
  	end,
 	createShadow = function(self, t)
-		local p = self:isTalentActive(self.T_SHADOW_WALK); if not p then return end --This can happen!
+		local p = self:isTalentActive(self.T_OUTRIDER_SHADOW_WALK); if not p then return end --This can happen!
 		if (p.shadow and not p.shadow.dead and game.level:hasEntity(p.shadow)) or game.zone.wilderness then return end
 
 		local x, y = util.findFreeGrid(self.x, self.y, 5, true, {[Map.ACTOR]=true})
@@ -249,8 +248,8 @@ newTalent{
 		m.on_added_to_level = nil
 
 		m.on_die = function(self)
-			local t = self:getTalentFromId(self.T_SHADOW_WALK)
-			local p = self:isTalentActive(self.T_SHADOW_WALK); if not p then return end --This can happen!
+			local t = self:getTalentFromId(self.T_OUTRIDER_SHADOW_WALK)
+			local p = self:isTalentActive(self.T_OUTRIDER_SHADOW_WALK); if not p then return end --This can happen!
 			p.shadow = nil
 			p.time_to_summon = t.getTime(self, t)
 		end
@@ -270,11 +269,11 @@ newTalent{
 		m.no_inventory_access = true
 		m.no_levelup_access = true
 
-		m:unlearnTalent(m.T_DRIPPING_WITH_VENOM, m:getTalentLevelRaw(m.T_DRIPPING_WITH_VENOM))
-		m:unlearnTalent(m.T_DRIPPING_WITH_VENOM2, m:getTalentLevelRaw(m.T_DRIPPING_WITH_VENOM2))
-		m:unlearnTalent(m.T_BLINDING_SPITTLE, m:getTalentLevelRaw(m.T_BLINDING_SPITTLE))
-		-- m:forceUseTalent(m.T_SHADOW_WALK, {ignore_energy=true})
-		m:unlearnTalent(m.T_SHADOW_WALK, m:getTalentLevelRaw(m.T_SHADOW_WALK))
+		m:unlearnTalent(m.T_OUTRIDER_DRIPPING_WITH_VENOM, m:getTalentLevelRaw(m.T_OUTRIDER_DRIPPING_WITH_VENOM))
+		m:unlearnTalent(m.T_OUTRIDER_DRIPPING_WITH_VENOM2, m:getTalentLevelRaw(m.T_OUTRIDER_DRIPPING_WITH_VENOM2))
+		m:unlearnTalent(m.T_OUTRIDER_BLINDING_SPITTLE, m:getTalentLevelRaw(m.T_OUTRIDER_BLINDING_SPITTLE))
+		-- m:forceUseTalent(m.T_OUTRIDER_SHADOW_WALK, {ignore_energy=true})
+		m:unlearnTalent(m.T_OUTRIDER_SHADOW_WALK, m:getTalentLevelRaw(m.T_OUTRIDER_SHADOW_WALK))
 
 		m.remove_from_party_on_death = true
 		m.resists[DamageType.LIGHT] = -100
@@ -301,12 +300,12 @@ newTalent{
 
 		if m.rider then
 			m.rider=nil
-			m:removeEffect(m.EFF_RIDDEN, true, true)
+			m:removeEffect(m.EFF_OUTRIDER_RIDDEN, true, true)
 		end
 		return true
 	end,
 	tryCreateShadow = function (self, t)
-		local p = self:isTalentActive(self.T_SHADOW_WALK); if not p then return end --This can happen!
+		local p = self:isTalentActive(self.T_OUTRIDER_SHADOW_WALK); if not p then return end --This can happen!
 
 		if not p.shadow or p.shadow.dead or not game.level:hasEntity(p.shadow) then
 			if not t.doCheckInCombat(self, t) then p.time_to_summon = t.getTime(self, t) return end
@@ -320,7 +319,7 @@ newTalent{
 		end
 	end,
 	callbackOnActBase = function(self, t)
-		local p = self:isTalentActive(self.T_SHADOW_WALK); if not p then return end --This can happen!
+		local p = self:isTalentActive(self.T_OUTRIDER_SHADOW_WALK); if not p then return end --This can happen!
 		--Try to create shadow if we don't have one (then quit the function)
 		local done = t.tryCreateShadow(self, t)
 		--Teleport shadow if it is too far or close
@@ -357,7 +356,7 @@ newTalent{
 }
 
 newTalent{
-	name = "One with Shadows",
+	name = "One with Shadows", short_name = "OUTRIDER_ONE_WITH_SHADOWS", image = "talents/one_with_shadows.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	cooldown = 15,
@@ -365,7 +364,7 @@ newTalent{
 	stamina= 30,
 	is_teleport = true,
 	on_pre_use = function(self, t)
-		local eff = self:isTalentActive(self.T_SHADOW_WALK)
+		local eff = self:isTalentActive(self.T_OUTRIDER_SHADOW_WALK)
 		if not eff then
 			if not silent then 
 				game.logPlayer(self, "You must have Shadow Walk active!")
@@ -381,7 +380,7 @@ newTalent{
 		return true
 	end,
 	action = function(self, t)
-		local eff = self:isTalentActive(self.T_SHADOW_WALK)
+		local eff = self:isTalentActive(self.T_OUTRIDER_SHADOW_WALK)
 		local x, y = eff.shadow.x, eff.shadow.y
 		eff.shadow:die()
 
@@ -404,7 +403,7 @@ newTalent{
 
 
 newTalent{
-	name = "Web Ambush",
+	name = "Web Ambush", short_name = "OUTRIDER_WEB_AMBUSH", image = "talents/web_ambush.png",
 	type = {"spider/weaver-of-woes", 1},
 	require = cuns_req1,
 	points = 5,
@@ -462,7 +461,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Vestigial Magicks",
+	name = "Vestigial Magicks", short_name = "OUTRIDER_VESTIGIAL_MAGICKS", image = "talents/vestigial_magicks.png",
 	type = {"spider/weaver-of-woes", 2},
 	points = 5,
 	mode = "passive",
@@ -502,7 +501,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Cobweb",
+	name = "Cobweb", short_name = "OUTRIDER_COBWEB", image = "talents/cobweb.png",
 	type = {"spider/weaver-of-woes",3},
 	require = spells_req3,
 	points = 5,
@@ -543,7 +542,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Numbing Ichor",
+	name = "Numbing Ichor", short_name = "OUTRIDER_NUMBING_ICHOR", image = "talents/numbing_ichor.png",
 	type = {"spider/weaver-of-woes", 4},
 	points = 5,
 	mode = "passive",

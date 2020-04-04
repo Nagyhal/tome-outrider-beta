@@ -6,9 +6,11 @@ function checkEffectHasParameter(self, eff, name)
 	end
 end
 
+load("/data-outrider/timed_effects/disobedience.lua")
+
 --Effects for basic mount functionality
 newEffect{
-	name = "MOUNT", image="talents/mount.png",
+	name = "OUTRIDER_MOUNT", image="talents/mount.png",
 	desc = "Mounted",
 	long_desc = function(self, eff)
 		if eff.mount.type == "animal" then
@@ -23,15 +25,42 @@ newEffect{
 	no_stop_enter_worldmap = true, no_stop_resting = true,
 	parameters = {mount},
 	on_timeout = function(self, eff)
-		if not eff.mount or eff.mount.dead or not eff.mount:hasEffect(eff.mount.EFF_RIDDEN) then
-			self:removeEffect(self.EFF_MOUNT, false, true)
+		if not eff.mount or eff.mount.dead or not eff.mount:hasEffect(eff.mount.EFF_OUTRIDER_RIDDEN) then
+			self:removeEffect(self.EFF_OUTRIDER_MOUNT, false, true)
 		end
 	end,
-	activate = function(self, eff)
+	generateMountedMOs = function(self, eff)
+		add_mos = {
+			{image = eff.mount.image and eff.mount.image}
+		}
+		j = 1
+		for _, mo in ipairs(self.add_mos or {}) do
+			new_mo = table.clone(mo)
+			new_mo.display_y = -.5
+			if mo.image and string.find(mo.image, "base") or string.find(mo.image, "body") or string.find(mo.image, "quiver") then
+				table.insert(add_mos, j, new_mo)
+				j = j+1
+				else
+				table.insert(add_mos, #add_mos+1, new_mo)
+			end
+		end
+		for _, mo in ipairs(eff.mount.add_mos or {}) do
+			new_mo = table.clone(mo)
+			new_mo.display_y = -.5
+			add_mos[#add_mos+1] = new_mo
+		end	
+		self.replace_display = mod.class.Actor.new{
+			image=self.image, add_mos = add_mos
+		}
+	end,
+	activate = function(self, eff, ed)
 		if not eff.mount then
-			self:removeEffect(self.EFF_MOUNT, nil, true)
+			self:removeEffect(self.EFF_OUTRIDER_MOUNT, nil, true)
 			error("No mount sent to temporary effect Mounted.")
 		end
+		--DEBUG: Test!
+		ed.generateMountedMOs(self, eff)
+		game.level.map:updateMap(self.x, self.y)
 	end,
 	deactivate = function(self, eff)
 		self.mount = nil
@@ -39,7 +68,7 @@ newEffect{
 }
 
 newEffect{
-	name = "RIDDEN", image="talents/mount.png",
+	name = "OUTRIDER_RIDDEN", image="talents/mount.png",
 	desc = "Ridden",
 	long_desc = function(self, eff)
 		return ("The target is being ridden, sharing damage with its controller")
@@ -52,14 +81,14 @@ newEffect{
 	parameters = {rider},
 	activate = function(self, eff)
 		if not eff.rider then
-			self:removeEffect(self.EFF_RIDDEN, nil, true)
+			self:removeEffect(self.EFF_OUTRIDER_RIDDEN, nil, true)
 			error("No rider sent to temporary effect Ridden.")
 		end
 		self:effectTemporaryValue(eff, "never_move", 1)
 	end,
 	deactivate = function(self, eff)
 		if self.dead then
-			eff.rider:removeEffect(self.EFF_MOUNT, false, true)
+			eff.rider:removeEffect(self.EFF_OUTRIDER_MOUNT, false, true)
 		end
 		self.rider = nil
 		return
@@ -67,7 +96,62 @@ newEffect{
 }
 
 newEffect{
-	name = "LIVING_SHIELD", image="talents/living_shield.png",
+name = "OUTRIDER_REGAIN_POISE",
+desc = "Regaining Poise",
+long_desc = function(self, eff) return ("The target gathers poise after an all-out attack, suffering a movement speed penalty of %d%% and enduring the disarmed state. However, when the target avoids taking damage, the target may recover %d stamina per turn."):format(eff.slow, eff.regen) end,
+type = "physical",
+subtype = { disarm=true },
+status = "detrimental",
+parameters = { regen=6, slow=50, cause="all-out attack", toggleDamageTaken=false },
+on_gain = function(self, eff) return ("#Target# must recover from the %s!"):format(eff.cause), "+Regain Poise" end,
+on_lose = function(self, eff) return "#Target# has regained full poise.", "-Regain Poise" end,
+activate = function(self, eff)
+	eff.tmpid = self:addTemporaryValue("disarmed", 1)
+	eff.speedid = self:addTemporaryValue("movement_speed", -eff.slow/100)
+	eff.toggleDamageTaken = false
+end,
+deactivate = function(self, eff)
+	self:removeTemporaryValue("movement_speed", eff.speedid)
+	self:removeTemporaryValue("disarmed", eff.tmpid)
+end,
+do_onTakeHit = function(self, eff, dam)
+	if dam > 1 
+		then eff.toggleDamageTaken = true
+	 -- Give the player some feeback
+		game.logSeen(self, ("#Self# gains no recovery under the onslaught!"):gsub("#Self#", self.name:capitalize()))
+		if game.flyers and not silent and self.x and self.y and game.level.map.seens(self.x, self.y) then
+			local fly = "No Recovery!"
+			local sx, sy = game.level.map:getTileToScreen(self.x, self.y)
+			if game.level.map.seens(self.x, self.y) then game.flyers:add(sx, sy, 20, (rng.range(0,2)-1) * 0.5, -3, fly, {255,100,80}) end
+		end
+	end
+end,
+on_timeout = function(self, eff)
+	if eff.toggleDamageTaken == false then
+		self:incStamina(eff.regen)
+		game.logSeen(self, ("#Self# recovers poise as the enemies are kept at bay!"):gsub("#Self#", self.name:capitalize()))
+		if game.flyers and not silent and self.x and self.y and game.level.map.seens(self.x, self.y) then
+			local fly = "Recovery!"
+			local sx, sy = game.level.map:getTileToScreen(self.x, self.y)
+			if game.level.map.seens(self.x, self.y) then game.flyers:add(sx, sy, 20, (rng.range(0,2)-1) * 0.5, -3, fly, {255,100,80}) end
+		end
+		
+	end
+	-- else -- Give the player some feeback
+		-- game.logSeen(self, ("#Target# gains no recovery under the onslaught!"):gsub("#Target#", self.name:capitalize()))
+		-- if game.flyers and not silent and self.x and self.y and game.level.map.seens(self.x, self.y) then
+			-- local fly = "No Recovery!"
+			-- local sx, sy = game.level.map:getTileToScreen(self.x, self.y)
+			-- if game.level.map.seens(self.x, self.y) then game.flyers:add(sx, sy, 20, (rng.range(0,2)-1) * 0.5, -3, fly, {255,100,80}) end
+		-- end
+	-- end
+	
+	eff.toggleDamageTaken = false
+end,
+}
+
+newEffect{
+	name = "OUTRIDER_LIVING_SHIELD", image="talents/living_shield.png",
 	desc = "Used as a Living Shield",
 	long_desc = function(self, eff) return ("The target is being used as a living shield, reducing defense by %d. The target's manhandler will have a %d%% chance to redirect attacks onto it!"):format(eff.def, eff.pct) end,
 	type = "physical",
@@ -79,19 +163,19 @@ newEffect{
 	activate = function(self, eff)
 		self:effectTemporaryValue(eff, "combat_def", -eff.def)
 		if not eff.src then
-			self:removeEffect(self.EFF_LIVING_SHIELD)
+			self:removeEffect(self.EFF_OUTRIDER_LIVING_SHIELD)
 			error("No source sent to temporary effect Used as a Living Shield.")
 		end
 	end,
 	deactivate = function(self, eff)
-		eff.src:removeEffect(eff.src.EFF_LIVING_SHIELDED)
+		eff.src:removeEffect(eff.src.EFF_OUTRIDER_LIVING_SHIELDED)
 	 end,
 	do_onTakeHit = function(self, eff, dam) end,
 	on_timeout = function(self, eff) end,
 }
 
 newEffect{
-	name = "LIVING_SHIELDED", image="talents/living_shield.png",
+	name = "OUTRIDER_LIVING_SHIELDED", image="talents/living_shield.png",
 	desc = "Living Shield",
 	display_desc = function(self, eff) return ("Living Shield: %s"):format(string.bookCapitalize(eff.trgt.name)) end,
 	long_desc = function(self, eff) return ("The target grips its victim and enjoys a %d%% chance to displace damage onto it."):format(eff.chance) end,
@@ -103,7 +187,7 @@ newEffect{
 	on_lose = function(self, err) return "#Target# no longer has a living shield", "-Shielded" end,
 	activate = function(self, eff)
 		if not eff.trgt then
-			self:removeEffect(self.EFF_LIVING_SHIELDED, nil, true)
+			self:removeEffect(self.EFF_OUTRIDER_LIVING_SHIELDED, nil, true)
 			error("No target sent to temporary effect Shield: Living Shield.")
 		end
 		if not self.dragged_entities then self.dragged_entities = {} end
@@ -113,18 +197,18 @@ newEffect{
 	deactivate = function(self, eff)
 		self.dragged_entities[eff.trgt] = self.dragged_entities[eff.trgt]-1
 		if self.dragged_entities[eff.trgt] == 0 then self.dragged_entities[eff.trgt] = nil end
-		eff.trgt:removeEffect(eff.trgt.EFF_LIVING_SHIELD)
+		eff.trgt:removeEffect(eff.trgt.EFF_OUTRIDER_LIVING_SHIELD)
 	end,
 	on_timeout = function(self, eff)
 		local p = eff.trgt:hasEffect(eff.trgt.EFF_GRAPPLED)
 		if not p or p.src ~= self or core.fov.distance(self.x, self.y, eff.trgt.x, eff.trgt.y) > 1 or eff.trgt.dead or not game.level:hasEntity(eff.trgt) then
-			self:removeEffect(self.EFF_LIVING_SHIELDED)
+			self:removeEffect(self.EFF_OUTRIDER_LIVING_SHIELDED)
 		end
 	end,
 }
 
 newEffect{
-	name = "IMPALED", image = "talents/impalement.png",
+	name = "OUTRIDER_IMPALED", image = "talents/impalement.png",
 	desc = "Impaled",
 	long_desc = function(self, eff) return ("The target is skewered against an obstacle, floor tile, or living thing, and is pinned and bled for %d per turn. Teleporting will break this pin."):format(eff.bleed) end,
 	type = "physical",
@@ -141,7 +225,7 @@ newEffect{
 }
 
 newEffect{
-	name = "STRIKE_AT_THE_HEART", image = "talents/strike_at_the_heart.png",
+	name = "OUTRIDER_STRIKE_AT_THE_HEART", image = "talents/strike_at_the_heart.png",
 	desc = "Strike at the Heart",
 	long_desc = function(self, eff)
 		local ct = eff.ct
@@ -175,7 +259,7 @@ newEffect{
 		self:effectTemporaryValue(eff, "combat_physcrit", eff.crit)
 	end,
 	doStoreBonuses = function(self, eff)
-		local p = self:hasEffect(self.EFF_SPRING_ATTACK)
+		local p = self:hasEffect(self.EFF_OUTRIDER_SPRING_ATTACK)
 		if p then
 			stored_move = math.min(eff.move, p.move)
 			stored_def = math.min(eff.def, p.def)
@@ -184,10 +268,10 @@ newEffect{
 			eff.def = eff.def-stored_def
 			eff.store={def=stored_def, move=stored_move}
 		end
-		ed = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
+		ed = self:getEffectFromId(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART)
 	end,
 	doUnstoreBonuses = function(self, eff, on_deactivate)
-		ed = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
+		ed = self:getEffectFromId(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART)
 		if not on_deactivate then ed.removeTempValues(self, eff) end
 		if eff.store then
 			eff.move = eff.move + eff.store.move
@@ -195,11 +279,11 @@ newEffect{
 			eff.store=nil
 		end
 		if not on_deactivate then ed.initiateTempValues(self, eff) end
-		ed = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
+		ed = self:getEffectFromId(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART)
 	end,
 	on_merge = function(self, old_eff, new_eff, ed)
 		new_eff.targets=old_eff.targets
-		local ed = self:getEffectFromId(self.EFF_STRIKE_AT_THE_HEART)
+		local ed = self:getEffectFromId(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART)
 		for i = #old_eff.__tmpvals, 1, -1 do
 			self:removeTemporaryValue(old_eff.__tmpvals[i][1], old_eff.__tmpvals[i][2])
 			old_eff.__tmpvals[i] = nil
@@ -208,14 +292,14 @@ newEffect{
 		return new_eff
 	end,
 	callbackOnArcheryAttack = function(self, eff, target, hitted, crit, weapon, ammo, damtype, mult, dam)
-		if target then self:callTalent(self.T_STRIKE_AT_THE_HEART, "handleStrike", target, hitted) end
+		if target then self:callTalent(self.T_OUTRIDER_STRIKE_AT_THE_HEART, "handleStrike", target, hitted) end
 	end,
 	deactivate = function(self, eff, ed)
 		local ct = eff.ct
 		ed.doUnstoreBonuses(self, eff, true)
-		if self:knowTalent(self.T_SPRING_ATTACK) and #table.keys(eff.targets)>0 then
-			local t = self:getTalentFromId(self.T_SPRING_ATTACK)
-			self:setEffect(self.EFF_SPRING_ATTACK, t.getDur(self,t), {
+		if self:knowTalent(self.T_OUTRIDER_SPRING_ATTACK) and #table.keys(eff.targets)>0 then
+			local t = self:getTalentFromId(self.T_OUTRIDER_SPRING_ATTACK)
+			self:setEffect(self.EFF_OUTRIDER_SPRING_ATTACK, t.getDur(self,t), {
 				move = eff.move,
 				def = eff.def,
 				min_pct = t.getMinPct(self, t),
@@ -228,7 +312,7 @@ newEffect{
 }
 
 newEffect{
-	name = "SPRING_ATTACK", image = "talents/spring_attack.png",
+	name = "OUTRIDER_SPRING_ATTACK", image = "talents/spring_attack.png",
 	desc = "Spring Attack",
 	long_desc = function(self, eff) return ("The target's onslaught has ended, but it retains a bonus of %d%% to movement speed and %d to defense. Also, the target gains a bonus to ranged damage against any marked targets for the duration. This bonus is dependent on distance: starting from %d%% at 2 tiles, increasing to %d%% at 5 tiles."):format(eff.move, eff.def, eff.min_pct, eff.max_pct) end,
 	type = "physical",
@@ -243,14 +327,14 @@ newEffect{
 		self:effectTemporaryValue(eff, "combat_def", eff.def)
 	end,
 	deactivate = function(self, eff)
-		if self:hasEffect(self.EFF_STRIKE_AT_THE_HEART) then
-			self:callEffect(self.EFF_STRIKE_AT_THE_HEART, "doUnstoreBonuses")
+		if self:hasEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART) then
+			self:callEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART, "doUnstoreBonuses")
 		end
 	end,
 }
 
 newEffect{
-	name = "HOWLING_ARROWS", image="talents/wailing_weapon.png",
+	name = "OUTRIDER_HOWLING_ARROWS", image="talents/wailing_weapon.png",
 	desc = "Howling Arrows",
 	long_desc = function(self, eff) return ("The target has a %d%% chance to confuse (power %d) with each archery attack."):format(eff.chance, eff.power) end,
 	type = "physical",
@@ -258,7 +342,7 @@ newEffect{
 	status = "beneficial",
 	parameters = { power=35, chance=25 },
 	callbackOnArcheryAttack = function(self, t, target, hitted, crit, weapon, ammo, damtype, mult, dam)
-		self:callTalent(self.T_WAILING_WEAPON, "doTryConfuse", target)
+		self:callTalent(self.T_OUTRIDER_WAILING_WEAPON, "doTryConfuse", target)
 	end,
 	activate = function(self, eff)
 	end,
@@ -267,7 +351,7 @@ newEffect{
 }
 
 newEffect{
-	name = "SHRIEKING_STRIKES", image="talents/wailing_weapon.png",
+	name = "OUTRIDER_SHRIEKING_STRIKES", image="talents/wailing_weapon.png",
 	desc = "Shrieking Strikes",
 	long_desc = function(self, eff) return ("The target has a %d%% chance to confuse (power %d) with each melee attack."):format(eff.chance, eff.power) end,
 	type = "physical",
@@ -275,7 +359,7 @@ newEffect{
 	status = "beneficial",
 	parameters = { power=35, chance=25 },
 	callbackOnMeleeAttack = function(self, t, target, hitted, crit, weapon, damtype, mult, dam)
-		self:callTalent(self.T_WAILING_WEAPON, "doTryConfuse", target)
+		self:callTalent(self.T_OUTRIDER_WAILING_WEAPON, "doTryConfuse", target)
 	end,
 	activate = function(self, eff)
 	end,
@@ -284,7 +368,7 @@ newEffect{
 }
 
 newEffect{
-	name = "UNBRIDLED_FEROCITY", image = "talents/unbridled_ferocity.png",
+	name = "OUTRIDER_UNBRIDLED_FEROCITY", image = "talents/unbridled_ferocity.png",
 	desc = "Unbridled Ferocity",
 	long_desc = function(self, eff) return ("The target is unleashed, gaining a %d bonus to physical power; however, the target cannot be mounted while in this state. Furthermore, when taking damage, the target will not lose Loyalty but will regain it."):format(eff.power) end,
 	type = "mental",
@@ -303,7 +387,7 @@ newEffect{
 }
 
 newEffect{
-	name = "WILD_CHALLENGE", image = "talents/challenge_the_wilds.png",
+	name = "OUTRIDER_WILD_CHALLENGE", image = "talents/challenge_the_wilds.png",
 	desc = "Wild Hunt",
 	long_desc = function(self, eff) return ("Slay %d more creatures to find your bestial challenger!"):format(eff.ct) end,
 	type = "other",
@@ -316,11 +400,11 @@ newEffect{
 		if tgt.exp_worth and tgt.exp_worth > 0 then eff.ct=math.max(0, eff.ct-1) end
 	end,
 	callbackOnWear = function(self, eff)
-		local ed = self:getEffectFromId(self.EFF_WILD_CHALLENGE)
+		local ed = self:getEffectFromId(self.EFF_OUTRIDER_WILD_CHALLENGE)
 		ed.checkChanges(self, eff, ed)
 	end,
 	callbackOnTakeoff = function(self, eff)
-		local ed = self:getEffectFromId(self.EFF_WILD_CHALLENGE)
+		local ed = self:getEffectFromId(self.EFF_OUTRIDER_WILD_CHALLENGE)
 		ed.checkChanges(self, eff, ed)
 	end,
 	checkChanges= function(self, eff, ed)
@@ -355,7 +439,7 @@ newEffect{
 }
 
 newEffect{
-	name = "WILD_CHALLENGER", image = "talents/challenge_the_wilds.png",
+	name = "OUTRIDER_WILD_CHALLENGER", image = "talents/challenge_the_wilds.png",
 	desc = "Wild Challenger",
 	long_desc = function(self, eff) return ("Beat down to 50%% life points to establish dominance over your mount!"):format(eff.ct) end,
 	type = "other",
@@ -368,9 +452,9 @@ newEffect{
 		if (self.life-dam) < self.max_life*.5 then
 			game:onTickEnd(function()
 				local src = eff.src
-				src:callTalent(src.T_CHALLENGE_THE_WILDS, "doBefriendMount", self)
+				src:callTalent(src.T_OUTRIDER_CHALLENGE_THE_WILDS, "doBefriendMount", self)
 				eff.first = false
-				self:removeEffect(self.EFF_WILD_CHALLENGER, nil, true)
+				self:removeEffect(self.EFF_OUTRIDER_WILD_CHALLENGER, nil, true)
 			end)
 		end
 	end,
@@ -386,7 +470,7 @@ newEffect{
 }
 
 newEffect{
-	name = "PINNED_TO_THE_WALL", image = "talents/impalement.png",
+	name = "OUTRIDER_PINNED_TO_THE_WALL", image = "talents/impalement.png",
 	desc = "Pinned to the wall",
 	long_desc = function(self, eff) return "The target is pinned to the wall or some other suitable piece of terrain, unable to move. If the terrain is detroyed, the target will be able to move agian." end,
 	type = "physical",
@@ -397,11 +481,11 @@ newEffect{
 	on_lose = function(self, err) return "#Target# is no longer pinned.", "-Pinned" end,
 	activate = function(self, eff)
 		if not eff.tile or not eff.tile.x then
-			self:removeEffect(self.EFF_PINNED_TO_THE_WALL, nil, true)
+			self:removeEffect(self.EFF_OUTRIDER_PINNED_TO_THE_WALL, nil, true)
 			error("No terrain tile sent to temporary effect Pinned to the Wall.")
 		end
 		if not eff.ox or not eff.oy then
-			self:removeEffect(self.EFF_PINNED_TO_THE_WALL, nil, true)
+			self:removeEffect(self.EFF_OUTRIDER_PINNED_TO_THE_WALL, nil, true)
 			error("Original position not sent to temporary effect Pinned to the Wall.")
 		end
 		eff.tmpid = self:addTemporaryValue("never_move", 1)
@@ -409,7 +493,7 @@ newEffect{
 	callbackOnActBase = function(self, eff)
 		local ter = game.level.map(eff.tile.x, eff.tile.y, engine.Map.TERRAIN)
 		if not ter or not ter.does_block_move or self.x~=eff.ox or self.y~=eff.oy then
-			self:removeEffect(self.EFF_PINNED_TO_THE_WALL, nil, true)
+			self:removeEffect(self.EFF_OUTRIDER_PINNED_TO_THE_WALL, nil, true)
 		end	
 	end,
 	deactivate = function(self, eff)
@@ -418,7 +502,7 @@ newEffect{
 }
 
 newEffect{
-	name = "UNCANNY_TENACITY", image = "talents/uncannity_tenacity.png",
+	name = "OUTRIDER_UNCANNY_TENACITY", image = "talents/uncannity_tenacity.png",
 	desc = "Uncanny Tenacity",
 	long_desc = function(self, eff) return ("The wolf gains %d%% to resist all and a %d bonus to attack and physical power. Each turn, its tenacity allows it to overcome 2 turns of a random detrimental effect."):format(eff.res, eff.buff) end,
 	type = "physical",
@@ -442,7 +526,7 @@ newEffect{
 }
 
 newEffect{
-	name = "FLANKED", image = "talents/flanking.png",
+	name = "OUTRIDER_FLANKED", image = "talents/flanking.png",
 	desc = "Flanked",
 	long_desc = function(self, eff) return ("Flanked by the outrider and its allies, the target suffers a defense decrease of %d, a %d%% increase to critical damage and all attackers gain a crit chance bonus of %d%% against it."):format(eff.def, eff.crit_dam, eff.crit) end,
 	type = "physical",
@@ -453,11 +537,11 @@ newEffect{
 	on_lose = function(self, err) return nil, "-Flanked" end,
 	activate = function(self, eff)
 		if not eff.src then
-			self:removeEffect(self.EFF_PREDATORY_FLANKING, nil, true)
+			self:removeEffect(self.EFF_OUTRIDER_PREDATORY_FLANKING, nil, true)
 			error("No source sent to temporary effect Flanking.")
 		end
 		if not eff.allies then
-			self:removeEffect(self.EFF_MOUNT, nil, true)
+			self:removeEffect(self.EFF_OUTRIDER_MOUNT, nil, true)
 			error("No allies list sent to temporary effect Flanking.")
 		end
 		self:effectTemporaryValue(eff, "combat_crit_vulnerable", eff.crit)
@@ -479,7 +563,7 @@ newEffect{
 
 
 newEffect{
-	name = "PREDATORY_FLANKING", image = "talents/predatory_flanking.png",
+	name = "OUTRIDER_PREDATORY_FLANKING", image = "talents/predatory_flanking.png",
 	desc = "Predatory Flanking",
 	long_desc = function(self, eff) return ("Flanked by the wolf and its allies, the target suffers %d%% increased damage from the source and %d%% from its flanking allies."):format(eff.src_pct, eff.allies_pct) end,
 	type = "physical",
@@ -490,11 +574,11 @@ newEffect{
 	on_lose = function(self, err) return nil, "-Flanked" end,
 	activate = function(self, eff)
 		if not eff.src then
-			self:removeEffect(self.EFF_PREDATORY_FLANKING, nil, true)
+			self:removeEffect(self.EFF_OUTRIDER_PREDATORY_FLANKING, nil, true)
 			error("No source sent to temporary effect Predatory Flanking.")
 		end
 		if not eff.allies then
-			self:removeEffect(self.EFF_MOUNT, nil, true)
+			self:removeEffect(self.EFF_OUTRIDER_MOUNT, nil, true)
 			error("No allies list sent to temporary effect Predatory Flanking.")
 		end
 	end,
@@ -513,7 +597,7 @@ newEffect{
 }
 
 newEffect{
-	name = "FETCH", image="talents/fetch.png",
+	name = "OUTRIDER_FETCH", image="talents/fetch.png",
 	desc = "Fetch!",
 	long_desc = function(self, eff) return ("The wolf, each turn, will drag its grappled target towards its master."):format(eff.chance) end,
 	type = "physical",
@@ -586,17 +670,17 @@ newEffect{
 	on_timeout = function(self, eff)
 		local p = eff.target:hasEffect(eff.target.EFF_GRAPPLED)
 		if not p or p.src ~= self or core.fov.distance(self.x, self.y, eff.target.x, eff.target.y) > 1 or eff.target.dead or not game.level:hasEntity(eff.target) then
-			self:removeEffect(self.EFF_FETCH)
+			self:removeEffect(self.EFF_OUTRIDER_FETCH)
 		end
 	end,
 }
 
 local function removeOtherTwinThreatEffects(self, eff)
-	self:callTalent(self.T_TWIN_THREAT, "removeAllEffects", {[eff.effect_id]=true})
+	self:callTalent(self.T_OUTRIDER_TWIN_THREAT, "removeAllEffects", {[eff.effect_id]=true})
 end
 
 newEffect{
-	name = "TWIN_THREAT_MOUNTED", image = "talents/twin_threat.png",
+	name = "OUTRIDER_TWIN_THREAT_MOUNTED", image = "talents/twin_threat.png",
 	desc = "Twin Threat: Mounted",
 	long_desc = function(self, eff) return ("Beast and master act in concert. The beast stands a %d%% chance to make a free, instananeous attack for each of the rider's physical critical hits."):format(eff.chance) end,
 	type = "other",
@@ -630,7 +714,7 @@ newEffect{
 }
 
 newEffect{
-	name = "TWIN_THREAT_ADJACENT", image = "talents/twin_threat.png",
+	name = "OUTRIDER_TWIN_THREAT_ADJACENT", image = "talents/twin_threat.png",
 	desc = "Twin Threat: Adjacent",
 	long_desc = function(self, eff) return ("Beast and master act in concert, each gaining a %d%% increase to healing modifer and a %d bonus to stamina and loyalty regen."):format(eff.heal, eff.regen) end,
 	type = "other",
@@ -644,16 +728,16 @@ newEffect{
 		self:effectTemporaryValue(eff, "stamina_regen", eff.regen)
 		if not self.rider then self:effectTemporaryValue(eff, "loyalty_regen", eff.regen) end
 		local mount = self:hasMount()
-		if mount then mount:setEffect(mount.EFF_TWIN_THREAT_ADJACENT, 2, {heal=eff.heal}) end
+		if mount then mount:setEffect(mount.EFF_OUTRIDER_TWIN_THREAT_ADJACENT, 2, {heal=eff.heal}) end
 	end,
 	deactivate = function(self, eff)
 		local pet = self:hasMount()
-		if pet then pet:removeEffect(pet.EFF_TWIN_THREAT_ADJACENT, true) end
+		if pet then pet:removeEffect(pet.EFF_OUTRIDER_TWIN_THREAT_ADJACENT, true) end
 	end,
 }
 
 newEffect{
-	name = "TWIN_THREAT_MID", image = "talents/twin_threat.png",
+	name = "OUTRIDER_TWIN_THREAT_MID", image = "talents/twin_threat.png",
 	desc = "Twin Threat: Mid Range",
 	long_desc = function(self, eff) return ("Beast and master act in concert, each gaining a %d%% increase in movement speed and a %d%% cooldown reduction to all Techniques talents."):format(eff.move, eff.cooldown) end,
 	type = "other",
@@ -672,16 +756,16 @@ newEffect{
 			end
 		end
 		local mount = self:hasMount()
-		if mount then mount:setEffect(mount.EFF_TWIN_THREAT_MID, 2, {move=eff.move, cooldown=eff.cooldown}) end
+		if mount then mount:setEffect(mount.EFF_OUTRIDER_TWIN_THREAT_MID, 2, {move=eff.move, cooldown=eff.cooldown}) end
 	end,
 	deactivate = function(self, eff)
 		local pet = self:hasMount()
-		if pet then pet:removeEffect(pet.EFF_TWIN_THREAT_MID, true) end
+		if pet then pet:removeEffect(pet.EFF_OUTRIDER_TWIN_THREAT_MID, true) end
 	end,
 }
 
 newEffect{
-	name = "TWIN_THREAT_LONG", image = "talents/twin_threat.png",
+	name = "OUTRIDER_TWIN_THREAT_LONG", image = "talents/twin_threat.png",
 	desc = "Twin Threat: Long Range",
 	long_desc = function(self, eff) return ("Beast and master act in concert. Successful attacks against targets adjacent to the beast will increase its Loyalty to the owner by %d. Also, when the beast reaches %d%% of its life total, the owner receives the ability to hasten to its aid in a heroic dash."):format(eff.regen, eff.life_total) end,
 	type = "other",
@@ -693,8 +777,8 @@ newEffect{
 		removeOtherTwinThreatEffects(self, eff)	
 		local mount = self:hasMount()
 		if mount then 
-			self:learnTalent(self.T_TWIN_THREAT_DASH, true, 1)
-			mount:setEffect(mount.EFF_TWIN_THREAT_LONG, 2, {move=eff.move, cooldown=eff.cooldown}) end
+			self:learnTalent(self.T_OUTRIDER_TWIN_THREAT_DASH, true, 1)
+			mount:setEffect(mount.EFF_OUTRIDER_TWIN_THREAT_LONG, 2, {move=eff.move, cooldown=eff.cooldown}) end
 	end,
 	callbackOnArcheryAttack = function(self, eff, target, hitted, crit, weapon, ammo, damtype, mult, dam)
 		local mount = self:hasMount()
@@ -703,14 +787,14 @@ newEffect{
 		end
 	end,
 	deactivate = function(self, eff)
-		self:unlearnTalent(self.T_TWIN_THREAT_DASH)
+		self:unlearnTalent(self.T_OUTRIDER_TWIN_THREAT_DASH)
 		local pet = self:hasMount()
-		if pet then pet:removeEffect(pet.EFF_TWIN_THREAT_LONG, true) end
+		if pet then pet:removeEffect(pet.EFF_OUTRIDER_TWIN_THREAT_LONG, true) end
 	end,
 }
 
 newEffect{
-	name = "BEASTMASTER_MARK",  image="talents/beastmasters_mark.png",
+	name = "OUTRIDER_BEASTMASTER_MARK",  image="talents/beastmasters_mark.png",
 	desc = "Beastmaster's Mark",
 	long_desc = function(self, eff) return ("The beast is filled with a thirst for blood, gaining a %d%% bonus to movement and attack speed, but losing %d%% loyalty each turn it does not move toward or attack %s"):format(eff.target.name) end,
 	type = "mental",
@@ -720,13 +804,13 @@ newEffect{
 	activate = function(self, eff)
 		checkEffectHasParameter(self, eff, "target")
 		self:setTarget(eff.target)
-		if not self.owner then self:removeEffect(self.EFF_BEASTMASTER_MARK, true) end
+		if not self.owner then self:removeEffect(self.EFF_OUTRIDER_BEASTMASTER_MARK, true) end
 		self:effectTemporaryValue(eff, "movement_speed", eff.speed)
 		self:effectTemporaryValue(eff, "combat_physspeed", eff.speed)
 	end,
 	callbackOnAct = function(self, eff)
 		if not eff.target or eff.target.dead or game.level.map:hasEntity(eff.target) then
-			self:removeEffect(self.EFF_BEASTMASTER_MARK, true)
+			self:removeEffect(self.EFF_OUTRIDER_BEASTMASTER_MARK, true)
 		end
 		self:setTarget(eff.target)
 		self.turn_procs.beastmaster_mark_loyalty_loss = true
@@ -752,7 +836,7 @@ newEffect{
 }
 
 newEffect{
-	name = "VESTIGIAL_MAGICKS", image="talents/vestigial_magicks.png",
+	name = "OUTRIDER_VESTIGIAL_MAGICKS", image="talents/vestigial_magicks.png",
 	desc = "Vestigial Magicks",
 	long_desc = function(self, eff) return ("The spider's residual magic energies have been awoken. Attackers will suffer %d arcane damage."):format(eff.power) end,
 	type = "spell",
@@ -764,15 +848,15 @@ newEffect{
 	activate = function(self, eff)
 	end,
 	callbackOnMeleeHit = function(self, eff, src, dam)
-		self:callTalent(self.T_VESTIGIAL_MAGICKS, "doDamage", src)
+		self:callTalent(self.T_OUTRIDER_VESTIGIAL_MAGICKS, "doDamage", src)
 	end,
 	callbackOnMeleeMiss = function(self, eff, src, dam)
-		self:callTalent(self.T_VESTIGIAL_MAGICKS, "doDamage", src)
+		self:callTalent(self.T_OUTRIDER_VESTIGIAL_MAGICKS, "doDamage", src)
 	end,
 }
 
 newEffect{
-	name = "CATCH", image="talents/catch.png",
+	name = "OUTRIDER_CATCH", image="talents/catch.png",
 	desc = "Catch: Readied!",
 	long_desc = function(self, eff) return "The target, having recently slain an adjacent enemy with a critical hit, is ready to hurl its severed remnants back at its foes." end,
 	type = "spell",
@@ -786,7 +870,7 @@ newEffect{
 }
 
 newEffect{
-	name = "AERIAL_SUPREMACY", image="talents/aerial_supremacy.png",
+	name = "OUTRIDER_AERIAL_SUPREMACY", image="talents/aerial_supremacy.png",
 	desc = "Aerial Supremacy",
 	long_desc = function(self, eff) return ("The drake gains a bonus of %d to attack, defense, and physical save."):format(eff.buff) end,
 	type = "physical",
@@ -803,7 +887,7 @@ newEffect{
 }
 
 newEffect{
-	name = "LOOSE_IN_THE_SADDLE", image="talents/loose_in_the_saddle.png",
+	name = "OUTRIDER_LOOSE_IN_THE_SADDLE", image="talents/loose_in_the_saddle.png",
 	desc = "Loose in the Saddle",
 	long_desc = function(self, eff) return ("The rider moves with an additional %d%% movement speed, but any action other than moving, mounting or dismounting will break the effect."):format(eff.speed*100) end,
 	type = "physical",
@@ -816,20 +900,20 @@ newEffect{
 		self:effectTemporaryValue(eff, "movement_speed", eff.speed)
 	end,
 	callbackOnTalentPost = function(self, t, ab, ret, silent)
-		if ab.id == "T_DISMOUNT" or ab.id == "T_MOUNT" then return end
-		if self:hasEffect(self.EFF_LOOSE_IN_THE_SADDLE) then
-			self:removeEffect(self.EFF_LOOSE_IN_THE_SADDLE)
+		if ab.id == "T_OUTRIDER_DISMOUNT" or ab.id == "T_OUTRIDER_MOUNT" then return end
+		if self:hasEffect(self.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE) then
+			self:removeEffect(self.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE)
 		end
 	end,
 	callbackOnMeleeAttack = function(self, t, target, hitted, crit, weapon, damtype, mult, dam)
-		if self:hasEffect(self.EFF_LOOSE_IN_THE_SADDLE) then
-			self:removeEffect(self.EFF_LOOSE_IN_THE_SADDLE)
+		if self:hasEffect(self.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE) then
+			self:removeEffect(self.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE)
 		end
 	end,
 }
 
 newEffect{
-	name = "LOOSE_IN_THE_SADDLE_SHARED", image="talents/loose_in_the_saddle.png",
+	name = "OUTRIDER_LOOSE_IN_THE_SADDLE_SHARED", image="talents/loose_in_the_saddle.png",
 	desc = "Loose in the Saddle",
 	long_desc = function(self, eff) return ("The rider moves with an additional %d%% movement speed, but any action other than moving, mounting or dismounting will break the effect."):format(eff.speed) end,
 	type = "other",
@@ -842,19 +926,19 @@ newEffect{
 	end,
 	callbackOnTakeDamage = function(self, eff, src, x, y, type, dam, state)
 		local rider = self.rider; if not rider then return end
-		local p = rider:isTalentActive(rider.T_LOOSE_IN_THE_SADDLE); if not p then return end
+		local p = rider:isTalentActive(rider.T_OUTRIDER_LOOSE_IN_THE_SADDLE); if not p then return end
 		if dam>self.max_life*.15 then
-			local t2 = rider:getTalentFromId(rider.T_LOOSE_IN_THE_SADDLE)
+			local t2 = rider:getTalentFromId(rider.T_OUTRIDER_LOOSE_IN_THE_SADDLE)
 			dam = dam - dam*p.reduction
-			rider:setEffect(rider.EFF_LOOSE_IN_THE_SADDLE, 2, {speed=t2.getSpeed(self, t)/100})
-			rider:forceUseTalent(rider.T_LOOSE_IN_THE_SADDLE, {ignore_energy=true})
+			rider:setEffect(rider.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE, 2, {speed=t2.getSpeed(self, t)/100})
+			rider:forceUseTalent(rider.T_OUTRIDER_LOOSE_IN_THE_SADDLE, {ignore_energy=true})
 		end
 		return {dam=dam}
 	end,
 }
 
 newEffect{
-	name = "SHOCK_ATTACK", image = "talents/shock_and_awe.png",
+	name = "OUTRIDER_SHOCK_ATTACK", image = "talents/shock_and_awe.png",
 	desc = "Shock Attack",
 	long_desc = function(self, eff) return ("The rider will knock back 1 square any enemy it targets with a melee attack."):format() end,
 	type = "physical",
@@ -864,11 +948,11 @@ newEffect{
 	activate = function(self, eff)
 		self:effectTemporaryValue(eff, "movement_speed", eff.speed)
 		self:effectTemporaryValue(eff, "combat_physspeed", eff.speed)
-		self:learnTalent(self.T_SHOCK_ATTACK_CHARGE, true, 1)
-		self.talents_cd[self.T_SHOCK_ATTACK_CHARGE] = nil
+		self:learnTalent(self.T_OUTRIDER_SHOCK_ATTACK_CHARGE, true, 1)
+		self.talents_cd[self.T_OUTRIDER_SHOCK_ATTACK_CHARGE] = nil
 	end,
 	deactivate = function(self, eff)
-		self:unlearnTalent(self.T_SHOCK_ATTACK_CHARGE)
+		self:unlearnTalent(self.T_OUTRIDER_SHOCK_ATTACK_CHARGE)
 	end,
 	callbackOnMeleeAttack = function(self, eff, target, hitted, crit, weapon, damtype, mult, dam)
 		if not self:isMounted() then return end
@@ -884,7 +968,7 @@ newEffect{
 }
 
 newEffect{
-	name = "BOND_BEYOND_BLOOD",
+	name = "OUTRIDER_BOND_BEYOND_BLOOD",
 	desc = "Bond Beyond Blood", image = "talents/bond_beyond_blood.png",
 	long_desc = function(self, eff) return ("Reduces damage received by %d%% while controlling the mount."):format(eff.res, eff.incdur) end,
 	type = "other",
@@ -894,7 +978,7 @@ newEffect{
 	activate = function(self, eff)
 		local pet = self.outrider_pet
 		eff.pet = pet
-		if not pet then self:removeEffect(self.EFF_BOND_BEYOND_BLOOD) end
+		if not pet then self:removeEffect(self.EFF_OUTRIDER_BOND_BEYOND_BLOOD) end
 		if pet and game.party:hasMember(self) and game.party:hasMember(pet) then
 			eff.old_control = game.party.members[pet].control 
 			game.party.members[pet].control ="full"
@@ -924,7 +1008,7 @@ newEffect{
 }
 
 newEffect{
-	name = "FETCH_VULNERABLE", image = "talents/backlash.png",
+	name = "OUTRIDER_FETCH_VULNERABLE", image = "talents/backlash.png",
 	desc = "Vulnerable (Fetch)",
 	long_desc = function(self, eff) return ("When the wolf's owner next strikes this target with a weapon attack, it gains a %d%% bonus to damage."):format(eff.pct) end,
 	type = "physical",
@@ -935,7 +1019,7 @@ newEffect{
 	-- on_lose = function(self, eff) return ("#Target#' completes the strike") end,
 	activate = function(self, eff)
 		if not eff.src then
-			self:removeEffect(self.EFF_FETCH_VULNERABLE, nil, true)
+			self:removeEffect(self.EFF_OUTRIDER_FETCH_VULNERABLE, nil, true)
 			error("No source sent to temporary effect Vulnerable (Fetch).")
 		end
 	end,
@@ -944,7 +1028,7 @@ newEffect{
 			dam = dam * eff.pct/100
 			if not self.turn_procs.handled_fetch_vulnerable then
 				game:onTickEnd(function()
-					self:removeEffect(self.EFF_FETCH_VULNERABLE)
+					self:removeEffect(self.EFF_OUTRIDER_FETCH_VULNERABLE)
 				end)
 				self.turn_procs.handled_fetch_vulnerable= true
 			end
@@ -956,7 +1040,7 @@ newEffect{
 }
 
 newEffect{
-	name = "OUTRIDER_PROVOKED", --image = "talents/backlash.png",
+	name = "OUTRIDER_OUTRIDER_PROVOKED", --image = "talents/backlash.png",
 	desc = "Provoked",
 	long_desc = function(self, eff) return ("Damage is increased by %d%%, but all damage resistances are decreased by %d%%"):format(eff.boost, eff.red) end,
 	type = "mental",
@@ -982,7 +1066,7 @@ newEffect{
 }
 
 newEffect{
-	name = "SET_LOOSE", image = "talents/let_em_loose.png",
+	name = "OUTRIDER_SET_LOOSE", image = "talents/let_em_loose.png",
 	desc = "Set Loose",
 	long_desc = function(self, eff) return ("The beast has been emboldened by the charge, gaining a damage bonus of %d%% and a bonus of %d to defense and all saves."):format(eff.dam, eff.def) end,
 	type = "physical",
@@ -1002,7 +1086,7 @@ newEffect{
 }
 
 newEffect{
-	name = "SILENT_KILLER", --image = "effects/madness_stunned.png",
+	name = "OUTRIDER_SILENT_KILLER", --image = "effects/madness_stunned.png",
 	desc = "Silent Killer",
 	long_desc = function(self, eff) return ("The spider is stealthed (power %d) and benefits from a passive crit bonus while stealthed of %d%%"):format() end,
 	type = "physical",

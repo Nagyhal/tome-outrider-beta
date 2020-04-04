@@ -18,8 +18,7 @@
 -- darkgod@te4.org
 
 newTalent{
-	name = "Charge!",
-	short_name = "CHARGE",
+	name = "Charge!", short_name = "OUTRIDER_CHARGE", image = "talents/charge.png",
 	type = {"mounted/shock-tactics", 1},
 	message = "@Source@ charges!",
 	require = techs_strdex_req1,
@@ -75,8 +74,8 @@ newTalent{
 			end
 		end
 		-- Attack ?
-		if self:knowTalent(self.T_SHOCK_AND_AWE) then
-			self:callTalent(self.T_SHOCK_AND_AWE, "doEffect")
+		if self:knowTalent(self.T_OUTRIDER_SHOCK_AND_AWE) then
+			self:callTalent(self.T_OUTRIDER_SHOCK_AND_AWE, "doEffect")
 		end
 		if self:attackTarget(target, nil, 1.2, true) and target:canBe("stun") then
 			--First, the stun component
@@ -122,18 +121,18 @@ newTalent{
 }
 
 newTalent{
-	name = "Shock and Awe",
+	name = "Shock and Awe", short_name = "OUTRIDER_SHOCK_AND_AWE", image = "talents/shock_and_awe.png",
 	type = {"mounted/shock-tactics", 2},
 	require = techs_strdex_req2,
 	points = 5,
 	mode = "passive",
 	doEffect = function(self, t)
 		local params = {}
-		if self:knowTalent(self.T_WHIRR_OF_BLADES) then
-			params.speed = self:callTalent(self.T_WHIRR_OF_BLADES, "getSpeed")
-			params.parry_chance = self:callTalent(self.T_WHIRR_OF_BLADES, "getParryChance")
+		if self:knowTalent(self.T_OUTRIDER_WHIRR_OF_BLADES) then
+			params.speed = self:callTalent(self.T_OUTRIDER_WHIRR_OF_BLADES, "getSpeed")
+			params.parry_chance = self:callTalent(self.T_OUTRIDER_WHIRR_OF_BLADES, "getParryChance")
 		end
-		self:setEffect(self.EFF_SHOCK_ATTACK, t.getDur(self, t), params)
+		self:setEffect(self.EFF_OUTRIDER_SHOCK_ATTACK, t.getDur(self, t), params)
 	end,
 	info = function(self, t)
 		local dur = t.getDur(self, t)
@@ -150,17 +149,16 @@ newTalent{
 }
 
 newTalent{
-	name = "Shock Attack: Charge",
-	short_name = "SHOCK_ATTACK_CHARGE",
+	name = "Shock Attack: Charge", short_name = "OUTRIDER_SHOCK_ATTACK_CHARGE", image = "talents/shock_attack_charge.png",
 	type = {"mounted/mounted-base", 1},
 	message = "@Source@ charges again!",
 	points = 1,
-	cooldown = function(self, t) return self:callTalent(self.T_SHOCK_AND_AWE, "getDur") end, --Limit to >0
+	cooldown = function(self, t) return self:callTalent(self.T_OUTRIDER_SHOCK_AND_AWE, "getDur") end, --Limit to >0
 	tactical = { ATTACK = { weapon = 1, stun = 1 }, CLOSEIN = 3 },
 	requires_target = true,
 	is_melee = true,
 	target = function(self, t) return {type="hit", range=self:getTalentRange(t)} end,
-	range = function(self, t) return self:callTalent(self.T_SHOCK_AND_AWE, "getChargeRange") end,
+	range = function(self, t) return self:callTalent(self.T_OUTRIDER_SHOCK_AND_AWE, "getChargeRange") end,
 	on_pre_use = function(self, t)
 		if self:attr("never_move") then return false end
 		return preCheckIsMounted(self)
@@ -191,7 +189,7 @@ newTalent{
 			self:setMoveAnim(ox, oy, 8, 5)
 		end
 		-- Attack ?
-		local dam = self:callTalent(self.T_SHOCK_AND_AWE, "getDam")
+		local dam = self:callTalent(self.T_OUTRIDER_SHOCK_AND_AWE, "getDam")
 		self:attackTarget(target, nil, dam, true)
 		return true
 	end,
@@ -203,7 +201,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Whirr of Blades",
+	name = "Whirr of Blades", short_name = "OUTRIDER_WHIRR_OF_BLADES", image = "talents/whirr_of_blades.png",
 	type = {"mounted/shock-tactics", 3},
 	points = 5,
 	require = techs_strdex_req3,

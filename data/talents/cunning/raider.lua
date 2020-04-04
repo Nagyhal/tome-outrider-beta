@@ -18,7 +18,7 @@ function hasFreeOffhand(self)
 end
 
 newTalent{
-	name = "Master of Brutality",
+	name = "Master of Brutality", short_name = "OUTRIDER_MASTER_OF_BRUTALITY", image = "talents/master_of_brutality.png",
 	type = {"cunning/raider", 1},
 	require = mnt_dexcun_req1,
 	points = 5,
@@ -154,7 +154,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Strike at the Heart",
+	name = "Strike at the Heart", short_name = "OUTRIDER_STRIKE_AT_THE_HEART", image = "talents/strike_at_the_heart.png",
 	type = {"cunning/raider", 2},
 	mode = "passive",
 	require = mnt_dexcun_req2,
@@ -181,19 +181,19 @@ newTalent{
 		format(sunder, stacks_string, move*mult1, move*mult3, atk*mult1, atk*mult3, crit*mult1, crit*mult3, def*mult1, def*mult3)
 	end,
 	handleStrike = function(self, t, target, hitted)
-		local eff = self:hasEffect(self.EFF_STRIKE_AT_THE_HEART)
+		local eff = self:hasEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART)
 		if not (eff and target) then return end
 		--Only do this once, on the first target
 		if not eff.done then
 			game:onTickEnd(function() 
-				local eff = self:hasEffect(self.EFF_STRIKE_AT_THE_HEART)
+				local eff = self:hasEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART)
 				if hitted and eff.sunder>0 then
 					for target in pairs(eff.targets) do
 						target:setEffect(target.EFF_SUNDER_ARMOUR, 3, {power=eff.sunder, apply_power=self:combatPhysicalpower()})
 					end
 				end
 				-- if eff.store then eff.doUnstoreBonuses(self, eff) end
-				self:removeEffect(self.EFF_STRIKE_AT_THE_HEART)
+				self:removeEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART)
 			end)
 		end
 		eff.targets[target] = true
@@ -228,10 +228,10 @@ newTalent{
 				if not self:attr("building_strike_at_heart") then
 					self:attr("building_strike_at_heart", 1, true)
 				else
-					local p = self:hasEffect(self.EFF_STRIKE_AT_THE_HEART)
+					local p = self:hasEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART)
 					local ct=p and math.min(3, p.ct+1) or 1
 					local mult = t.getMult(self, t, ct)
-					self:setEffect(self.EFF_STRIKE_AT_THE_HEART, 3, {
+					self:setEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART, 3, {
 						ct=ct,
 						move=t.getMove(self, t)*mult,
 						atk=t.getAtk(self, t)*mult,
@@ -242,7 +242,7 @@ newTalent{
 				end
 			end
 		else
-			self:removeEffect(self.EFF_STRIKE_AT_THE_HEART)
+			self:removeEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART)
 			self:attr("building_strike_at_heart", 0, true)
 			self.turn_procs.did_strike = true
 		end
@@ -262,7 +262,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Spring Attack",
+	name = "Spring Attack", short_name = "OUTRIDER_SPRING_ATTACK", image = "talents/spring_attack.png",
 	type = {"cunning/raider", 3},
 	mode = "passive",
 	require = mnt_dexcun_req3,
@@ -285,7 +285,7 @@ newTalent{
 
 
 newTalent{
-	name = "Impunity of Warlords",
+	name = "Impunity of Warlords", short_name = "OUTRIDER_IMPUNITY_OF_WARLORDS", image = "talents/impunity_of_warlords.png",
 	type = {"cunning/raider", 4},
 	mode = "sustained",
 	require = mnt_dexcun_req4,

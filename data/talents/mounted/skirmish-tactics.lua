@@ -18,7 +18,7 @@
 -- darkgod@te4.org
 
 newTalent{
-	name = "Beastmaster's Mark",
+	name = "Beastmaster's Mark", short_name = "OUTRIDER_BEASTMASTERS_MARK", image = "talents/beastmasters_mark.png",
 	type = {"mounted/skirmish-tactics", 1},
 	points = 5,
 	cooldown = 10,
@@ -37,7 +37,7 @@ newTalent{
 		if target:canBe("cut") then target:setEffect(mount.EFF_BLEED,  t.getDur(self, t), {power=t.getBleed(self, t)}) end
 		local mount = self:hasMount()
 		if not mount then return true end
-		mount:setEffect(mount.EFF_BEASTMASTER_MARK,  t.getDur(self, t), {target=target})
+		mount:setEffect(mount.EFF_OUTRIDER_BEASTMASTER_MARK,  t.getDur(self, t), {target=target})
 		return true
 	end,
 	info = function(self, t)
@@ -60,8 +60,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Set-up Shot",
-	short_name = "SET_UP_SHOT",
+	name = "Set-up Shot", short_name = "OUTRIDER_SET_UP_SHOT", image = "talents/set_up_shot.png",
 	type = {"mounted/skirmish-tactics", 2},
 	points = 5,
 	cooldown = function(self, t) return math.max(6, self:combatTalentScale(t, 8, 6)) end,
@@ -100,8 +99,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Loose in the Saddle",
-	short_name = "LOOSE_IN_THE_SADDLE",
+	name = "Loose in the Saddle", short_name = "LOOSE_IN_THE_SADDLE", image = "talents/loose_in_the_saddle.png",
 	type = {"mounted/skirmish-tactics", 3},
 	points = 5,
 	mode = "sustained",
@@ -115,14 +113,14 @@ newTalent{
 			reduction=t.getReduction(self, t)/100,
 		}
 		if mount then
-			mount:setEffect(mount.EFF_LOOSE_IN_THE_SADDLE_SHARED, 2, ret)
+			mount:setEffect(mount.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE_SHARED, 2, ret)
 			ret.mount = mount
 		end
 		return ret
 	end,
 	deactivate = function(self, t, p)
 		if ret.mount then
-			ret.mount:removeEffect(ret.mount.EFF_LOOSE_IN_THE_SADDLE_SHARED, true, true)
+			ret.mount:removeEffect(ret.mount.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE_SHARED, true, true)
 		end
 		return true
 	end,
@@ -131,8 +129,8 @@ newTalent{
 		local p = self:isTalentActive(t.id)
 		if dam>self.max_life*.15 then
 			dam = dam - dam*p.reduction
-			self:setEffect(self.EFF_LOOSE_IN_THE_SADDLE, 2, {speed=t.getSpeed(self, t)/100})
-			self:forceUseTalent(self.T_LOOSE_IN_THE_SADDLE, {ignore_energy=true})
+			self:setEffect(self.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE, 2, {speed=t.getSpeed(self, t)/100})
+			self:forceUseTalent(self.T_OUTRIDER_LOOSE_IN_THE_SADDLE, {ignore_energy=true})
 		end
 		return {dam=dam}
 	end,

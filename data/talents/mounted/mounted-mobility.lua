@@ -50,7 +50,7 @@ local rundown_block_path = function(typ, lx, ly, for_highlights)
 end
 
 newTalent{
-	name = "Run Them Down",
+	name = "Run Them Down", short_name = "OUTRIDER_RUN_THEM_DOWN", image = "talents/run_them_down.png",
 	type = {"mounted/mounted-mobility", 1},
 	require = mnt_strdex_req1,
 	points = 5,
@@ -108,7 +108,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Goad",
+	name = "Goad", short_name = "OUTRIDER_GOAD", image = "talents/goad.png",
 	type = {"mounted/mounted-mobility", 2},
 	points = 5,
 	cooldown = function (self, t) return math.floor(20-2*self:getTalentLevel(t)) end,
@@ -132,7 +132,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Savage Bound",
+	name = "Savage Bound", short_name = "OUTRIDER_SAVAGE_BOUND", image = "talents/savage_bound.png",
 	type = {"mounted/mounted-mobility", 3},
 	require = mnt_strdex_req3,
 	points = 5,
@@ -191,7 +191,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Mounted Acrobatics",
+	name = "Mounted Acrobatics", short_name = "OUTRIDER_MOUNTED_ACROBATICS", image = "talents/mounted_acrobatics.png",
 	type = {"mounted/mounted-mobility", 4},
 	require = mnt_strdex_req4,
 	points = 5,

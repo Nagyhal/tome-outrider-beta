@@ -1,6 +1,5 @@
 newTalent{
-	name = "Fortitude",
-	-- short_name = "",
+	name = "Fortitude", short_name = "OUTRIDER_FORTITUDE", image = "talents/fortitude.png",
 	type = {"race/beast-training", 1},
 	mode = "passive",
 	points = 5,
@@ -65,8 +64,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Hunting Prowess",
-	-- short_name = "	",
+	name = "Hunting Prowess", short_name = "OUTRIDER_HUNTING_PROWESS", image = "talents/hunting_prowess.png",
 	type = {"race/beast-training", 1},
 	mode = "passive",
 	points = 5,
@@ -136,8 +134,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Staying Power",
-	-- short_name = "	",
+	name = "Staying Power", short_name = "OUTRIDER_STAYING_POWER", image = "talents/staying_power.png",
 	type = {"race/beast-training", 1},
 	mode = "passive",
 	points = 5,
@@ -186,8 +183,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Grit",
-	-- short_name = "	",
+	name = "Grit", short_name = "OUTRIDER_GRIT", image = "talents/grit.png",
 	type = {"race/beast-training", 1},
 	mode = "passive",
 	points = 5,

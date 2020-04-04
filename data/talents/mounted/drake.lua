@@ -1,10 +1,10 @@
 newTalent{
-	name = "Aerial Supremacy",
+	name = "Aerial Supremacy", short_name = "OUTRIDER_AERIAL_SUPREMACY", image = "talents/aerial_supremacy.png",
 	type = {"drake/dragonflight", 1},
 	points = 5,
 	require = techs_dex_req1,
 	mode = "passive",
-	shared_talent = "T_AERIAL_SUPREMACY_SHARED",
+	shared_talent = "T_OUTRIDER_AERIAL_SUPREMACY_SHARED",
 	callbackOnMounted = function(self, t)
 		shareTalentWithOwner(self, t)
 	end,
@@ -18,8 +18,8 @@ newTalent{
 			if not self:attr("building_aerial_supremacy") then
 				self:attr("building_aerial_supremacy", 1, true)
 			else
-				local p = self:hasEffect(self.EFF_STRIKE_AT_THE_HEART)
-				self:setEffect(self.EFF_AERIAL_SUPREMACY, 3, {
+				local p = self:hasEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART)
+				self:setEffect(self.EFF_OUTRIDER_AERIAL_SUPREMACY, 3, {
 				power=t.getBuff(self, t)
 				}) 
 			end
@@ -46,11 +46,11 @@ newTalent{
 
 newTalent{
 	name = "Aerial Supremacy (Shared)",
-	short_name = "AERIAL_SUPREMACY_SHARED",
+	short_name = "OUTRIDER_AERIAL_SUPREMACY_SHARED", image = "talents/aerial_supremacy_shared.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	mode = "passive",
-	base_talent = "T_AERIAL_SUPREMACY",
+	base_talent = "T_OUTRIDER_AERIAL_SUPREMACY",
 	passives = function(self, t, p)
 		local mount = self:hasMount()
 		local t2 = self:getTalentFromId(t.base_talent)
@@ -74,7 +74,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Carry Aloft",
+	name = "Carry Aloft", short_name = "OUTRIDER_CARRY_ALOFT", image = "talents/carry_aloft.png",
 	type = {"drake/dragonflight", 2},
 	require = techs_dex_req2,
 	points = 5,
@@ -94,10 +94,10 @@ newTalent{
 	end,
 	on_pre_use = function(self, t, silent)
 		if self:attr("never_move") then return false end
-		if self:hasEffect(self.EFF_RIDDEN) then if not silent then game.logPlayer(self, "Your owner has to command you, for you to use Carry Aloft!") end return false end
+		if self:hasEffect(self.EFF_OUTRIDER_RIDDEN) then if not silent then game.logPlayer(self, "Your owner has to command you, for you to use Carry Aloft!") end return false end
 		return true
 	end,
-	shared_talent = "T_COMMAND:_CARRY_ALOFT",
+	shared_talent = "T_OUTRIDER_COMMAND_CARRY_ALOFT",
 	on_learn = function(self, t)
 		shareTalentWithOwner(self, t)
 	end,
@@ -159,7 +159,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Command: Carry Aloft",
+	name = "Command: Carry Aloft", short_name = "OUTRIDER_COMMAND_CARRY_ALOFT", image = "talents/carry_aloft.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	tactical = { CLOSEIN = 3, DISABLE = { pin = 2 }  },
@@ -168,7 +168,7 @@ newTalent{
 	cooldown = 12,
 	requires_target = true,
 	direct_hit = true,
-	base_talent = "T_CARRY_ALOFT",
+	base_talent = "T_OUTRIDER_CARRY_ALOFT",
 	target = function(self, t)
 		local pet = self.outrider_pet
 		return pet:getTalentTarget(pet:getTalentFromId(t.base_talent))
@@ -176,7 +176,7 @@ newTalent{
 	on_pre_use = function(self, t, silent)
 		if self:attr("never_move") then return false end
 		local mount = self.outrider_pet
-		return mount and mount:callTalent(mount.T_CARRY_ALOFT, "on_pre_use") or false
+		return mount and mount:callTalent(mount.T_OUTRIDER_CARRY_ALOFT, "on_pre_use") or false
 	end,
 	action = function(self, t)
 		local tg = {type="hit", range=1, first_target = "friend"}
@@ -209,12 +209,12 @@ newTalent{
 
 
 newTalent{
-	name = "Leviathan",
+	name = "Leviathan", short_name = "OUTRIDER_LEVIATHAN", image = "talents/leviathan.png",
 	type = {"drake/dragonflight", 3},
 	require = techs_dex_req3,
 	points = 5,
 	mode = "passive",
-	shared_talent = "T_LEVIATHAN_SHARED",
+	shared_talent = "T_OUTRIDER_LEVIATHAN_SHARED",
 	callbackOnMounted = function(self, t)
 		shareTalentWithOwner(self, t)
 	end,
@@ -256,12 +256,11 @@ newTalent{
 }
 
 newTalent{
-	name = "Leviathan (Shared)",
-	short_name = "LEVIATHAN_SHARED",
+	name = "Leviathan (Shared)", short_name = "OUTRIDER_LEVIATHAN_SHARED", image = "talents/leviathan.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	mode = "passive",
-	base_talent = "T_LEVIATHAN",
+	base_talent = "T_OUTRIDER_LEVIATHAN",
 	callbackOnMove = function(self, t, moved, force, ox, oy, x, y)
 		local mount = self:hasMount(); if not mount then return end
 		mount:callTalent(t.base_talent, "setTurnProc", self)
@@ -276,7 +275,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Dive Bomb",
+	name = "Dive Bomb", short_name = "OUTRIDER_DIVE_BOMB", image = "talents/dive_bomb.png",
 	type = {"drake/dragonflight", 4},
 	require = techs_dex_req4,
 	mode = "sustained",
@@ -285,7 +284,7 @@ newTalent{
 	tactical = { CLOSEIN = 1, BUFF = 1,  DISABLE = { knockback = 1 } },
 	radius = function(self, t) return self:combatTalentScale(t, 3, 5) end,
 	target = function(self, t) return {type="ball", range=self:getTalentRange(t), radius=self:getTalentRadius(t), selffire=false, talent=t} end,
-	shared_talent = "T_COMMAND:_DIVE_BOMB",
+	shared_talent = "T_OUTRIDER_COMMAND_DIVE_BOMB",
 	on_pre_use= function(self, t, silent)
 		if self:attr("never_move") then return false end
 		if not self.owner.__talent_running and not self.player then
@@ -307,14 +306,14 @@ newTalent{
  		 return tostring(p.ct), "buff_font"
 	end,
 	callbackOnActBase = function(self, t)
-		local p = self:isTalentActive(self.T_DIVE_BOMB)
+		local p = self:isTalentActive(self.T_OUTRIDER_DIVE_BOMB)
 		if not p then return end
 		if p.ct>=3 then self:forceUseTalent(t.id, {ignore_energy=true}) end
 		p.ct = p.ct+1
 	end,
 	deactivate = function(self, t, p)
 		local rider = self.rider
-		if self.owner and self.owner:isTalentActive("T_COMMAND:_DIVE_BOMB") then
+		if self.owner and self.owner:isTalentActive("T_OUTRIDER_COMMAND_DIVE_BOMB") then
 			if not self.owner.turn_procs.dive_bomb_clear then
 				return --Don't deactivate if we're waiting on the player to do it for us
 			end
@@ -369,7 +368,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Command: Dive Bomb",
+	name = "Command: Dive Bomb", short_name = "OUTRIDER_COMMAND_DIVE_BOMB", image = "talents/dive_bomb.png",
 	type = {"mounted/mounted-base", 1},
 	mode = "sustained",
 	cooldown = 20,
@@ -377,11 +376,11 @@ newTalent{
 	tactical = { CLOSEIN = 1, BUFF = 1,  DISABLE = { knockback = 1 } },
 	radius = function(self, t) return self:combatTalentScale(t, 3, 5) end,
 	target = function(self, t) return {type="ball", range=self:getTalentRange(t), radius=self:getTalentRadius(t), selffire=false, talent=t} end,
-	base_talent = "T_DIVE_BOMB",
+	base_talent = "T_OUTRIDER_DIVE_BOMB",
 	on_pre_use = function(self, t, silent)
 		if self:attr("never_move") then return false end
 		local mount = self.outrider_pet
-		return mount and mount:callTalent(mount.T_GO_FOR_THE_THROAT, "on_pre_use") or false
+		return mount and mount:callTalent(mount.T_OUTRIDER_GO_FOR_THE_THROAT, "on_pre_use") or false
 	end,
 	activate = function(self, t)
 		local pet = self.outrider_pet
@@ -393,7 +392,7 @@ newTalent{
  		 return tostring(p.ct), "buff_font"
 	end,
 	callbackOnActBase = function(self, t)
-		local p = self:isTalentActive("T_COMMAND:_DIVE_BOMB")
+		local p = self:isTalentActive("T_OUTRIDER_COMMAND_DIVE_BOMB")
 		if not p then return end
 		if p.ct>=3 then self:forceUseTalent(t.id, {ignore_energy=true}) end
 		p.ct = p.ct+1

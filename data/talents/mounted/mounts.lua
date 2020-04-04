@@ -25,7 +25,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Mount",
+	name = "Mount", short_name = "OUTRIDER_MOUNT", image = "talents/mount.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	message = false,
@@ -34,8 +34,8 @@ newTalent{
 	tactical = { BUFF = 2, DEFEND = 3 },
 	no_unlearn_last = true,
 	range = function(self, t)
-		if self:knowTalent(self.T_MOUNTED_ACROBATICS) then
-			return self:callTalent(self.T_MOUNTED_ACROBATICS, "range")
+		if self:knowTalent(self.T_OUTRIDER_MOUNTED_ACROBATICS) then
+			return self:callTalent(self.T_OUTRIDER_MOUNTED_ACROBATICS, "range")
 		else return 1 end
 	end,
 	on_pre_use = function(self, t)
@@ -66,7 +66,7 @@ newTalent{
 			if self:canMount(tg) then 
 				game.logPlayer(self, "Your mount cannot be mounted right now!") return nil
 			else
-				if tg:hasEffect(tg.EFF_UNBRIDLED_FEROCITY) then
+				if tg:hasEffect(tg.EFF_OUTRIDER_UNBRIDLED_FEROCITY) then
 					game.logPlayer(self, "Your mount's ferocity prevents you from riding it!")
 				else	
 					game.logPlayer(self, "That cannot be mounted!") return nil 
@@ -81,7 +81,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Dismount",
+	name = "Dismount", short_name = "OUTRIDER_DISMOUNT", image = "talents/dismount.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	no_break_stealth = true, -- stealth is broken in attackTarget
@@ -95,9 +95,9 @@ newTalent{
 	end,
 	no_unlearn_last = true,
 	range = function(self, t)
-		if self:knowTalent(self.T_MOUNTED_ACROBATICS) then
-			-- t_acr = self:getTalentFromId(self.T_MOUNTED_ACROBATICS)
-			return self:callTalent(self.T_MOUNTED_ACROBATICS, "range")
+		if self:knowTalent(self.T_OUTRIDER_MOUNTED_ACROBATICS) then
+			-- t_acr = self:getTalentFromId(self.T_OUTRIDER_MOUNTED_ACROBATICS)
+			return self:callTalent(self.T_OUTRIDER_MOUNTED_ACROBATICS, "range")
 		else return 1 end
 	end,
 	on_pre_use = function(self, t, silent)
@@ -106,15 +106,15 @@ newTalent{
 	action = function(self, t)
 		local mount = self:getMount()
 		local tg = self:getTalentTarget(t)
-		if self:isTalentCoolingDown(self.T_MOUNTED_ACROBATICS) then tg.range=1 end
+		if self:isTalentCoolingDown(self.T_OUTRIDER_MOUNTED_ACROBATICS) then tg.range=1 end
 		local x, y, _ = self:getTarget(tg)
 		if not x or not y then return nil end
 		local ox, oy = self.x, self.y
 		if game.level.map:checkAllEntities(x, y, "block_move") then game.logPlayer(self, "You can't dismount there!") return nil end
 		if self:dismountTarget(mount, x, y) then
 			if core.fov.distance(ox, oy, x, y) > 1 then
-				self:callTalent(self.T_MOUNTED_ACROBATICS, "doAttack", ox, oy, x, y)
-				self:startTalentCooldown(self.T_MOUNTED_ACROBATICS)
+				self:callTalent(self.T_OUTRIDER_MOUNTED_ACROBATICS, "doAttack", ox, oy, x, y)
+				self:startTalentCooldown(self.T_OUTRIDER_MOUNTED_ACROBATICS)
 			end
 		end
 		return true
@@ -126,7 +126,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Interact With Your Mount", short_name = "INTERACT_MOUNT",
+	name = "Interact With Your Mount", short_name = "OUTRIDER_INTERACT_MOUNT", image = "talents/interact_mount.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	no_energy = true,
@@ -149,7 +149,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Hunting Horn Buff",
+	name = "Hunting Horn Buff", short_name = "OUTRIDER_HUNTING_HORN_BUFF", image = "talents/hunting_horn_buff.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	hide = "always",

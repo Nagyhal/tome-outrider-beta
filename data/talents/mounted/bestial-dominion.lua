@@ -176,8 +176,8 @@ function befriendMount(self, m)
 	--Other mount stuff
 	shareAllTalentsWithPet(self, m)
 	self.unused_traits = 0
-	if self:knowTalent(self.T_PRIMAL_BOND) then
-		self:callTalent(self.T_PRIMAL_BOND, "on_learn")
+	if self:knowTalent(self.T_OUTRIDER_PRIMAL_BOND) then
+		self:callTalent(self.T_OUTRIDER_PRIMAL_BOND, "on_learn")
 	end
 	m:resetToFull()
 	--Loyalty
@@ -225,9 +225,9 @@ function mountSetupSummon(self, m, x, y, no_control)
 end
 
 newTalent{
-	name = "Challenge the Wilds",
+	name = "Challenge the Wilds", short_name = "OUTRIDER_CHALLENGE_THE_WILDS", image = "talents/challenge_the_wilds.png",
 	type = {("mounted/bestial-dominion"), 1},
-	autolearn_talent = "T_INTERACT_MOUNT",
+	autolearn_talent = "T_OUTRIDER_INTERACT_MOUNT",
 	require =  mnt_strwil_req1,
 	points = 5,
 	cooldown = 50,
@@ -235,7 +235,7 @@ newTalent{
 	no_npc_use = true,
 	range = 10,
 	tactical = { BUFF = 5 },
-	shared_talent = "T_BESTIAL_DOMINION",
+	shared_talent = "T_OUTRIDER_BESTIAL_DOMINION",
 	no_unlearn_last = true,
 	on_learn = function (self, t)
 		local pet = self.outrider_pet
@@ -252,7 +252,7 @@ newTalent{
 	on_pre_use = function(self, t, silent)
 		if self:hasMount() then if not silent then game.logPlayer(self, "Use Challenge the Wilds when you seek a mount, not when you already have one.") end return false
 		else
-			local eff = self:hasEffect(self.EFF_WILD_CHALLENGE)
+			local eff = self:hasEffect(self.EFF_OUTRIDER_WILD_CHALLENGE)
 			if eff and eff.ct>0 then if not silent then game.logPlayer(self, "You must slay %d enemies before you may prove your might to the wilderness.", eff.ct) end return false 
 			else return true
 			end
@@ -284,7 +284,7 @@ newTalent{
 	callbackOnTalentPost = function(self, t, ab, ret, silent)
 		-- if ab.tactical and (ab.tactical.attack or ab.tactical.attackarea or ab.tactical.disable) then return end
 		local mount = self:hasMount(); if not mount then return end
-		local max_dist = self:callTalent(self.T_FERAL_AFFINITY, "getMaxDist") or 1
+		local max_dist = self:callTalent(self.T_OUTRIDER_FERAL_AFFINITY, "getMaxDist") or 1
 		if core.fov.distance(self.x, self.y, mount.x, mount.y)<=max_dist and string.find(ab.type[1],  "inscriptions") then
 			old_fake = mount.__inscription_data_fake
 			local name = string.sub(ab.id, 3)
@@ -304,12 +304,12 @@ newTalent{
 		end
 	end,
 	action = function(self, t)
-		if self:hasEffect(self.EFF_WILD_CHALLENGE) then
+		if self:hasEffect(self.EFF_OUTRIDER_WILD_CHALLENGE) then
 			t.doWarning(self, t)
 			--No return values from dialogs?
 		else
 			local ct = self:isQuestStatus("outrider-start", engine.Quest.PENDING) and 10 or t.getNum(self, t)
-			self:setEffect(self.EFF_WILD_CHALLENGE, 3, {ct=ct})
+			self:setEffect(self.EFF_OUTRIDER_WILD_CHALLENGE, 3, {ct=ct})
 		end
 		return
 	end,
@@ -318,8 +318,8 @@ newTalent{
 		local fct = function(ret)
 			if not ret then return end
 			t.doSummon(self, t)
-			self:removeEffect(self.EFF_WILD_CHALLENGE, nil, true)
-			self:startTalentCooldown(self.T_CHALLENGE_THE_WILDS)
+			self:removeEffect(self.EFF_OUTRIDER_WILD_CHALLENGE, nil, true)
+			self:startTalentCooldown(self.T_OUTRIDER_CHALLENGE_THE_WILDS)
 			return true
 		end
 		return Dialog:yesnoLongPopup("Your quarry is near...", "You can feel your quarry stalking nearby - but it does not stalk alone. Moreover, letting out your Wild Challenge could bring threats greater than mere beasts upon you. If the time is not ripe or the area not primed for the hunt, then it is better you do not proceed.", 300, fct, "I am ready! RELEASE MY FURY!", "I need to prepare for my trial.")
@@ -346,7 +346,7 @@ newTalent{
 			if first then 
 				local mount = makeBestialMount(self, self:getTalentLevel(t))
 				mountSetupSummon(self, mount, coords[i][1], coords[i][2], true)
-				mount:setEffect(mount.EFF_WILD_CHALLENGER, 2, {src=self})
+				mount:setEffect(mount.EFF_OUTRIDER_WILD_CHALLENGER, 2, {src=self})
 			else
 				local base_list=require("mod.class.NPC"):loadList("data/general/npcs/canine.lua")
 				local filter = {base_list=base_list
@@ -386,13 +386,12 @@ newTalent{
 
 --Teach mount its elementary attribute-based bonuses
 newTalent{
-	name = "Bestial Dominion (Mount)",
-	short_name = "BESTIAL_DOMINION",
+	name = "Bestial Dominion (Mount)", short_name = "OUTRIDER_BESTIAL_DOMINION", image = "talents/bestial_dominion.png",
 	type = {"mounted/mounted-base", 1},
 	mode = "passive",
 	hide = "always",
 	points = 1,
-	base_talent = "T_CHALLENGE_THE_WILDS",
+	base_talent = "T_OUTRIDER_CHALLENGE_THE_WILDS",
 	passives = function(self, t, p) 
 		--TODO: These need to be updated frequently
 		local owner = self.owner
@@ -410,7 +409,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Gruesome Depredation",
+	name = "Gruesome Depredation", short_name = "OUTRIDER_GRUESOME_DEPREDATION", image = "talents/gruesome_depredation.png",
 	type = {"mounted/bestial-dominion", 2},
 	require = mnt_strwil_req2,
 	points = 5,
@@ -485,7 +484,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Subdue The Beast",
+	name = "Subdue The Beast", short_name = "OUTRIDER_SUBDUE_THE_BEAST", image = "talents/subdue_the_beast.png",
 	type = {"mounted/bestial-dominion", 3},
 	require = mnt_strwil_req3,
 	points = 5,
@@ -512,7 +511,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Unbridled Ferocity",
+	name = "Unbridled Ferocity", short_name = "OUTRIDER_UNBRIDLED_FEROCITY", image = "talents/unbridled_ferocity.png",
 	type = {"mounted/bestial-dominion", 4},
 	points = 5,
 	cooldown = function(self, t) return self:combatTalentLimit(t, 20, 50, 30) end,
@@ -525,7 +524,7 @@ newTalent{
 	end,
 	action = function(self, t)
 		local mount = self:hasMount()
-		mount:setEffect(mount.EFF_UNBRIDLED_FEROCITY, t.getDur(self, t), {power=t.getPower(self, t), atk=t.getAtk(self, t), move=t.getMove(self, t)})
+		mount:setEffect(mount.EFF_OUTRIDER_UNBRIDLED_FEROCITY, t.getDur(self, t), {power=t.getPower(self, t), atk=t.getAtk(self, t), move=t.getMove(self, t)})
 		return true
 	end,
 	info = function(self, t)

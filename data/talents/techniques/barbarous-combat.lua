@@ -42,8 +42,8 @@ newTalent{
 		if not target then return end
 		local hit = self:attackTarget(target, nil, t.getDamage(self, t), true)
 		if hit then
-			self:setEffect(self.EFF_REGAIN_POISE, 3, {regen=t.getStamina(self, t), slow=t.getSlowPower(self, t)})
-		else self:setEffect(self.EFF_REGAIN_POISE, 3, {regen=0, slow=t.getSlowPower(self, t), cause="reckless assault"})
+			self:setEffect(self.EFF_OUTRIDER_REGAIN_POISE, 3, {regen=t.getStamina(self, t), slow=t.getSlowPower(self, t)})
+		else self:setEffect(self.EFF_OUTRIDER_REGAIN_POISE, 3, {regen=0, slow=t.getSlowPower(self, t), cause="reckless assault"})
 		end
 		return true
 	end,

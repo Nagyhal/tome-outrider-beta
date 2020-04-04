@@ -1,5 +1,5 @@
 newTalent{
-	name = "Feast of Blood",
+	name = "Feast of Blood", short_name = "OUTRIDER_FEAST_OF_BLOOD", image = "talents/feast_of_blood.png",
 	type = {"mounted/beast-heart", 1},
 	require = mnt_wilcun_req_high1,
 	points = 5,
@@ -44,9 +44,8 @@ newTalent{
 	end,
 }
 
-
 newTalent{
-	name = "Primal Bond",
+	name = "Primal Bond", short_name = "OUTRIDER_PRIMAL_BOND", image = "talents/primal_bond.png",
 	type = {"mounted/beast-heart", 2},
 	require = mnt_wilcun_req_high2,
 	mode = "passive",
@@ -94,7 +93,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Twin Threat",
+	name = "Twin Threat", short_name = "OUTRIDER_TWIN_THREAT", image = "talents/twin_threat.png",
 	type = {"mounted/beast-heart", 3},
 	require = mnt_wilcun_req_high3,
 	mode = "sustained",
@@ -141,10 +140,10 @@ newTalent{
 			end
 		end
 	end,
-	effects = {mounted="EFF_TWIN_THREAT_MOUNTED",
-		adjacent="EFF_TWIN_THREAT_ADJACENT",
-		mid="EFF_TWIN_THREAT_MID",
-		long="EFF_TWIN_THREAT_LONG"
+	effects = {mounted="EFF_OUTRIDER_TWIN_THREAT_MOUNTED",
+		adjacent="EFF_OUTRIDER_TWIN_THREAT_ADJACENT",
+		mid="EFF_OUTRIDER_TWIN_THREAT_MID",
+		long="EFF_OUTRIDER_TWIN_THREAT_LONG"
 	},
 	info = function(self, t)
 		local chance = t.getChance(self, t)
@@ -176,8 +175,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Twin Hearts",
-	short_name = "TWIN_THREAT_DASH",
+	name = "Twin Hearts", short_name = "OUTRIDER_TWIN_THREAT_DASH", image = "talents/twin_threat.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	cooldown = 6,
@@ -190,7 +188,7 @@ newTalent{
 	on_pre_use = function(self, t, silent)
 		local ret = preCheckHasMountPresent(self, t, silent)
 		if ret then 
-			local t2 = self:getTalentFromId(self.T_TWIN_THREAT)
+			local t2 = self:getTalentFromId(self.T_OUTRIDER_TWIN_THREAT)
 			local mount = self:hasMount()
 			if mount.life > mount.max_life*t2.getLifeTotal(self, t)/100 then
 				if not silent then 
@@ -235,7 +233,7 @@ newTalent{
 		return true
 	end,
 	info = function(self, t)
-		local t2 = self:getTalentFromId(self.T_TWIN_THREAT)
+		local t2 = self:getTalentFromId(self.T_OUTRIDER_TWIN_THREAT)
 		local life_total = t2.getLifeTotal(self, t)
 		return ([[Fighting at long range, your Twin Threat allows you to dash into a space adjacent to your mount as an instant action, but only when it is at less than %d%% of its max health!]]):
 		format(life_total)
@@ -243,7 +241,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Bond Beyond Blood",
+	name = "Bond Beyond Blood", short_name = "OUTRIDER_BOND_BEYOND_BLOOD", image = "talents/bond_beyond_blood.png",
 	type = {"mounted/beast-heart", 4},
 	points = 5,
 	require = mnt_wilcun_req_high4,
@@ -252,7 +250,7 @@ newTalent{
 		return preCheckHasMount(self, t, silent)
 	end,
 	action = function(self, t)
-		self:setEffect(self.EFF_BOND_BEYOND_BLOOD, t.getDur(self, t), {loyalty_discount=t.getLoyaltyDiscount(self, t), res=t.getResist(self, t)})
+		self:setEffect(self.EFF_OUTRIDER_BOND_BEYOND_BLOOD, t.getDur(self, t), {loyalty_discount=t.getLoyaltyDiscount(self, t), res=t.getResist(self, t)})
 		return true
 	end,
 	info = function(self, t)

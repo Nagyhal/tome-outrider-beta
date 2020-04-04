@@ -1,6 +1,6 @@
 newTalent{
 	name = "Combative",
-	short_name = "TRAIT_COMBATIVE",
+	short_name = "OUTRIDER_TRAIT_COMBATIVE",  image = "talents/trait_combative.png",
 	type = {"race/traits", 1},
 	mode = "passive",
 	points = 5,
@@ -37,12 +37,12 @@ newTalent{
 
 newTalent{
 	name = "Opportunistic",
-	short_name = "TRAIT_OPPORTUNISTIC",
+	short_name = "OUTRIDER_TRAIT_OPPORTUNISTIC", image = "talents/trait_opportunistic.png",
 	type = {"race/traits", 1},
 	mode = "passive",
 	points = 5,
 	hide = true,
-	shared_talent = "T_TRAIT_OPPORTUNISTIC_SHARED",
+	shared_talent = "T_OUTRIDER_TRAIT_OPPORTUNISTIC_SHARED",
 	on_learn = function(self, t)
 		shareTalentWithOwner(self, t)
 	end,
@@ -71,7 +71,7 @@ newTalent{
 
 newTalent{
 	name = "Opportunistic",
-	short_name = "T_TRAIT_OPPORTUNISTIC_SHARED",
+	short_name = "OUTRIDER_TRAIT_OPPORTUNISTIC_SHARED", image = "talents/trait_opportunistic.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	hide = true,
@@ -93,7 +93,7 @@ newTalent{
 
 newTalent{
 	name = "Hardy",
-	short_name = "TRAIT_HARDY",
+	short_name = "OUTRIDER_TRAIT_HARDY", image = "talents/trait_hardy.png",
 	type = {"race/traits", 1},
 	mode = "passive",
 	points = 5,
@@ -124,7 +124,7 @@ newTalent{
 
 newTalent{
 	name = "Unbreakable",
-	short_name = "TRAIT_UNBREAKABLE",
+	short_name = "OUTRIDER_TRAIT_UNBREAKABLE", image = "talents/trait_unbreakable.png",
 	type = {"race/traits", 1},
 	mode = "passive",
 	points = 5,
@@ -166,7 +166,7 @@ newTalent{
 
 newTalent{
 	name = "Long Fangs",
-	short_name = "TRAIT_LONG_FANGS",
+	short_name = "OUTRIDER_TRAIT_LONG_FANGS", image = "talents/trait_long_fangs.png",
 	type = {"race/traits", 1},
 	mode = "passive",
 	points = 5,
@@ -197,7 +197,7 @@ newTalent{
 
 newTalent{
 	name = "Strong Bite",
-	short_name = "TRAIT_STRONG_BITE",
+	short_name = "OUTRIDER_TRAIT_STRONG_BITE", image = "talents/trait_strong_bite.png",
 	type = {"race/traits", 1},
 	mode = "passive",
 	points = 5,

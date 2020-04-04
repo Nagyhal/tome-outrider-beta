@@ -1,5 +1,5 @@
 newTalent{
-	name = "Sly Senses",
+	name = "Sly Senses", short_name = "OUTRIDER_SLY_SENSES", image="talents/sly_senses",
 	type = {"wolf/tenacity", 1},
 	points = 5,
 	require = mnt_dex_req1,
@@ -21,7 +21,7 @@ newTalent{
 		self:onStatChange(self.STAT_DEX,  t.getStatBoost(self, t))
 		self:onStatChange(self.STAT_CUN,  t.getStatBoost(self, t))
 	end,
-	shared_talent = "T_SLY_SENSES_SHARED",
+	shared_talent = "T_OUTRIDER_SLY_SENSES_SHARED",
 	on_learn = function(self, t)
 		shareTalentWithOwner(self, t)
 	end,
@@ -43,12 +43,11 @@ newTalent{
 }
 
 newTalent{
-	name = "Sly Senses",
-	short_name = "SLY_SENSES_SHARED",
+	name = "Sly Senses", short_name = "OUTRIDER_SLY_SENSES_SHARED", image="talents/sly_senses",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	mode = "passive",
-	base_talent = "T_SLY_SENSES",
+	base_talent = "T_OUTRIDER_SLY_SENSES",
 	passives = function(self, t, p)
 		local mount = self:hasMount()
 		local t2 = self:getTalentFromId(t.base_talent)
@@ -66,7 +65,7 @@ newTalent{
 
 
 newTalent{
-	name = "Uncanny Tenacity",
+	name = "Uncanny Tenacity", short_name = "OUTRIDER_UNCANNY_TENACITY", image="talents/uncanny_tenacity",
 	type = {"wolf/tenacity", 2},
 	points = 5,
 	require = mnt_dex_req2,
@@ -80,7 +79,7 @@ newTalent{
 		self:startTalentCooldown(t.id)
 	end,
 	setEffect = function(self, t)
-		self:setEffect(self.EFF_UNCANNY_TENACITY, t.getDur(self, t), {res=t.getRes(self, t), buff=t.getBuff(self, t)})
+		self:setEffect(self.EFF_OUTRIDER_UNCANNY_TENACITY, t.getDur(self, t), {res=t.getRes(self, t), buff=t.getBuff(self, t)})
 	end,
 	info = function(self, t)
 		local res = t.getRes(self, t)
@@ -100,7 +99,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Go for the Throat",
+	name = "Go for the Throat",  short_name = "OUTRIDER_GO_FOR_THE_THROAT", image="talents/go_for_the_throat",
 	type = {"wolf/tenacity", 3},
 	require = mnt_dex_req3,
 	points = 5,
@@ -112,7 +111,7 @@ newTalent{
 	getDamage = function (self, t) return self:combatTalentScale(t, 0.7, 1.2) end,
 	getDamInc = function (self, t) return self:combatTalentScale(t, .15, .25, .85) end,
 	range = function (self, t) return self:combatTalentScale(t, 2, 4) end,
-	shared_talent = "T_GO_FOR_THE_THROAT_COMMAND",
+	shared_talent = "T_OUTRIDER_COMMAND_GO_FOR_THE_THROAT",
 	on_learn = function(self, t)
 		shareTalentWithOwner(self, t)
 	end,
@@ -122,7 +121,7 @@ newTalent{
 		end
 	end,
 	on_pre_use = function(self, t)
-		-- if self:hasEffect(self.EFF_RIDDEN) then return false end
+		-- if self:hasEffect(self.EFF_OUTRIDER_RIDDEN) then return false end
 		if self.owner and not self.player then return false end
 	end,
 	action = function(self, t)
@@ -134,7 +133,7 @@ newTalent{
 		--TODO: Maybe use something more mount-centric than self.rider:isMounted()
 		local ret = t.doAttack(self, t, self, target)
 		local owner = self.owner
-		if ret and owner then owner:startTalentCooldown(owner.T_GO_FOR_THE_THROAT_COMMAND) end
+		if ret and owner then owner:startTalentCooldown(owner"T_OUTRIDER_COMMAND_GO_FOR_THE_THROAT") end
 		return ret
 	end,
 	--Modular action function so can be invoked by either mount or rider
@@ -182,16 +181,16 @@ newTalent{
 
 newTalent{
 	name = "Command: Go for the Throat",
-	short_name = "GO_FOR_THE_THROAT_COMMAND", image = "talents/go_for_the_throat.png",
+	short_name = "OUTRIDER_COMMAND_GO_FOR_THE_THROAT", image = "talents/go_for_the_throat.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	cooldown = 8,
 	requires_target = true,
-	base_talent = "T_GO_FOR_THE_THROAT",
+	base_talent = "T_OUTRIDER_GO_FOR_THE_THROAT",
 	tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} },
 	-- tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} }, --TODO: Decide on how summon controls are handled tactically
-	getDamage = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_GO_FOR_THE_THROAT, "getDamage") end,
-	range = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_GO_FOR_THE_THROAT, "range") end,
+	getDamage = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_OUTRIDER_GO_FOR_THE_THROAT, "getDamage") end,
+	range = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_OUTRIDER_GO_FOR_THE_THROAT, "range") end,
 	targetTry = function(self, t)
 		return {type="ball", radius=self:getTalentRange(t), 0}
 	end,
@@ -201,7 +200,7 @@ newTalent{
 	end,
 	action = function(self, t)
 		local mount = self.outrider_pet
-		local t2 = mount:getTalentFromId(mount.T_GO_FOR_THE_THROAT)
+		local t2 = mount:getTalentFromId(mount.T_OUTRIDER_GO_FOR_THE_THROAT)
 
 		local tg = {type="hit", start_x=mount.x, start_y=mount.y, range=mount:getTalentRange(t2)}
 		if self:attr("never_move") then tg.range=1 end
@@ -211,8 +210,8 @@ newTalent{
 
 		local mover
 		if self:isMounted() then mover = self else mover = mount end
-		local ret = mount:callTalent(mount.T_GO_FOR_THE_THROAT, "doAttack", mover, target)
-		if ret then mount:startTalentCooldown(mount.T_GO_FOR_THE_THROAT) end
+		local ret = mount:callTalent(mount.T_OUTRIDER_GO_FOR_THE_THROAT, "doAttack", mover, target)
+		if ret then mount:startTalentCooldown(mount.T_OUTRIDER_GO_FOR_THE_THROAT) end
 		return ret
 	end,
 	info = function(self, t)
@@ -224,8 +223,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Fetch!",
-	short_name = "FETCH",
+	name = "Fetch!", short_name = "OUTRIDER_FETCH", image="talents/fetch.png",
 	type = {"wolf/tenacity", 4},
 	points = 5,
 	require = mnt_dex_req4,
@@ -240,7 +238,7 @@ newTalent{
 	on_pre_use= function(self, t, silent)
 		return false
 	end,
-	shared_talent = "T_FETCH_COMMAND",
+	shared_talent = "T_OUTRIDER_COMMAND_FETCH",
 	on_learn = function(self, t)
 		shareTalentWithOwner(self, t)
 	end,
@@ -288,10 +286,10 @@ newTalent{
 		if eff then
 			eff.power = t.getDam(self, t)
 			eff.dur = t.getDur(self, t)
-			self:setEffect(self.EFF_FETCH, t.getDur(self, t), {target=target})
+			self:setEffect(self.EFF_OUTRIDER_FETCH, t.getDur(self, t), {target=target})
 			local owner = self.owner
 			if owner then
-				target:setEffect(target.EFF_FETCH_VULNERABLE, t.getDur(self, t), {pct=t.getBonusPct(self, t), src=owner})
+				target:setEffect(target.EFF_OUTRIDER_FETCH_VULNERABLE, t.getDur(self, t), {pct=t.getBonusPct(self, t), src=owner})
 			end
 		end
 		return true
@@ -309,24 +307,23 @@ newTalent{
 }
 
 newTalent{
-	name = "Command: Fetch!",
-	short_name = "FETCH_COMMAND", image = "talents/fetch.png",
+	name = "Command: Fetch!", short_name = "OUTRIDER_COMMAND_FETCH", image = "talents/fetch.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	cooldown = 30,
 	requires_target = true,
-	base_talent = "T_FETCH",
+	base_talent = "T_OUTRIDER_FETCH",
 	tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} },
 	-- tactical = { ATTACK = { PHYSICAL = 2 , CLOSEIN = 3, CUT = 1} }, --TODO: Decide on how summon controls are handled tactically
-	getDamage = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_FETCH, "getDamage") end,
-	range = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_FETCH, "range") end,
+	getDamage = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_OUTRIDER_FETCH, "getDamage") end,
+	range = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_OUTRIDER_FETCH, "range") end,
 	on_pre_use = function(self, t)
 		local pet = self.outrider_pet
-		return pet and not pet:isTalentCoolingDown(pet.T_FETCH) or false
+		return pet and not pet:isTalentCoolingDown(pet.T_OUTRIDER_FETCH) or false
 	end,
 	action = function(self, t)
 		local pet = self.outrider_pet
-		local t2 = pet:getTalentFromId(pet.T_FETCH)
+		local t2 = pet:getTalentFromId(pet.T_OUTRIDER_FETCH)
 
 		local tg = {type="hit", start_x=pet.x, start_y=pet.y, range=pet:getTalentRange(t2)}
 		if self:attr("never_move") then tg.range=1 end
@@ -334,15 +331,15 @@ newTalent{
 		if not x or not y or not target then return nil end
 		if core.fov.distance(pet.x, pet.y, x, y) > pet:getTalentRange(t2) then return nil end
 
-		local ret = pet:callTalent(pet.T_FETCH, "doAttack", target)
-		if ret then pet:startTalentCooldown(pet.T_FETCH) end
+		local ret = pet:callTalent(pet.T_OUTRIDER_FETCH, "doAttack", target)
+		if ret then pet:startTalentCooldown(pet.T_OUTRIDER_FETCH) end
 		return ret
 	end,
 	info = function(self, t)
 		local pet = self.outrider_pet
 		if not pet then return [[Without a wolf, you cannot use Command: Fetch!]]
 		else
-			local t2=self:getTalentFromId(pet.T_FETCH)
+			local t2=self:getTalentFromId(pet.T_OUTRIDER_FETCH)
 			local dam = t2.getDam(pet, t2)
 			local dur = t2.getDur(pet, t2)
 			local reduction = t2.getReduction(pet, t2)*100
@@ -356,7 +353,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Loyal to the Pack",
+	name = "Loyal to the Pack",  short_name = "OUTRIDER_LOYAL_TO_THE_PACK", image="talents/loyal_to_the_pack.png",
 	type = {"wolf/pack-hunter", 1},
 	points = 5,
 	require = mnt_cun_req1,
@@ -371,7 +368,7 @@ newTalent{
 		self:onStatChange(self.STAT_CUN,  t.getStatBoost(self, t))
 		self:talentTemporaryValue(p, "combat_mentalresist", t.getSaves(self, t))
 	end,
-	shared_talent = "T_LOYAL_TO_THE_PACK_SHARED",
+	shared_talent = "T_OUTRIDER_LOYAL_TO_THE_PACK_SHARED",
 	on_learn = function(self, t)
 		shareTalentWithOwner(self, t)
 	end,
@@ -390,12 +387,11 @@ newTalent{
 }
 
 newTalent{
-	name = "Loyal to the Pack",
-	short_name = "LOYAL_TO_THE_PACK_SHARED",
+	name = "Loyal to the Pack", short_name = "OUTRIDER_LOYAL_TO_THE_PACK_SHARED", image="talents/loyal_to_the_pack.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	mode = "passive",
-	base_talent = "T_LOYAL_TO_THE_PACK",
+	base_talent = "T_OUTRIDER_LOYAL_TO_THE_PACK",
 	passives = function(self, t, p)
 		local mount = self:hasMount()
 		local t2 = self:getTalentFromId(t.base_talent)
@@ -411,8 +407,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Together, Forever",
-	short_name = "TOGETHER_FOREVER",
+	name = "Together, Forever", short_name = "OUTRIDER_TOGETHER_FOREVER", image="talents/together_forever.png",
 	type = {"wolf/pack-hunter", 2},
 	points = 5,
 	require = mnt_cun_req2,
@@ -483,7 +478,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Predatory Flanking",
+	name = "Predatory Flanking", short_name = "OUTRIDER_PREDATORY_FLANKING", image="talents/predatory_flanking.png",
 	type = {"wolf/pack-hunter", 3},
 	points = 5,
 	require = mnt_cun_req3,
@@ -505,7 +500,7 @@ newTalent{
 				local target2 = game.level.map(c[1], c[2], Map.ACTOR)
 				if target2 and self:reactionToward(target2) >= 0 and core.fov.distance(self.x, self.y, target2.x, target2.y)>1 then allies[#allies+1] = target2 end
 				if #allies>=1 then
-					target:setEffect(target.EFF_PREDATORY_FLANKING, 2, {src=self, allies=allies, src_pct=t.getPct(self, t), allies_pct=t.getSecondaryPct(self, t)})
+					target:setEffect(target.EFF_OUTRIDER_PREDATORY_FLANKING, 2, {src=self, allies=allies, src_pct=t.getPct(self, t), allies_pct=t.getSecondaryPct(self, t)})
 				end --We run the check to see if we are no longer flanking from within the enemy's temp effect.
 			end
 		end
@@ -525,7 +520,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Howl to the Moon",
+	name = "Howl to the Moon", short_name = "OUTRIDER_HOWL_TO_THE_MOON", image="talents/howl_to_the_moon.png",
 	type = {"wolf/pack-hunter", 4},
 	points = 5,
 	require = mnt_cun_req4,

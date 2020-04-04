@@ -85,8 +85,8 @@ local ans = {
 	{"Nothing, let's go."},
 }
 
-if player:hasEffect(player.EFF_BOND_BEYOND_BLOOD) then table.insert(ans, 4,d {"I want to take direct control.", action=change_control}) end
-if player:knowTalent(player.T_PRIMAL_BOND) then table.insert(ans, 4, {"I want to train your bestial traits", action=change_traits}) end
+if player:hasEffect(player.EFF_OUTRIDER_BOND_BEYOND_BLOOD) then table.insert(ans, 4,d {"I want to take direct control.", action=change_control}) end
+if player:knowTalent(player.T_OUTRIDER_PRIMAL_BOND) then table.insert(ans, 4, {"I want to train your bestial traits", action=change_traits}) end
 
 newChat{ id="welcome",
 	text = [[#LIGHT_GREEN#*Your mount waits at the ready, eager for your next command.*#WHITE#]],
