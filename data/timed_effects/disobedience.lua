@@ -17,6 +17,8 @@
 -- Nicolas Casalini "DarkGod"
 -- darkgod@te4.org
 
+local Particles = require "engine.Particles"
+
 newEffect{
 	name = "OUTRIDER_RILED_UP", image = "talents/panic.png",
 	desc = "Riled Up",
@@ -108,6 +110,63 @@ newEffect{
 	parameters = {chance=20},
 	on_gain = function(self, err) return "#F53CBE##Target# becomes obstinate!", "+Obstinate" end,
 	on_lose = function(self, err) return "#Target# is no longer obstinate", "-Obstinate" end,
+	activate = function(self, eff)
+		eff.particlesId = self:addParticles(Particles.new("fear_violet", 1))
+	end,
+	deactivate = function(self, eff)
+		self:removeParticles(eff.particlesId)
+	end,
+}
+
+newEffect{
+	name = "OUTRIDER_FRENZIED", image = "talents/panic.png",
+	desc = "Frenzied",
+	long_desc = function(self, eff) return ("The beast has become frenzied and has a %d%% chance to flee in terror instead of acting."):format(eff.chance) end,
+	type = "mental",
+	lists = "outrider_disobedience",
+	subtype = { fear=true },
+	status = "detrimental",
+	parameters = {chance=20},
+	on_gain = function(self, err) return "#F53CBE##Target# becomes frenzied!", "+Frenzied" end,
+	on_lose = function(self, err) return "#Target# is no longer frenzied", "-Frenzied" end,
+	activate = function(self, eff)
+		eff.particlesId = self:addParticles(Particles.new("fear_violet", 1))
+	end,
+	deactivate = function(self, eff)
+		self:removeParticles(eff.particlesId)
+	end,
+}
+
+newEffect{
+	name = "OUTRIDER_TERROR-STRICKEN", image = "talents/panic.png",
+	desc = "Terror-Stricken",
+	long_desc = function(self, eff) return ("The beast has become terror-stricken and has a %d%% chance to flee in terror instead of acting."):format(eff.chance) end,
+	type = "mental",
+	lists = "outrider_disobedience",
+	subtype = { fear=true },
+	status = "detrimental",
+	parameters = {chance=20},
+	on_gain = function(self, err) return "#F53CBE##Target# becomes terror-Stricken!", "+Terror-Stricken" end,
+	on_lose = function(self, err) return "#Target# is no longer terror-Stricken", "-Terror-Stricken" end,
+	activate = function(self, eff)
+		eff.particlesId = self:addParticles(Particles.new("fear_violet", 1))
+	end,
+	deactivate = function(self, eff)
+		self:removeParticles(eff.particlesId)
+	end,
+}
+
+newEffect{
+	name = "OUTRIDER_DEFIANT", image = "talents/panic.png",
+	desc = "Defiant",
+	long_desc = function(self, eff) return ("The beast has become defiant and has a %d%% chance to flee in terror instead of acting."):format(eff.chance) end,
+	type = "mental",
+	lists = "outrider_disobedience",
+	subtype = { fear=true },
+	status = "detrimental",
+	parameters = {chance=20},
+	on_gain = function(self, err) return "#F53CBE##Target# becomes defiant!", "+Defiant" end,
+	on_lose = function(self, err) return "#Target# is no longer defiant", "-Defiant" end,
 	activate = function(self, eff)
 		eff.particlesId = self:addParticles(Particles.new("fear_violet", 1))
 	end,

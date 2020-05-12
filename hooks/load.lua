@@ -191,6 +191,7 @@ class:bindHook("Actor:getTalentFullDescription:ressources", function(self, data)
 end)
 
 class:bindHook("Actor:takeHit", function(self, data)
+	--Pet's owners lose loyalty when pet takes a hit.
 	local owner = self.owner
 	if owner and owner.loyalty then
 		local coeff = self.loyalty_loss_coeff or 1
@@ -203,6 +204,7 @@ class:bindHook("Actor:takeHit", function(self, data)
 			owner:incLoyalty(-loyalty_loss * coeff)
 		end
 	end
+	--Chance to dismount on hit.
 	local eff = self:hasEffect(self.EFF_OUTRIDER_RIDDEN) or self:hasEffect(self.EFF_OUTRIDER_MOUNT)
 	rider = (eff and eff.rider) or ((eff and eff.mount) and self)
 	if rider and data.value / self.max_life > .1 then

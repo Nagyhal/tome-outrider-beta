@@ -1,66 +1,175 @@
+-- ToME - Tales of Maj'Eyal
+-- Copyright (C) 2009 - 2019 Nicolas Casalini
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+--
+-- Nicolas Casalini "DarkGod"
+-- darkgod@te4.org
+
+function hasNonTwoHander(self)
+	if self:attr("disarmed") then
+		return nil, "disarmed"
+	end
+
+	if not self:getInven("MAINHAND") then return end
+	local weapon = self:getInven("MAINHAND")[1]
+	if not weapon or weapon.twohanded or weapon.archery then
+		return nil
+	end
+	return weapon
+end
+
+function hasFreeOffhand(self)
+	local mainhand = self:getInven("MAINHAND")[1]
+	if mainhand and (mainhand.twohanded or mainhand.archery) then return nil end
+	if not (self:getInven("OFFHAND") and self:getInven("OFFHAND")[1]) then return true else return nil end
+end
+
 newTalent{
-	name = "Wailing Weapon", short_name = "OUTRIDER_WAILING_WEAPON", image="talents/wailing_weapon.png",
+	name = "Master of Brutality", short_name = "OUTRIDER_MASTER_OF_BRUTALITY", image = "talents/master_of_brutality.png",
 	type = {"technique/dreadful-onset", 1},
-	points = 5,
-	cooldown = 15,
-	-- stamina = 5,
 	require = mnt_dexcun_req1,
-	no_energy = true,
-	tactical = { BUFF = { weapon = 2 }, DISABLE = { confusion = 2 } }, 
-	on_pre_use = function(self, t)
-		if self:hasEffect(self.EFF_DISARMED) or self:isUnarmed() then if silent then game.logPlayer(self, "You must equip a weapon to convert it into a Wailing Weapon!") end return false end
+	points = 5,
+	mode = "sustained",
+	cooldown = 30,
+	sustain_stamina = 40,
+	tactical = { BUFF = 2 },
+	on_pre_use = function(self, t, silent)
+		-- if not hasOneHandedWeapon(self) then
+		if not t.checkBothWeaponSets(self, t) then
+			if not silent then
+				game.logPlayer(self, "You require a one-handed weapon to use this talent.")
+			end
+			return false
+		end
 		return true
 	end,
-	radius = function(self, t) return math.round(self:combatTalentScale(t, 2, 3)) end,
-	action = function(self, t)
-		local eff_id
-		if self:hasArcheryWeapon() then eff_id = self.EFF_OUTRIDER_HOWLING_ARROWS else eff_id = self.EFF_OUTRIDER_SHRIEKING_STRIKES end
-		self:setEffect(eff_id, t.getDur(self, t), {power=t.getConfusePower(self, t)})
-		return true
-	end,
-	doTryConfuse = function(self, t, target)
-		assert(target, "No target sent to doTryConfuse")
-		if self.turn_procs.done_wailing_weapon then return end
-		local acts = {}
-		self:project({type="ball", target.x, target.y, radius=self:getTalentRadius(t), selffire=false, friendlyfire=false}, target.x, target.y, function(px, py)
-			local a = game.level.map(px, py, engine.Map.ACTOR)
-			if a and a~=target and self:reactionToward(a)<0 then acts[a] = true end
-		end)
-		local target2 = rng.tableIndex(acts)
-		if target2 and target2:canBe("confusion") and rng.percent(t.getConfuseChance(self, t)) then
-			target2:setEffect(target.EFF_CONFUSED, t.getConfuseDur(self, t), {power=t.getConfusePower(self, t)})
-			local eff = target2:hasEffect(target2.EFF_CONFUSED)
-			if eff then
-				if self:hasEffect(self.EFF_OUTRIDER_HOWLING_ARROWS) then self:logCombat(target2, "#Source#'s howling arrows confuse #target#!") end
-				if self:hasEffect(self.EFF_OUTRIDER_SHRIEKING_STRIKES) then self:logCombat(target2, "#Source#'s shrieking strikes confuse #target#!") end
+	--TODO: This code is virtually nonsensical at this stage, let's delete most of it.
+	checkBothWeaponSets = function(self, t)
+		local mains = {main=self:getInven("MAINHAND") and self:getInven("MAINHAND")[1],
+			qs = self:getInven("QS_MAINHAND") and self:getInven("QS_MAINHAND")[1]}
+		local offhands = {main=self:getInven("OFFHAND") and self:getInven("OFFHAND")[1],
+			qs = self:getInven("QS_OFFHAND") and self:getInven("QS_OFFHAND")[1]}
+		local one_handed = false
+		local free_off = false
+		for _, set in ipairs{"main"} do
+			local main = mains[set]
+			if main and not main.twohanded then--and not main.archery then
+				one_handed = true
+				free_off = true
+				if offhands[set] or main.archery then free_off = false end
 			end
 		end
-		self.turn_procs.done_wailing_weapon = true
+		return one_handed, free_off
+	end,
+	callbackOnCrit = function(self, t, type, dam, chance, target)
+		if not type=="physical" then return end
+		local val = t.getPhysPen(self, t)
+		target:setEffect(target.EFF_WEAKENED_DEFENSES, 3, {inc=-val, max=-val})
+	end,
+	activate = function(self, t)
+		-- local weapon = hasOneHandedWeapon(self)
+		-- if not weapon then
+		-- 	game.logPlayer(self, "You cannot use Master of Brutality without a one-handed weapon!")
+		-- 	return false
+		-- end
+
+		local ret = {free_off=false}
+		if hasFreeOffhand(self) then
+				self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower2(self, t))
+				self:talentTemporaryValue(ret, "combat_physcrit", t.getPhysCrit2(self, t))
+				self:talentTemporaryValue(ret, "combat_critical_power", t.getCritPower2(self, t))
+				self:talentTemporaryValue(ret, "combat_apr", t.getApr2(self, t))
+				free_off=true
+		else
+			self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower(self, t))
+			self:talentTemporaryValue(ret, "combat_physcrit", t.getPhysCrit(self, t))
+			self:talentTemporaryValue(ret, "combat_critical_power", t.getCritPower(self, t))
+			self:talentTemporaryValue(ret, "combat_apr", t.getApr(self, t))
+		end
+		return ret
+	end,
+	callbackOnWear  = function(self, t, o, bypass_set) t.checkWeapons(self, t, o, bypass_set) end,
+	callbackOnTakeoff  = function(self, t, o, bypass_set) t.checkWeapons(self, t, o, bypass_set) end,
+	checkWeapons = function(self, t, o, bypass_set)
+		if o.type and o.type=="weapon" then
+			game:onTickEnd(function()
+				local one_handed, free_off = t.checkBothWeaponSets(self, t)
+				if one_handed then
+					local p = self:isTalentActive(t.id); if not p then return end
+					for i = #p.__tmpvals, 1, -1  do
+						self:removeTemporaryValue(p.__tmpvals[i][1], p.__tmpvals[i][2])
+						p.__tmpvals[i] = nil
+					end
+					if free_off then
+						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower2(self, t))
+						self:talentTemporaryValue(p, "combat_physcrit", t.getPhysCrit2(self, t))
+						self:talentTemporaryValue(p, "combat_critical_power", t.getCritPower2(self, t))
+						self:talentTemporaryValue(p, "combat_apr", t.getApr2(self, t))
+						p.free_off=true
+					else
+						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower(self, t))
+						self:talentTemporaryValue(p, "combat_physcrit", t.getPhysCrit(self, t))
+						self:talentTemporaryValue(p, "combat_critical_power", t.getCritPower(self, t))
+						self:talentTemporaryValue(p, "combat_apr", t.getApr(self, t))
+						p.free_off=false
+					end
+				else
+					self:forceUseTalent(t.id, {no_energy=true})
+				end
+			end)
+		end
+	end,
+	deactivate = function(self, t, p)
+		return true
 	end,
 	info = function(self, t)
-		local dur = t.getDur(self, t)
-		local confuse_dur = t.getConfuseDur(self, t)
-		local radius = self:getTalentRadius(t)
-		local chance = t.getConfuseChance(self, t)
-		local power = t.getConfusePower(self, t)
-		local silence_chance = t.getSilenceChance(self, t)
-		return ([[Taking either specially notched arrows from your quiver, or sought-after feathers which you affix to your melee weaponry, you let loose horridly screeching missiles or hack at your foes with howling strikes. For %d turns, attacks you make with your current weaponry have a %d%% chance to confuse a single enemy in radius %d around your target (power %d, duration %d). At level 5, the cacophony created is enough to drown out the chants of spellcasters, applying an additional silence chance of %d%%. This effect can proc once per turn.]])
-		:format(dur, chance, radius, power, confuse_dur, silence_chance)
+		local apr = t.getApr(self, t)
+		local apr2 = t.getApr2(self, t)
+		local crit_power = t.getCritPower(self, t)
+		local crit_power2 = t.getCritPower2(self, t)
+		local phys_crit = t.getPhysCrit(self, t)
+		local phys_crit2 = t.getPhysCrit2(self, t)
+		local mindpower = t.getMindpower(self, t)
+		local mindpower2 = t.getMindpower2(self, t)
+		local phys_pen = t.getPhysPen(self, t)
+		return ([[While you prefer weapons less visibily impressive than some, the merciless precision with which you wield them makes them no less intimidating in your hands.
+
+		Also, while wielding a one-handed or an archery weapon, gain the following bonuses:
+		+%d mindpower
+		+%d%% physical crit chance
+		+%d%% critical power
+		+%d APR
+		Critical hits will reduce the physical resistance of the target by %d%% for 3 turns.
+
+		If you hold nothing in your off-hand, instead gain the following benefits:
+		+%d mindpower
+		+%d%% physical crit chance
+		+%d%% critical power
+		+%d APR
+		Critical hits will reduce the physical resistance of the target by %d%% for 3 turns.]]):
+		format(mindpower, phys_crit, crit_power, apr, phys_pen, mindpower2, phys_crit2, crit_power2, apr2, phys_pen)
 	end,
-	getDur = function(self, t) return self:combatTalentLimit(t, 10, 3.75, 5.5, .35) end,
-	getConfuseDur = function(self, t) return self:combatTalentScale(t, 2.75, 4, .35) end,
-	getConfusePower = function(self, t) return self:combatTalentLimit(t, 70, 25, 50) end,
-	getConfuseChance = function(self, t)
-		local base = self:combatStatTalentIntervalDamage(t, "combatMindpower", 10, 50)
-		return self:combatLimit(base, 100, 10, 10, 75, 75)
-	end,
-	getSilenceChance = function(self, t)
-		local old_level = self.talents[t.id]
-		self.talents[t.id] =math.max(self.talents[t.id], 5)
-		local base = self:combatStatTalentIntervalDamage(t, "combatMindpower", 5, 20)
-		self.talents[t.id] = old_level
-		return self:combatLimit(base, 50, 5, 5, 25,25)
-	end
+	getApr = function(self, t) return self:combatTalentScale(t, 5, 12) end,
+	getApr2 = function(self, t) return self:callTalent(t.id, "getApr")*1.65 end,
+	getPhysCrit = function(self, t) return self:combatTalentScale(t, 3, 7) end,
+	getPhysCrit2 = function(self, t) return self:callTalent(t.id, "getPhysCrit")*1.85 end,
+	getCritPower = function(self, t) return self:combatTalentScale(t, 15, 30) end,
+	getCritPower2 = function(self, t) return self:callTalent(t.id, "getCritPower")*1.65 end,
+	getMindpower = function(self, t) return self:combatTalentScale(t, 6, 15) end,
+	getMindpower2 = function(self, t) return self:callTalent(t.id, "getMindpower")*1.65 end,
+	getPhysPen = function(self, t) return self:combatTalentScale(t, 15, 35) end,
 }
 
 newTalent{
@@ -133,59 +242,30 @@ newTalent{
 }
 
 newTalent{
-	name = "Catch!", short_name = "OUTRIDER_CATCH", image="talents/catch.png",
+	name = "Feigned Retreat", short_name = "OUTRIDER_FEIGNED_RETREAT", image="talents/feigned_retreat.png",
 	type = {"technique/dreadful-onset", 3},
 	require = mnt_dexcun_req3,
 	points = 5,
-	random_ego = "attack",
-	cooldown = 20,
-	-- stamina = 35,
-	tactical = { DISABLE = { fear = 4 } },
+	-- random_ego = "attack",
+	cooldown = 30,
+	stamina = -25,
+	-- tactical = { DISABLE = { fear = 4 } },
 	range = function (self, t) return math.floor(self:getTalentLevel(t) +4)  end,
 	radius = 2,
 	requires_target = true,
 	target = function(self, t)
-		return {type="ball", radius=self:getTalentRadius(t), range=self:getTalentRange(t), talent=t, friendlyfire=false, selffire=false}
+		-- return {type="ball", radius=self:getTalentRadius(t), range=self:getTalentRange(t), talent=t, friendlyfire=false, selffire=false}
 	end,
-	on_learn = function(self, t)
-		if not self:knowTalent(self.T_OUTRIDER_CATCH_PASSIVE) then self:learnTalent(self.T_OUTRIDER_CATCH_PASSIVE, true) end
-	end,
-	on_unlearn = function(self, t)
-		if self:getTalentLevel(t) == 0 and self:knowTalent(self.T_OUTRIDER_CATCH_PASSIVE) then self:unlearnTalentFull(self.T_OUTRIDER_CATCH_PASSIVE) end
-	end,
-	on_pre_use = function(self, t, silent)
-		if not self:hasEffect(self.EFF_OUTRIDER_CATCH) then
-			if not silent then
-				game.logPlayer(self, "You must have recently slain an aenemy wih a critical hit to use Catch!")
-			end
-			return false
-		end
-		return true
-	end,
-	callbackOnCrit = function(self, t, type, dam, chance, target)
-			if type=="physical" then
-				self.turn_procs.truephyscrit = true
-		end
-	end,
-	callbackOnKill = function(self, t, target, death_note)
-			if not (self.turn_procs and self.turn_procs.truephyscrit) then return end
-			if core.fov.distance(target.x, target.y, self.x, self.y)>1 then return end
-		self:setEffect(self.EFF_OUTRIDER_CATCH, t.getUsageWindow(self, t), {})
-	end,
+	-- on_pre_use = function(self, t, silent)
+	-- 	if not self:hasEffect(self.EFF_OUTRIDER_CATCH) then
+	-- 		if not silent then
+	-- 			game.logPlayer(self, "You must have recently slain an aenemy wih a critical hit to use Catch!")
+	-- 		end
+	-- 		return false
+	-- 	end
+	-- 	return true
+	-- end,
 	action = function(self, t)
-		local tg = self:getTalentTarget(t)
-		local x, y, target = self:getTarget(tg)
-		if not x or not y  then return nil end
-		self:project(tg, x, y, function(px, py)
-			local target = game.level.map(px, py, engine.Map.ACTOR)
-			if not target then return end
-			if target:canBe("confusion") then
-				target:setEffect(target.EFF_CONFUSED, t.getDur(self, t), {power=30 + self:getCun(70), apply_power=self:combatAttack()})
-			else
-				game.logSeen(target, "%s resists the terror!", target.name:capitalize())
-			end
-		end)
-		return true
 	end,
 	info = function(self, t)
 		local dur = t.getDur(self, t)
@@ -204,56 +284,6 @@ newTalent{
 	getLifePct = function(self, t) return self:combatTalentLimit(t, 30, 10, 20) end,
 	getCritBonus = function(self, t) return self:combatTalentScale(t, 15, 30) end,
 }
-
-newTalent{
-	name = "Catch! (Passive)", short_name = "OUTRIDER_CATCH_PASSIVE", image="talents/catch.png",
-	type = {"technique/other", 1},
-	hide = "always",
-	points = 1,
-	cooldown = function(self, t) return self:callTalent(self.T_OUTRIDER_CATCH, "getPassiveCooldown")end,
-	callbackOnAct = function(self, t)
-		if self:isTalentCoolingDown(t.id) then return false end
-		local t2 = self:getTalentFromId(self.T_OUTRIDER_CATCH)
-		--I'm only doing it as callbackOnAct so I can use this lazy methodology :P
-		--(fov.actors_dist will not work if it isn't the user's turn.)
-		local foes = {}
-		for i = 1, #self.fov.actors_dist do
-			act = self.fov.actors_dist[i]
-			-- Possible bug with this formula
-			if act and game.level:hasEntity(act) and self:reactionToward(act) < 0 and self:canSee(act) and act["__sqdist"] == 1 and act.life <= act.max_life*t2.getLifePct(self, t)/100 then
-				foes[#foes+1] = act
-			end
-		end
-		if #foes>=1 then
-			local offhand, choice
-			local mh1 = self.inven[self.INVEN_MAINHAND] and self.inven[self.INVEN_MAINHAND][1]
-			local oh1 = self.inven[self.INVEN_OFFHAND] and self.inven[self.INVEN_OFFHAND][1]
-			local mh2 = self.inven[self.INVEN_QS_MAINHAND] and self.inven[self.INVEN_QS_MAINHAND][1]
-			local oh2 = self.inven[self.INVEN_QS_OFFHAND] and self.inven[self.INVEN_QS_OFFHAND][1]
-			for _, weap in ipairs({mh1, mh2, oh1, oh2}) do
-				if weap and not weap.twohanded and not weap.archery then
-					choice = weap
-					-- if weap == oh1 or 
-				end
-			end
-			local target = rng.table(foes)
-			local crit_bonus = t2.getCritBonus(self, t)
-			-- if offhand then
-			-- 	self:quickSwitchWeapons(true, false)
-			-- end
-			self.combat_physcrit = self.combat_physcrit+crit_bonus
-			self:logCombat(target, "#Source# attempts an executioner's strike against #target#!")
-			self:attackTargetWith(target, weap)
-			self.combat_physcrit = self.combat_physcrit-crit_bonus
-			-- if offhand then
-			-- 	self:quickSwitchWeapons(true, false)
-			-- end
-			self:startTalentCooldown(t.id)
-		end
-	end,
-	info = function(self, t) return [[Handles passive ability of Catch!]] end,
-}
-
 
 newTalent{
 	name = "Living Shield", short_name = "OUTRIDER_LIVING_SHIELD", image="talents/living_shield.png",
