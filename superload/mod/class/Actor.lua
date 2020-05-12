@@ -18,9 +18,11 @@ function _M:init(t, no_default)
 end
 
 function _M:onTakeHit(value, src)
+	--Mounted takes damage in rider's stead
 	if self:isMounted() then
+		local has_taunt = src:hasEffect(src.EFF_OUTRIDER_TAUNT) --Rider can tank using taunts
 		local m = self:hasMount()
-		if rng.percent(m.mount_data.share_damage) then
+		if rng.percent(m.mount_data.share_damage) and not (has_taunt and has_taunt.src==self) then
 			m:takeHit(value, src)
 			game.logSeen(self, "%s takes %d damage in %s's stead!", m.name:capitalize(), value, self.name)
 			value = 0

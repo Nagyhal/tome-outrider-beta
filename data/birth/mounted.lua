@@ -51,22 +51,25 @@ newBirthDescriptor{
 	stats = { str=3, dex=3, wil=1, cun=3},
 	not_on_random_boss = true,
 	talents_types = {
-		["technique/archery-bow"]={true, 0.1},
-		["technique/combat-techniques-passive"]={true, 0.1},
-		["technique/combat-training"]={true, 0.1},
-		["technique/superiority"]={false, 0.3},
-		["technique/warcries"]={false, 0.3},
+		["technique/combat-training"]={true, 0.3},
 		["cunning/survival"]={true, 0.1},
 		["technique/conditioning"]={true, 0.1},
 		["mounted/bestial-dominion"]={true, 0.3},
 		["mounted/teamwork"]={true, 0.3},
+		["mounted/skirmish-tactics"]={true, 0.3},
 		["mounted/mounted-mobility"]={true, 0.3},
-		-- ["mounted/skirmish-tactics"]={false, 0.3},
-		["technique/barbarous-combat"]={true, 0.3},
+		["mounted/barbarous-combat"]={true, 0.3},
 		["technique/dreadful-onset"]={true, 0.3},
-		-- ["mounted/shock-tactics"]={false, -0.1},
 		["mounted/beast-heart"]={false, 0.3},
-		["cunning/raider"]={true, 0.3},
+
+		--These will be switched back on later, after testing!
+		-- ["technique/superiority"]={false, 0.3},
+		-- ["technique/warcries"]={false, 0.3},
+		-- ["cunning/raider"]={true, 0.3},
+		-- ["mounted/shock-tactics"]={false, -0.1},
+
+		--Note to self : THIS IS COMBAT VETERAN!
+		-- ["technique/combat-techniques-passive"]={true, 0.1},
 	},
 
 	talents = {

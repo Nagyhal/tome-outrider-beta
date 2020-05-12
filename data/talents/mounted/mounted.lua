@@ -26,6 +26,7 @@ newTalentType{ allow_random=true, type="mounted/bestial-dominion", name = "besti
 newTalentType{ allow_random=true, type="mounted/mounted-mobility", name = "mounted mobility", generic = true, description = "Wresting mastery over your fleet pawed steed, you leave slower foes bleeding in the dust."}
 newTalentType{ allow_random=true, type="mounted/teamwork", name = "teamwork", description = "Wresting mastery over your fleet pawed steed, you dance the last dance with those not quick enough to match you."}
 newTalentType{ allow_random=true, type="mounted/skirmish-tactics", name = "skirmish tactics", description = "Beside your beast, not even the winds can outpace you; atop it, not even the sky can outreach your aim."}
+newTalentType{ allow_random=true, type="mounted/barbarous-combat", name = "barbarous combat", description = "Mounted or afoot, your brutal blademastery shall ravage legions."}
 newTalentType{ allow_random=true, type="mounted/shock-tactics", name = "shock tactics", description = "Shattering your foes' ranks with devastating charge attacks, your shock tactics represent the pinnacle of mounted martial domination and the ultimate unison of steel and steed."}
 newTalentType{ allow_random=true, type="mounted/beast-heart", name = "beast heart", description = "Become no longer beast-rider, but beast-kind."}
 
@@ -47,9 +48,9 @@ local sort_traits = function(dialog, node)
 		end
 	end)
 end
+
 newTalentType{ allow_random=true, type="race/traits", name = "bestial traits", description = "Even the most mundane of beasts, when handled with wisdom, can reveal hidden traits that make it appear prodigious when compared to its natural kin.", sort=sort_traits}
 newTalentType{ allow_random=true, type="race/beast-training", name = "beast training", generic=true, description = "Develop the natural talents of your beast."}
-
 
 --Mount talents
 --Wolf, the basic mount, and its subtypes
@@ -76,18 +77,18 @@ newTalentType{ type="great-elk/monarch-of-the-woods", name = "monarch of the woo
 newTalentType{ type="mammoth/thundering-colossus", name = "thundering colossus", description = "Mammoth utility abilities." }
 --Shalore can ride exotic drakes
 --Bears, dwarf mount
-newTalentType{ type="bear/crushing claws", name = "crushing claws", description = "Bear power abilities." }
+newTalentType{ type="bear/crushing-claws", name = "crushing claws", description = "Bear power abilities." }
 --Xorn, dwarf mount
 newTalentType{ type="xorn/embodiment-of-stone", name = "xorn/embodiment of stone", description = "Xorn defensive and travel abilities." }
 --Yeeks, yeek mount
 newTalentType{ type="yeek/upholder-of-the-way", name = "upholder of the way", description = "Yeek cooperative abilities." }
 --Ritch, yeek mount
 newTalentType{ type="ritch/hive-sentinel", name = "hive sentinel", description = "Ritch cooperative power abilities." }
-
+--Lion, by popular domand
+newTalentType{ type="lion/pride-of-the-steppes", name = "pride of the steppes", description = "Powerful lion combat abilities." }
 
 --Techniques and Cunning
 newTalentType{ allow_random=true, type="technique/dreadful-onset", name = "dreadful onset", description = "Far and wide, kingdoms shall quake at the onset of your terrible reign of blood, arrows and steel."}
-newTalentType{ allow_random=true, type="technique/barbarous-combat", name = "barbarous combat", description = "Mounted or afoot, your brutal blademastery shall ravage legions."}
 newTalentType{ allow_random=true, type="technique/combined-arms", name = "combined arms", description = "Master many styles of warfare, each complimenting the others."}
 newTalentType{ allow_random=true, type="cunning/raider", name = "seasoned raider", generic = true, description = "Relish the danger the unknown brings."}
 
@@ -425,7 +426,6 @@ function preCheckHasMountInRange(self, t, silent, range)
 	end
 end
 
-
 function shareTalentWithOwner(self, t)
 	if not t.shared_talent then error(("No shared talent for talent %s"):format(t.id))end
 	if self.owner then self.owner:learnTalent(t.shared_talent, true, 1) else error(("No owner to share with for talent %s"):format(t.id)) end
@@ -528,13 +528,11 @@ load("/data-outrider/talents/mounted/drake.lua")
 load("/data-outrider/talents/mounted/bestial-dominion.lua")
 load("/data-outrider/talents/mounted/mounted-mobility.lua")
 load("/data-outrider/talents/mounted/teamwork.lua")
--- load("/data-outrider/talents/mounted/skirmish-tactics.lua")
--- load("/data-outrider/talents/mounted/shock-tactics.lua")
+load("/data-outrider/talents/mounted/skirmish-tactics.lua")
+load("/data-outrider/talents/mounted/barbarous-combat.lua")
 load("/data-outrider/talents/mounted/beast-heart.lua")
 load("/data-outrider/talents/race/traits.lua")
 load("/data-outrider/talents/race/beast-training.lua")
-
---technique and cunning
-load("/data-outrider/talents/techniques/barbarous-combat.lua")
 load("/data-outrider/talents/techniques/dreadful-onset.lua")
-load("/data-outrider/talents/cunning/raider.lua")
+-- load("/data-outrider/talents/mounted/shock-tactics.lua")
+

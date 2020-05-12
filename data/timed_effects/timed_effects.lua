@@ -96,29 +96,39 @@ newEffect{
 }
 
 newEffect{
-name = "OUTRIDER_REGAIN_POISE",
+name = "OUTRIDER_REGAIN_POISE", image = "talents/brazen_lunge.png",
 desc = "Regaining Poise",
-long_desc = function(self, eff) return ("The target gathers poise after an all-out attack, suffering a movement speed penalty of %d%% and enduring the disarmed state. However, when the target avoids taking damage, the target may recover %d stamina per turn."):format(eff.slow, eff.regen) end,
+long_desc = function(self, eff) return ("The target gathers poise after an all-out attack. Each turn the target avoids taking damage, the target may recover %d stamina per turn."):format(eff.regen) end,
 type = "physical",
-subtype = { disarm=true },
-status = "detrimental",
-parameters = { regen=6, slow=50, cause="all-out attack", toggleDamageTaken=false },
-on_gain = function(self, eff) return ("#Target# must recover from the %s!"):format(eff.cause), "+Regain Poise" end,
-on_lose = function(self, eff) return "#Target# has regained full poise.", "-Regain Poise" end,
+subtype = { tactic=true, morale=true },
+status = "beneficial",
+parameters = { regen=6, toggleDamageTaken=false, first_turn=true},
+on_gain = function(self, eff) return "#Target# tries to regain stamina!", "+Regain Poise" end,
+on_lose = function(self, eff) return "#Target# stops recovering stamina.", "-Regain Poise" end,
 activate = function(self, eff)
-	eff.tmpid = self:addTemporaryValue("disarmed", 1)
-	eff.speedid = self:addTemporaryValue("movement_speed", -eff.slow/100)
 	eff.toggleDamageTaken = false
 end,
-deactivate = function(self, eff)
-	self:removeTemporaryValue("movement_speed", eff.speedid)
-	self:removeTemporaryValue("disarmed", eff.tmpid)
+deactivate = function(self, eff, ed)
+	--Note to self:
+	--This is a weird one, because I can't use actor:callEffect here.
+
+	--If I use callEffect, that function doesn't get any effect table, so it doesn't ever try to call an effect
+	--that doesn't seem to exist.
+
+	--That is because deactivate() is called AFTER the effect is removed from self.tmp, which callEffect checks.
+	--However, the effect parameters are still passed to deactivate, even though
+	--the effect no longer exists as an element of the actor object table.
+
+	--If bugs appear, you'd be wise to check here!
+	ed.on_timeout(self, eff)
 end,
 do_onTakeHit = function(self, eff, dam)
-	if dam > 1 
-		then eff.toggleDamageTaken = true
-	 -- Give the player some feeback
-		game.logSeen(self, ("#Self# gains no recovery under the onslaught!"):gsub("#Self#", self.name:capitalize()))
+	--Give the player one turn to escape
+	if eff.first_turn == true then return end
+	if dam > 1 and not eff.toggleDamageTaken then
+		eff.toggleDamageTaken = true
+		-- Give the player some feeback
+		game.logSeen(self, ("#Self# recovers no stamina under the onslaught!"):gsub("#Self#", self.name:capitalize()))
 		if game.flyers and not silent and self.x and self.y and game.level.map.seens(self.x, self.y) then
 			local fly = "No Recovery!"
 			local sx, sy = game.level.map:getTileToScreen(self.x, self.y)
@@ -127,9 +137,12 @@ do_onTakeHit = function(self, eff, dam)
 	end
 end,
 on_timeout = function(self, eff)
-	if eff.toggleDamageTaken == false then
+	--This gives player one turn to escape & makes timing nicer
+	if eff.first_turn == true then eff.first_turn = false return end
+
+	if not eff.toggleDamageTaken then
 		self:incStamina(eff.regen)
-		game.logSeen(self, ("#Self# recovers poise as the enemies are kept at bay!"):gsub("#Self#", self.name:capitalize()))
+		game.logSeen(self, ("#Self# recovers stamina as the enemies are kept at bay!"):gsub("#Self#", self.name:capitalize()))
 		if game.flyers and not silent and self.x and self.y and game.level.map.seens(self.x, self.y) then
 			local fly = "Recovery!"
 			local sx, sy = game.level.map:getTileToScreen(self.x, self.y)
@@ -137,17 +150,44 @@ on_timeout = function(self, eff)
 		end
 		
 	end
-	-- else -- Give the player some feeback
-		-- game.logSeen(self, ("#Target# gains no recovery under the onslaught!"):gsub("#Target#", self.name:capitalize()))
-		-- if game.flyers and not silent and self.x and self.y and game.level.map.seens(self.x, self.y) then
-			-- local fly = "No Recovery!"
-			-- local sx, sy = game.level.map:getTileToScreen(self.x, self.y)
-			-- if game.level.map.seens(self.x, self.y) then game.flyers:add(sx, sy, 20, (rng.range(0,2)-1) * 0.5, -3, fly, {255,100,80}) end
-		-- end
-	-- end
-	
 	eff.toggleDamageTaken = false
 end,
+}
+
+newEffect{
+	name = "OUTRIDER_TAUNT", image = "talents/brazen_lunge.png",
+	desc = "Taunted",
+	long_desc = function(self, eff) return ("Target is taunted and will target %s."):
+		format(eff.src and eff.src.name:capitalize() or "the source")
+	end,
+	type = "mental",
+	subtype = { tactic=true, morale=true },
+	status = "detrimental",
+	parameters = { src=nil },
+	on_gain = function(self, eff) return "#Target#' is taunted!", "+Taunted" end,
+	on_lose = function(self, eff) return "#Target#' is no longer taunted!", "-Taunted" end,
+	on_timeout = function(self, eff)
+		self:callEffect(self.EFF_OUTRIDER_TAUNT, "doTaunt")
+	end,
+	doTaunt = function(self, eff)
+		local src = eff.src 
+		if not scr or src.dead then
+			self:removeEffect(eff.EFF_OUTRIDER_TAUNT)
+			return
+		end  
+		--Copied from the golem taunt, but constantly refreshes
+		if self:reactionToward(src) < 0 then
+			self:setTarget(src)
+		src:logCombat(self, "#Source# provokes #Target# to attack it.")
+		end
+	end,
+	callbackOnAct = function(self, eff)
+		self:callEffect(self.EFF_OUTRIDER_TAUNT, "doTaunt")
+	end,
+	activate = function(self, eff)
+		if not eff.src then	error("No source sent to temporary effect EFF_OUTRIDER_TAUNT.") end
+		self:callEffect(self.EFF_OUTRIDER_TAUNT, "doTaunt")
+	end,
 }
 
 newEffect{
@@ -1040,7 +1080,7 @@ newEffect{
 }
 
 newEffect{
-	name = "OUTRIDER_OUTRIDER_PROVOKED", --image = "talents/backlash.png",
+	name = "OUTRIDER_PROVOKED", --image = "talents/backlash.png",
 	desc = "Provoked",
 	long_desc = function(self, eff) return ("Damage is increased by %d%%, but all damage resistances are decreased by %d%%"):format(eff.boost, eff.red) end,
 	type = "mental",
