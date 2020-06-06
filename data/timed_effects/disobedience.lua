@@ -24,12 +24,15 @@ newEffect{
 	desc = "Riled Up",
 	long_desc = function(self, eff) return ("The beast has become riled up and has a %d%% chance to flee in terror instead of acting."):format(eff.chance) end,
 	type = "mental",
-	lists = "outrider_disobedience",
-	subtype = { fear=true },
+	-- lists = "outrider_disobedience",
+	subtype = { fear=true, disobedience=true },
 	status = "detrimental",
 	parameters = {chance=20},
 	on_gain = function(self, err) return "#F53CBE##Target# becomes riled up!", "+Riled Up" end,
 	on_lose = function(self, err) return "#Target# is no longer riled up", "-Riled Up" end,
+	callbackOnActBase = function(self, eff)
+
+	end,
 	activate = function(self, eff)
 		eff.particlesId = self:addParticles(Particles.new("fear_violet", 1))
 	end,
@@ -59,7 +62,7 @@ newEffect{
 		if not self:enoughEnergy() then return nil end
 		if eff.src.dead then return true end
 
-		if rng.pct(eff.chance) then
+		if rng.percent(eff.chance) then
 			local distance = core.fov.distance(self.x, self.y, eff.src.x, eff.src.y)
 			if distance <= eff.range then
 				-- in range

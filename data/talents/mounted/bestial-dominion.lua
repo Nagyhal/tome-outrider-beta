@@ -143,7 +143,7 @@ function befriendMount(self, m)
 	if game.party:hasMember(self) then
 		m.remove_from_party_on_death = true
 		game.party:addMember(m, {
-			control="no",
+			control="order",
 			type="mount",
 			title="Mount",
 			orders = {target=true, leash=true, anchor=true, talents=true},
@@ -158,6 +158,7 @@ function befriendMount(self, m)
 	end
 	--Mount used for Mounted Combat abilities, TODO: Consider making this more modular for multiple mounts owned
 	self.outrider_pet = m
+	m.ai = "outrider_pet"
 	m.owner = self
 	m.summoner= self
 	m.summoner_gain_exp = true
@@ -173,21 +174,23 @@ function befriendMount(self, m)
 	self.mounts_owned[#self.mounts_owned+1] = m
 	m.show_owner_loyalty_pool = true
 
+
 	--Other mount stuff
+	m:learnTalent(self.T_OUTRIDER_DISOBEDIENCE, true, 1)
 	shareAllTalentsWithPet(self, m)
 	self.unused_traits = 0
 	if self:knowTalent(self.T_OUTRIDER_PRIMAL_BOND) then
 		self:callTalent(self.T_OUTRIDER_PRIMAL_BOND, "on_learn")
 	end
 	m:resetToFull()
-	--Loyalty
-	self.max_loyalty = self.max_loyalty + m.mount_data.loyalty_mod
+	--
 	--Quest complete
 	if self:isQuestStatus("outrider-start", engine.Quest.PENDING) then
 		self:setQuestStatus("outrider-start", engine.Quest.COMPLETED)
 	end
 end
 
+--TODO: Rewrite this function completely. Snapshotting is bad, very bad!
 function mountSetupSummon(self, m, x, y, no_control)
 	m.can_mount = true
 	m.mount_data = {
@@ -224,6 +227,21 @@ function mountSetupSummon(self, m, x, y, no_control)
 	game.level.map:particleEmitter(x, y, 1, "summon")
 end
 
+function debugGenerateNewMount(self)
+	local old_mount = self.outrider_pet
+	if old_mount then old_mount:die() end
+
+	local x, y = util.findFreeGrid(self.x, self.y, 1, "block_move", {[engine.Map.ACTOR]=true})
+	if not x then
+		game.logPlayer(self, "You need a free space nearby to spawn your mount!")
+	else
+		print("OUTRIDER: Generating mount from debug routine.")
+		local m = makeBestialMount(self)
+		mountSetupSummon(self, m, x, y, true)
+		befriendMount(self, m)
+	end
+end
+
 newTalent{
 	name = "Challenge the Wilds", short_name = "OUTRIDER_CHALLENGE_THE_WILDS", image = "talents/challenge_the_wilds.png",
 	type = {("mounted/bestial-dominion"), 1},
@@ -249,7 +267,7 @@ newTalent{
 			unshareTalentWithPet(self, pet, t)
 		end
 	end,
-	on_pre_use = function(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
 		if self:hasMount() then if not silent then game.logPlayer(self, "Use Challenge the Wilds when you seek a mount, not when you already have one.") end return false
 		else
 			local eff = self:hasEffect(self.EFF_OUTRIDER_WILD_CHALLENGE)
@@ -260,7 +278,7 @@ newTalent{
 	end,
 	callbackOnSummonDeath = function(self, t, summon, src, death_note)
 		if summon ~= self.outrider_pet then return end
-		self:dismountTarget(summon)
+		self:dismount(_, _, true)
 		for tid, nb in pairs(summon.talents) do
 			local t2 = summon:getTalentFromId(tid)
 			if t2.shared_talent then
@@ -278,13 +296,12 @@ newTalent{
 		end
 		--Unset pet
 		self.outrider_pet = nil
-		self.max_loyalty = self.max_loyalty - summon.mount_data.loyalty_mod
 	end,
 	--Handle sharing of inscriptions here.
 	callbackOnTalentPost = function(self, t, ab, ret, silent)
 		-- if ab.tactical and (ab.tactical.attack or ab.tactical.attackarea or ab.tactical.disable) then return end
 		local mount = self:hasMount(); if not mount then return end
-		local max_dist = self:callTalent(self.T_OUTRIDER_FERAL_AFFINITY, "getMaxDist") or 1
+		local max_dist = self:callTalent(self.T_OUTRIDER_SUBDUE_THE_BEAST, "getMaxDist") or 1
 		if core.fov.distance(self.x, self.y, mount.x, mount.y)<=max_dist and string.find(ab.type[1],  "inscriptions") then
 			old_fake = mount.__inscription_data_fake
 			local name = string.sub(ab.id, 3)
@@ -408,6 +425,27 @@ newTalent{
 	end,
 }
 
+--Adds loyalty bonus and any other future bonuses from having a mount.
+--This seems to be safest way to do this.
+--	(the thought of forgetting a temporary value and applying the same bonus 
+--  multiple times is terrifying enough to warrant this!)
+newTalent{
+	name = "Bestial Dominion (Passive)", short_name = "OUTRIDER_CHALLENGE_PASSIVES", image = "talents/challenge_the_wilds.png",
+	type = {"mounted/mounted-base", 1},
+	mode = "passive",
+	hide = "always",
+	points = 1,
+	-- base_talent = "T_OUTRIDER_CHALLENGE_THE_WILDS",
+	passives = function(self, t, p)
+		local mod = table.get(self.mount_data, "loyalty_mod") or 0
+		self:talentTemporaryValue(p, "loyalty", val)
+	end,
+	info = function(self, t)
+		return ([[Modify loyalty by the mount's innate loyalty modifier.]]
+			):format()
+	end,
+}
+
 newTalent{
 	name = "Gruesome Depredation", short_name = "OUTRIDER_GRUESOME_DEPREDATION", image = "talents/gruesome_depredation.png",
 	type = {"mounted/bestial-dominion", 2},
@@ -426,8 +464,8 @@ newTalent{
 		end
 		return ret
 	end,
-	on_pre_use = function(self, t, silent)
-		return preCheckHasMountPresent(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
+		return preCheckHasMountPresent(self, t, silent, fake)
 	end, 
 	action = function(self, t)
 		local tg = self:getTalentTarget(t)
@@ -472,7 +510,7 @@ newTalent{
 		local loyalty = t.getLoyalty(self, t)
 		local heal = t.getHeal(self, t)*100
 		local loyalty2, heal2 = loyalty*1.5, heal*1.3
-		return ([[Your mount bites your enemy for %d%% damage. If this hits, then your mount's bite devours a great chunk of your enemy's carcass, restoring %d Loyalty and healing your mount for %d%% of its total life. If your mount kills its target with this attack, then it instead gains %d Loyalty and %d%% of its total life.
+		return ([[Your mount bites your enemy for %d%% damage. If this hits, then your mount's bite devours a great chunk of your enemy's carcass, restoring %d Loyalty and healing your mount for %d%% of its total life. If your mount kills its target with this attack, then it instead regains %d Loyalty and %d%% of its total life.
 
 			The Loyalty gain will scale with your Cunning and talent level.]]):
 			format(dam, loyalty, heal, loyalty2, heal2)
@@ -493,8 +531,8 @@ newTalent{
 	-- tactical = { STAMINA = 2 },
 	getRestore = function(self, t) return self:combatTalentScale(t, 20, 40) end,
 	getMaxLoyalty = function(self, t) return math.round(self:combatTalentScale(t, 5, 15), 5) end,
-	on_pre_use = function(self, t, silent)
-		return preCheckHasMount(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
+		return preCheckHasMount(self, t, silent, fake)
 	end,
 	action = function(self, t)
 		self:incLoyalty(t.getRestore(self, t)*self.max_loyalty/ 100)
@@ -513,14 +551,15 @@ newTalent{
 newTalent{
 	name = "Unbridled Ferocity", short_name = "OUTRIDER_UNBRIDLED_FEROCITY", image = "talents/unbridled_ferocity.png",
 	type = {"mounted/bestial-dominion", 4},
+	hide="always", --DEBUG: Hiding untested talents 
 	points = 5,
 	cooldown = function(self, t) return self:combatTalentLimit(t, 20, 50, 30) end,
 	stamina = 50,
 	require = mnt_strwil_req4,
 	no_energy = true,
 	tactical = { BUFF = 3 }, 
-	on_pre_use = function(self, t, silent)
-		return preCheckHasMountPresent(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
+		return preCheckHasMountPresent(self, t, silent, fake)
 	end,
 	action = function(self, t)
 		local mount = self:hasMount()

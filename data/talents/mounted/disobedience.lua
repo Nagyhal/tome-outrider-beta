@@ -27,11 +27,13 @@ newTalent{
 	points = 1,
 	no_energy = true,
 	callbackOnActBase = function(self, t)
+		--for debugging, we'll set this to every turn.
+		t.callbackOnTakeDamage(self, t)
 		self.outrider_done_disobedience = nil
 	end,
 	callbackOnTakeDamage = function(self, t)
 		if self.outrider_done_disobedience then return end
-		if not self.owner or self.owner.dead then error("T_OUTRIDER_DISOBEDIENCE: Mount has no owner!") return end
+		if not self.owner or self.owner.dead then error("Outrider: T_OUTRIDER_DISOBEDIENCE: Mount has no owner!") return end
 		local pct = self.owner.loyalty / self.owner.max_loyalty * 100
 
 		--Quickly return if it isn't neccessary to run the routine
@@ -43,16 +45,17 @@ newTalent{
 		if pct >= t.getLoyaltyLowThreshold(self, t) and rng.percent(t.getLoyaltyHighChance(self, t)) then
 			local eff_id = rng.table{
 				"EFF_OUTRIDER_RILED_UP",
-				"EFF_OUTRIDER_FLITFUL",
-				"EFF_OUTRIDER_OBSTINATE"
+				-- "EFF_OUTRIDER_FLITFUL",
+				-- "EFF_OUTRIDER_OBSTINATE"
 				}
 			self:setEffect(eff_id, 5, {})
 		--And then the low.
 		elseif rng.percent(t.getLoyaltyLowChance(self, t)) then
 			local eff_id = rng.table{
-				"EFF_OUTRIDER_FRENZIED",
-				"EFF_OUTRIDER_TERROR-STRICKEN",
-				"EFF_OUTRIDER_DEFIANT"
+				"EFF_OUTRIDER_RILED_UP",
+				-- "EFF_OUTRIDER_FRENZIED",
+				-- "EFF_OUTRIDER_TERROR-STRICKEN",
+				-- "EFF_OUTRIDER_DEFIANT"
 				}
 			self:setEffect(eff_id, 5, {})	
 		end
@@ -79,7 +82,7 @@ newTalent{
 
 		return ([[Bestial mounts are wilful and not easily tamed. Moreover, their tamer must learn to survive by instilling constant mutual respect.
 
-			In combat, when your beast's Loyalty reserves are below %d%%, once per turn after taking damage it has a %d%% chance to turn either Riled Up, Flitful or Obstinate. 
+			In combat, when your beast's Loyalty reserves are below %d%%, once per turn after taking damage it has a %d%% chance to turn either Riled Up, Flitful or Obstinate #RED#(DEBUG: Obstinate not yet implemented)#LAST#. 
 
 			If your beast's Loyalty to you is below %d%%, the effects are more serious: It has a %d%% chance to become Frenzied, Terror-Stricken or Defiant. These effects are stronger versions of the above effects and will override them when they occur.
 

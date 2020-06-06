@@ -17,6 +17,8 @@
 -- Nicolas Casalini "DarkGod"
 -- darkgod@te4.org
 
+local Talents = require "engine.interface.ActorTalents"
+
 newEntity{base = "BASE_TOOL_MISC",
 	define_as = "HUNTING_HORN",
 	image = "object/artifact/hunting_horn.png",
@@ -63,4 +65,6 @@ newEntity{base = "BASE_TOOL_MISC",
 			old:unlearnTalentFull(old.T_OUTRIDER_HUNTING_HORN_BUFF)
 		end
 	end,
+	max_power = 25, power_regen = 1,
+	use_talent = { id = Talents.T_OUTRIDER_HUNTING_HORN_BLAST, level = 2, power = 25 },
 }

@@ -1,12 +1,13 @@
 newTalent{
 	name = "Feast of Blood", short_name = "OUTRIDER_FEAST_OF_BLOOD", image = "talents/feast_of_blood.png",
 	type = {"mounted/beast-heart", 1},
+	hide="always", --DEBUG: Hiding untested talents 
 	require = mnt_wilcun_req_high1,
 	points = 5,
 	cooldown = function(self, t) return self:combatTalentLimit(t, 15, 35, 25) end,
 	loyalty = 20,
 	tactical = { HEAL = 2 }, --TODO: Complicated AI routine
-	on_pre_use = function(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
 		if self:isMounted() then
 			if not silent then
 				game.logPlayer(self, "You must be dismounted and adjacent to your beast!")
@@ -47,6 +48,7 @@ newTalent{
 newTalent{
 	name = "Primal Bond", short_name = "OUTRIDER_PRIMAL_BOND", image = "talents/primal_bond.png",
 	type = {"mounted/beast-heart", 2},
+	hide="always", --DEBUG: Hiding untested talents 
 	require = mnt_wilcun_req_high2,
 	mode = "passive",
 	no_unlearn_last = true,
@@ -95,13 +97,14 @@ newTalent{
 newTalent{
 	name = "Twin Threat", short_name = "OUTRIDER_TWIN_THREAT", image = "talents/twin_threat.png",
 	type = {"mounted/beast-heart", 3},
+	hide="always", --DEBUG: Hiding untested talents 
 	require = mnt_wilcun_req_high3,
 	mode = "sustained",
 	points = 5,
 	sustain_stamina = 100,
 	cooldown = 10,
-	on_pre_use = function(self, t, silent)
-		return preCheckHasMount(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
+		return preCheckHasMount(self, t, silent, fake)
 	end,
 	activate = function(self, t)
 		return {}
@@ -177,6 +180,7 @@ newTalent{
 newTalent{
 	name = "Twin Hearts", short_name = "OUTRIDER_TWIN_THREAT_DASH", image = "talents/twin_threat.png",
 	type = {"mounted/mounted-base", 1},
+	hide="always", --DEBUG: Hiding untested talents 
 	points = 1,
 	cooldown = 6,
 	range = 10,
@@ -185,8 +189,8 @@ newTalent{
 	getDam = function(self, t) return self:combatTalentScale(1, 1.2, 1.75) end,
 	getRegen = function(self, t) return 1 + self:getTalentLevel(t) end,
 	getThreshold = function(self,t) return 10 + self:getTalentLevel(t) * 2.5 end,
-	on_pre_use = function(self, t, silent)
-		local ret = preCheckHasMountPresent(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
+		local ret = preCheckHasMountPresent(self, t, silent, fake)
 		if ret then 
 			local t2 = self:getTalentFromId(self.T_OUTRIDER_TWIN_THREAT)
 			local mount = self:hasMount()
@@ -246,8 +250,8 @@ newTalent{
 	points = 5,
 	require = mnt_wilcun_req_high4,
 	cooldown = 30,
-	on_pre_use = function(self, t, silent)
-		return preCheckHasMount(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
+		return preCheckHasMount(self, t, silent, fake)
 	end,
 	action = function(self, t)
 		self:setEffect(self.EFF_OUTRIDER_BOND_BEYOND_BLOOD, t.getDur(self, t), {loyalty_discount=t.getLoyaltyDiscount(self, t), res=t.getResist(self, t)})

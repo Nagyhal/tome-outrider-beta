@@ -34,7 +34,7 @@ newTalent{
 	range = function(self, t) return math.floor(self:combatTalentScale(t, 6, 10)) end,
 	on_pre_use = function(self, t)
 		if self:attr("never_move") then return false
-		else return preCheckIsMounted(self, t, silent) end
+		else return preCheckIsMounted(self, t, silent, fake) end
 	end,
 	action = function(self, t)
 		local tg = self:getTalentTarget(t)
@@ -67,7 +67,7 @@ newTalent{
 		end
 		--Get permissible knockback directions
 		local poss_coords = {}
-		for _, coord in ipairs(util.adjacentCoorsds(target.x, target.y)) do
+		for _, coord in ipairs(util.adjacentCoords(target.x, target.y)) do
 			local cx, cy = coord[1], coord[2]
 			if not game.level.map:checkEntity(cx, cy, engine.Map.TERRAIN, "block_move", target) then
 				poss_coords[#poss_coords+1] = coord

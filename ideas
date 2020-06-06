@@ -1,0 +1,77 @@
+
+• Make the game work.
+• Test the whole of our "Dreadful Onset" talent category
+• Then go for Mounted Archery. It's fun and easy!
+
+---------------------------------------------------------------------------
+Coding resolutions:
+
+○ Make use of 'assert'
+○ Use modules and helper files, but know how Lua handles this
+○ Learn about how debug, xpcall, etc. work and how to use them
+○ Study the runic tomes of grayswandir and see if you can come up with a more unified strategy for extending ToME.
+
+------------------------------------------------------------------------------
+
+IDEAS ZONE: Maybe Challenge the Wilds beasts could run away when damaged / panicked?
+
+Things not to forget (Thu.):
+
+• What do we call mounted weaponry? Mounted Weapons or Cavalry Weapons or Riding Weapons
+• ...and think about if we ought to do the same for ranged weaponry?
+• The Skykraken - tentacle tail, water spray, smash through terrain, steam
+	(...maybe it can switch through a few different attacks based on a number of elemental drake classics)
+• Animal Affinity as a prodigy?
+• Disobedience for your Challenged animals
+• Challenged mobs can also run away e.g. at 50% health--fight back the swarm!
+• Special Arena mission leading to Skykraken showdown
+• Smash Defenses : we'll need to implement thats fully
+• Need squelch noises for giblets throw 
+• Capstones : Shatter and Unbridled Ferocity need to be just a bit beefier
+		and maybe Rearing Assault. You could merge it with Smash!
+• How to theme it if we put Mounted Archery into Beastmaster's Mark and also add missile slowing-down to Loose in the Saddle?
+• Double fatigue for mounted talents
+• Overrun could have a quick daze tacked on 
+• Sickle-Hook Spear
+• Horn-Bellied Bow
+• Lance w/ Knightly (Glorious, whatever) Charge
+• Solar Knight class! And some kind of Cataphract!
+• Ogre mounts : The hoar spider, mammoth & direwolf
+• Halflings in treants can't shoot, treant moves slow but has root, fun had by all
+• Icons : Giblets for Gory Spectacle
+• Rename "Mounted Archery" to something else
+• Think about Challenge the Wilds
+• Spring Attack: A simple attack, ranged or melee, which switches to ranged, jumps back a square or two, and sets the Spring Attack bonus as currently implemented. THEN, you need some kind of indicator or feedback for the player so that they realize Spring Attack hits are indeed more powerful - but what can it be? A movement slow? Lost turns for the enemy on hit? Gained turns for the player? I dunno!
+• Mounted Archery should be an effect, and anyway
+• Needs more Stamina gain, and Loyalty too... a "there, there!" where you pet your pet, provided you're safe and out of reach of enemy attacks? Maybe when you just stand still with your pet?
+
+--------------------------------------------------------
+
+What is needed for a "polish pass" on all known talents?
+
+1) Tactical tables
+2) Item egos
+3) Pre-use etc.
+4) range
+5) is_melee
+6) requires_target
+7) speed
+8) Does everything scale nicely?
+	deactivate_on = {no_combat=true, run=true, rest=true},
+	on_pre_use_ai
+9) damDesc
+10) no_npc_use
+
+--------------------------------------------------------
+
+• How can you tighten up & re-organize all this code?
+• Look at greyswandir's ancient magic runes again
+• Comment and clean the code in mounted-mobility - rundown_block_path -- I don't understand this!
+• Likewise, is_corner_blocked in mounted-mobility - what is this about?
+• Think about "temporary talents" and "temporary particles"
+
+	--TODO: Could add an unusual element where knockback is a function of number of hits
+	--Or that only creatures knocked back are hit.
+	--Sounds good to me and differentiates it well from Repulsion
+
+Shader: Shield shatter!

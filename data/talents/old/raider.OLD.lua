@@ -26,7 +26,7 @@ newTalent{
 	cooldown = 30,
 	sustain_stamina = 40,
 	tactical = { BUFF = 2 },
-	on_pre_use = function(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
 		-- if not hasOneHandedWeapon(self) then
 		if not t.checkBothWeaponSets(self, t) then
 			if not silent then

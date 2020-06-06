@@ -34,7 +34,7 @@ newTalent{
 	info = function(self, t)
 		local buff = t.getBuff(self, t)
 		local res = t.getRes(self, t)
-		return ([[Gain %d attack, defense, and physical save for 2 turns after moving at least two squares. In addition your base stun, knockback and blind resistance, gain a %d%% base pin and fear resistance.
+		return ([[Gain %d attack, defense, and physical save for 2 turns after moving at least two squares. In addition to your base stun, knockback and blind resistance, gain a %d%% base pin and fear resistance.
 
 		Your rider will share these benefits.]]):
 		format(buff, res)
@@ -92,9 +92,9 @@ newTalent{
 		end
 		return {type="hit", range=self:getTalentRange(t), selffire=false, talent=t}
 	end,
-	on_pre_use = function(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
 		if self:attr("never_move") then return false end
-		if self:hasEffect(self.EFF_OUTRIDER_RIDDEN) then if not silent then game.logPlayer(self, "Your owner has to command you, for you to use Carry Aloft!") end return false end
+		if self:hasEffect(self.EFF_OUTRIDER_RIDDEN) then if not silent then game.logPlayer(self, "Your owner has to command you for you to use Carry Aloft!") end return false end
 		return true
 	end,
 	shared_talent = "T_OUTRIDER_COMMAND_CARRY_ALOFT",
@@ -173,7 +173,7 @@ newTalent{
 		local pet = self.outrider_pet
 		return pet:getTalentTarget(pet:getTalentFromId(t.base_talent))
 	end,
-	on_pre_use = function(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
 		if self:attr("never_move") then return false end
 		local mount = self.outrider_pet
 		return mount and mount:callTalent(mount.T_OUTRIDER_CARRY_ALOFT, "on_pre_use") or false
@@ -269,7 +269,7 @@ newTalent{
 		local t2 = self:getTalentFromId(t.base_talent)
 		local chance = t2.getChance(self, t2)
 		local stun_dur = t2.getStunDur(self, t2)
-		return ([[Any time you rider your drake more than 1 square as part of an attack, you have a %d%% chance to inflict a %d turn stun on any enemies you damage that turn.]]):
+		return ([[Any time you ride your drake more than 1 square as part of an attack, you have a %d%% chance to inflict a %d turn stun on any enemies you damage that turn.]]):
 		format(chance, stun_dur)
 	end,
 }
@@ -285,7 +285,7 @@ newTalent{
 	radius = function(self, t) return self:combatTalentScale(t, 3, 5) end,
 	target = function(self, t) return {type="ball", range=self:getTalentRange(t), radius=self:getTalentRadius(t), selffire=false, talent=t} end,
 	shared_talent = "T_OUTRIDER_COMMAND_DIVE_BOMB",
-	on_pre_use= function(self, t, silent)
+	on_pre_use= function(self, t, silent, fake)
 		if self:attr("never_move") then return false end
 		if not self.owner.__talent_running and not self.player then
 			 return false end
@@ -345,7 +345,7 @@ newTalent{
 			end
 		end)
 
-		if rider then game:onTickEnd(function() rider:dismountTarget(self) end) end
+		if rider then game:onTickEnd(function() rider:dismount() end) end
 		return true
 	end,
 	info = function(self, t)
@@ -354,7 +354,7 @@ newTalent{
 		local knockback = t.getKnockback(self, t)
 		local fear_threshold = t.getFearThreshold(self, t)
 		local shared_pct = t.getSharedPct(self, t)
-		return ([[Charge for up to 3 turns. While you soar aloft, incoming damage is reduced by 75%%, Aerial Supremacy bonuses are automaically gained, and you can not attack nor be targeted by melee abilities. 
+		return ([[Charge for up to 3 turns. While you soar aloft, incoming damage is reduced by 75%%, Aerial Supremacy bonuses are automatically gained, and you can not attack nor be targeted by melee abilities. 
 
 			While active, moving will instead try to move you over enemies's heads into the square beyond them. When you deactivate, deal damage equal to %d to all in a radius of %d and knock back those stricken up to %d squares. %d%% of the damage will be shared with you and your rider. Also, gain a damage bonus of 15%% for each turn of charge. If performing this attack, however, would decrease you or your rider's health below %d%% health, then your courage will falter and you will fail to perform the attack.
 
@@ -377,7 +377,7 @@ newTalent{
 	radius = function(self, t) return self:combatTalentScale(t, 3, 5) end,
 	target = function(self, t) return {type="ball", range=self:getTalentRange(t), radius=self:getTalentRadius(t), selffire=false, talent=t} end,
 	base_talent = "T_OUTRIDER_DIVE_BOMB",
-	on_pre_use = function(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
 		if self:attr("never_move") then return false end
 		local mount = self.outrider_pet
 		return mount and mount:callTalent(mount.T_OUTRIDER_GO_FOR_THE_THROAT, "on_pre_use") or false

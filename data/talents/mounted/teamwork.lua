@@ -28,45 +28,32 @@ newTalent{
 	tactical = { ATTACK = 1, CLOSEIN = 1, DISABLE = { stun = 1 }  },
 	range = function(self, t) return math.min(10, self:combatTalentScale(t, 5, 9)) end,
 	requires_target = true,
-	on_pre_use = function(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
 		-- local mount = self:hasMount()
 		-- if mount and mount:attr("never_move") then return false end
 		-- return true
-		return preCheckHasMountPresent(self, t, silent)
+		return preCheckHasMountPresent(self, t, silent, fake)
+	end,
+	target = function(self, t)
+		local mount = self:hasMount()
+		return {
+			type="bolt", range=self:getTalentRange(t),
+			friendlyfire=false, friendlyblock=false,
+			start_x=mount.x or self.x,
+			start_y=mount.y or self.y
+		}
 	end,
 	action = function(self, t)
 		local mount = self:hasMount()	
-		local tg = {type="bolt", range=self:getTalentRange(t), start_x=mount.x, start_y=mount.y}
+		local tg = self:getTalentTarget(t)
 		local x, y, target = self:getTarget(tg)
 		if not x or not y or not target then return nil end
 		if self:reactionToward(target) >= 0 then return nil end
+
 		if core.fov.distance(mount.x, mount.y, x, y) > self:getTalentRange(t) then return nil end
 
-		local block_actor = function(_, bx, by) return game.level.map:checkEntity(bx, by, Map.TERRAIN, "block_move", mount) end
-		local linestep = mount:lineFOV(x, y, block_actor)
-
-		local tx, ty, lx, ly, is_corner_blocked 
-		repeat  -- make sure each tile is passable
-			tx, ty = lx, ly
-			lx, ly, is_corner_blocked = linestep:step()
-		until is_corner_blocked or not lx or not ly or game.level.map:checkAllEntities(lx, ly, "block_move", self)
-		if not tx or core.fov.distance(mount.x, mount.y, tx, ty) < 1 then
-			game.logPlayer(self, "Your pet is too close to build up momentum!")
-			return
-		end
-		if not tx or not ty or core.fov.distance(x, y, tx, ty) > 1 then return nil end
-
-		local mounted, px, py = self:isMounted(), self.x, self.y
-		if mounted then self:dismountTarget(mount); if self:isMounted() then return nil end end
-
-		local first = true
-		local ox, oy = mount.x, mount.y
-		mount:move(tx, ty, true)
-		if config.settings.tome.smooth_move > 0 then
-			mount:resetMoveAnim()
-			mount:setMoveAnim(ox, oy, 8, 5)
-		end
-		self:move(px, py, true)
+		local done = rushTargetTo(mount, x, y, {min_range=0, dismount=true, go_through_friends=true})
+		if not done then return end
 
 		if core.fov.distance(mount.x, mount.y, x, y) > 1 then return true end
 		if mount:attackTarget(target, nil, t.getDam(self, t), true) and target:canBe("stun") then
@@ -83,9 +70,9 @@ newTalent{
 		local dam_buff = t.getDamBuff(self, t)
 		local res_buff = t.getDefBuff(self, t)
 		local evade = t.getEvade(self, t)
-		return ([[Your mount performs a rushing attack on an enemy within %d squares, dealing %d%% damage and stunning it for %d turns. If you are mounted, then using Let 'Em Loose will forcibly dismount you.
+		return ([[Your mount performs a rushing attack on an enemy within %d squares, dealing %d%% damage and stunning it for %d turns. If you are mounted, then using Let 'Em Have It will forcibly dismount you.
 
-			After using Let 'Em Loose, for %d turns your mount will be incensed, gaining a %d%% evasion chance and +%d to saves (scaling with your Willpower) as well as a %d%% bonus to damage (scaling with Cunning.)]]):
+			After using Let 'Em Have It, for %d turns your mount will be incensed, gaining a %d%% evasion chance and +%d to saves (scaling with your Willpower) as well as a %d%% bonus to damage (scaling with Cunning.)]]):
 			format(range, dam, eff_dur, buff_dur, evade, res_buff, dam_buff)
 	end,
 	getDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
@@ -97,84 +84,50 @@ newTalent{
 }
 
 newTalent{
-	name = "Animal Affinity", short_name = "OUTRIDER_FERAL_AFFINITY", image="talents/feral_affinity.png",
+	name = "Predatory Flanking", short_name = "OUTRIDER_FLANKING", image = "talents/flanking.png",
 	type = {"mounted/teamwork", 2},
+	points = 5,
 	require = mnt_wilcun_req2,
 	mode = "passive",
-	points = 5,
-	passives = function(self, t, p)
-		local mount = self.outrider_pet
-		if mount then
-			for damtype, val in pairs(mount.resists) do
-				self:talentTemporaryValue(p, "resists", {[damtype]=val*t.getResistPct(self, t)})
+	doCheck = function(self, t)
+		local tgts = {}
+		for _, c in pairs(util.adjacentCoords(self.x, self.y)) do
+			local target = game.level.map(c[1], c[2], Map.ACTOR)
+			if target and self:reactionToward(target) < 0 then tgts[#tgts+1] = target end
+		end
+		for _, target in ipairs(tgts) do
+			local allies = {}
+			for _, c in pairs(util.adjacentCoords(target.x, target.y)) do
+				local target2 = game.level.map(c[1], c[2], Map.ACTOR)
+				if target2 and self:reactionToward(target2) >= 0 and core.fov.distance(self.x, self.y, target2.x, target2.y)>1 then allies[#allies+1] = target2 end
+				if #allies>=1 then
+					target:setEffect(target.EFF_OUTRIDER_FLANKED, 2, {src=self, allies=allies, crit=t.getCritChance(self, t), crit_dam=t.getCritPower(self, t)})
+				end --We run the check to see if we are no longer flanking from within the enemy's temp effect.
 			end
 		end
 	end,
-	shared_talent = "T_OUTRIDER_FERAL_AFFINITY_MOUNT",
-	on_learn = function (self, t)
-		local pet = self.outrider_pet
-		if not pet then return end
-		shareTalentWithPet(self, pet, t)
+	callbackOnActBase = function(self, t)
+		t.doCheck(self, t)
 	end,
-	on_unlearn = function(self, t)
-		local pet = self.outrider_pet
-		if not pet then return end
-		if self:getTalentLevelRaw(t) == 0 then
-			unshareTalentWithPet(self, pet, t)
-		end
+	callbackOnMove = function(self, t, ...)
+		t.doCheck(self, t)
 	end,
 	info = function(self, t)
-		local res = t.getResistPct(self, t)
-		local save = t.getSavePct(self, t)
-		local max_dist = t.getMaxDist(self, t)
-		return ([[You share %d%% of the resistances of your steed, while your steed partakes of some of your own defenses against mental attacks (%d%% of your mindpower, contributing to mental save, and up to %d%% of your confusion & fear resistance).
-
-			Levelling Feral Affinity will increase the distance at which you can share your infusions with your mount; currently %d]]
-			):format(res, save, res, max_dist)
+		local def = t.getDef(self, t)
+		local crit = t.getCritChance(self, t)
+		local crit_dam = t.getCritPower(self, t)
+		return ([[If you and one of your allies both stand adjacent to the same enemy (but not adjacent to one another), then you both gain a bonus of %d%% to critical strike chance and %d%% to critical damage against that enemy. It will also suffer a %d penalty to defense.]]):
+			format(crit, crit_dam, def)
 	end,
-	getSavePct = function(self, t) return self:combatTalentScale(t, 15, 35) end,
-	getResistPct = function(self, t) return self:combatTalentScale(t, 25, 50) end,
-	getMaxDist = function(self, t) return math.round(self:combatTalentScale(t, 2, 4.2, .85)) end,
-}
-
-newTalent{
-	name = "Animal Affinity (Mount)", short_name = "OUTRIDER_FERAL_AFFINITY_MOUNT", image = "talents/feral_affinity.png",
-	type = {"technique/other", 1},
-	mode = "passive",
-	points = 1,
-	passives = function(self, t, p)
-		--TODO: These need to be updated frequently
-		local owner = self.summoner
-		if owner then
-			local save_pct = owner:callTalent(owner.T_OUTRIDER_FERAL_AFFINITY, "getSavePct")/100
-			local resist_pct = owner:callTalent(owner.T_OUTRIDER_FERAL_AFFINITY, "getResistPct")/100
-			local save = owner:combatMindpower()*save_pct
-			self:talentTemporaryValue(p, "combat_mentalresist", save)
-			local confusion = (owner:attr("confusion_immune") or 0) * resist_pct
-			local fear = (owner:attr("fear_immune") or 0) * resist_pct
-			local sleep = (owner:attr("sleep_immune") or 0) * resist_pct
-			self:talentTemporaryValue(p, "confusion_immune", confusion)
-			self:talentTemporaryValue(p, "fear_immune", fear)
-			self:talentTemporaryValue(p, "sleep_immune", sleep)
-		end
-	end,
-	info = function(self, t)
-		local res = t.getResistPct(self, t)
-		local save = t.getSavePct(self, t)
-		local max_dist = t.getMaxDist(self, t)
-		return ([[You share some of your rider's defenses against mental attacks (%d%% of mindpower, contributing to mental save, and up to %d%% of your confusion, sleep & fear resistance).
-
-			Levelling Feral Affinity will increase the distance at which you can share your infusions with your mount; currently %d]]
-			):format(res, save, res, max_dist)
-	end,
-	getSavePct = function(self, t) return self:combatTalentScale(t, 25, 50) end,
-	getResistPct = function(self, t) return self:combatTalentScale(t, 35, 60) end,
-	getMaxDist = function(self, t) return math.round(self:combatTalentScale(t, 1, 4.2, .85)) end,
+	getDef = function(self, t) return self:combatTalentScale(t, 5, 12) end,
+	getCritChance = function(self, t) return self:combatTalentScale(t, 5, 15) end,
+	getCritPower = function(self, t) return self:combatTalentScale(t, 15, 35) end,
 }
 
 newTalent{
 	name = "Rearing Assault", short_name = "READING_ASSAULT", image = "talents/rearing_assault.png",
 	type = {"mounted/teamwork", 3},
+	hide="always", --DEBUG: Hiding untested talents 
 	points = 5,
 	random_ego = "defensive",
 	cooldown = 6,
@@ -183,14 +136,14 @@ newTalent{
 	require = mnt_wilcun_req3,
 	requires_target = true,
 	tactical = { ATTACK = 2 },
-	on_pre_use = function(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
 		if self:isMounted() then
 			if self:attr("never_move") then return false end
 		else
 			local mount = self:hasMount()
 			if mount and mount:attr("never_move") then return false end
 		end
-		return preCheckHasMountPresent(self, t, silent)
+		return preCheckHasMountPresent(self, t, silent, fake)
 	end,
 	target = function(self, t)
 		local pet = self.outrider_pet
@@ -253,44 +206,92 @@ newTalent{
 	getCrit = function(self, t) return self:combatTalentScale(t, 6, 25) end,
 }
 
-
 newTalent{
-	name = "Flanking", short_name = "OUTRIDER_FLANKING", image = "talents/flanking.png",
+	name = "Strike at the Heart", short_name = "T_OUTRIDER_SMASH_DEFENSES", image = "talents/feral_affinity.png",
 	type = {"mounted/teamwork", 4},
-	points = 5,
+	hide="always", --DEBUG: Hiding untested talents 
 	require = mnt_wilcun_req4,
-	mode = "passive",
-	doCheck = function(self, t)
-		local tgts = {}
-		for _, c in pairs(util.adjacentCoords(self.x, self.y)) do
-			local target = game.level.map(c[1], c[2], Map.ACTOR)
-			if target and self:reactionToward(target) < 0 then tgts[#tgts+1] = target end
+	points = 5,
+	cooldown = 10,
+	stamina = 20,
+	loyalty = 5,
+	tactical = { ATTACK = {weapon = 2}, DISABLE = 3 },
+	requires_target = true,
+	range = function(self, t)
+		if self:hasArcheryWeapon() then return util.getval(archery_range, self, t)
+		else return 1 end
+	end,
+	is_melee = function(self, t) return not self:hasArcheryWeapon() end,
+	target = function(self, t)
+		if self:hasArcheryWeapon() then 
+			local weapon, ammo = self:hasArcheryWeapon()
+			return {
+				type="bolt",
+				range=self:getTalentRange(t),
+				display=self:archeryDefaultProjectileVisual(weapon, ammo),
+				talent = t
+			}
+		else return {type="hit", range=self:getTalentRange(t), talent=t}
 		end
-		for _, target in ipairs(tgts) do
-			local allies = {}
-			for _, c in pairs(util.adjacentCoords(target.x, target.y)) do
-				local target2 = game.level.map(c[1], c[2], Map.ACTOR)
-				if target2 and self:reactionToward(target2) >= 0 and core.fov.distance(self.x, self.y, target2.x, target2.y)>1 then allies[#allies+1] = target2 end
-				if #allies>=1 then
-					target:setEffect(target.EFF_OUTRIDER_FLANKED, 2, {src=self, allies=allies, crit=t.getCritChance(self, t), crit_dam=t.getCritPower(self, t)})
-				end --We run the check to see if we are no longer flanking from within the enemy's temp effect.
+	end,
+	speed = function(self, t) return self:hasArcheryWeapon() and "archery" or "weapon" end,
+	on_pre_use = function(self, t, silent, fake) if self:attr("disarmed") then if not silent then game.logPlayer(self, "You require a weapon to use this talent.") end return false end return true end,
+	archery_onhit = function(self, t, target, x, y)
+		t.doSmash(self, t, target)
+	end,
+	doSmash = function(self, t, target)
+			target:setEffect(target.EFF_OUTRIDER_SMASH_DEFENSES, t.getDuration(self, t), {apply_power=self:combatPhysicalpower(t)})
+	end,
+	--This is shamelessly copied from the Chronomancy "Breach" talent.
+	action = function(self, t)
+		local target
+		local tg = self:getTalentTarget(t)
+		--Player attacks.
+		if self:hasArcheryWeapon() then
+			local targets = self:archeryAcquireTargets(tg, {one_shot=true, no_energy = true})
+			if not targets then return nil end
+
+			target=targets[1]
+			self:archeryShoot(targets, t, {type="bolt"}, {mult=t.getDamage(self, t)})
+		else
+			local tg = {type="hit", range=self:getTalentRange(t), talent=t}
+			local _, x, y = self:canProject(tg, self:getTarget(tg))
+			target = game.level.map(x, y, game.level.map.ACTOR)
+			if not target then return nil end
+			
+			local hit = self:attackTarget(target, nil, t.getDam(self, t), true)
+
+			if hit then
+				t.doSmash(self, t, target)
 			end
 		end
+
+		--Pet attacks!
+		local mount = self:getOutriderPet()
+		if not mount then return true end
+
+		if doOutriderCharge(self, t, mount, t.getPetRange(self, t), target.x, target.y, false) then
+			if core.fov.distance(mount.x, mount.y, target.x, target.y) > 1 then return true end
+			--Not sure how to work out the second part of this ability
+			if mount:attackTarget(target, nil, t.getDam(self, t), true) then
+				-- target:setEffect(target.EFF_FOO, t.getDur(self, t), {})
+			end
+		end
+		return true
 	end,
-	callbackOnActBase = function(self, t)
-		t.doCheck(self, t)
-	end,
-	callbackOnMove = function(self, t, ...)
-		t.doCheck(self, t)
-	end,
+	-- pet_target = function(self, t) return end
 	info = function(self, t)
-		local def = t.getDef(self, t)
-		local crit = t.getCritChance(self, t)
-		local crit_dam = t.getCritPower(self, t)
-		return ([[If you and one of your allies both stand adjacent to the same enemy (but not adjacent to one another), then you both gain a bonus of %d%% to critical strike chance and %d%% to critical damage against that enemy. It will also suffer a %d penalty to defense.]]):
-			format(crit, crit_dam, def)
+		local dam = t.getDam(self, t)*100
+		local dur = t.getDur(self, t)
+		local pet_range = t.getPetRange(self,t)
+		local phys_pen= t.getPhysPen(self,t)
+		return ([[Make a cruelly aimed attack against one target for %d%% damage. If it hits, its defenses are wrecked for %d turns, decreasing physical resistance by %d%%. It will lose one beneficial effect which is chosen at random.
+
+		Your pet immediately closes in for the takedown - from a range of %d, it will move in to strike, for %d%% damage. On a hit, it completely breaches the target's armour, increasing its own physical penetration by %d%% for the duration.]]):
+		format(dam, dur, phys_pen, pet_range, dam, phys_pen)
 	end,
-	getDef = function(self, t) return self:combatTalentScale(t, 5, 12) end,
-	getCritChance = function(self, t) return self:combatTalentScale(t, 5, 15) end,
-	getCritPower = function(self, t) return self:combatTalentScale(t, 15, 35) end,
+	getDam = function(self, t) return self:combatTalentWeaponDamage(t, 1.2, 1.7) end,
+	getDur = function(self, t) return self:combatTalentScale(t, 3, 7) end,
+	getPetRange = function(self, t) return self:combatTalentScale(t, 3, 4.5) end,
+	getPhysPen = function(self, t) return self:combatTalentLimit(t, 37.5, 15, 25) end,
 }

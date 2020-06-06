@@ -77,32 +77,4 @@ function _M:attackTarget(target, damtype, mult, noenergy, force_unharmed)
 	return unpack(ret)
 end
 
---Overload this function, as there is no convenient insert point
-function _M:combatDamage(weapon, adddammod)
-	weapon = weapon or self.combat or {}
-
-	local dammod = self:getDammod(weapon)
-
-	local totstat = 0
-	for stat, mod in pairs(dammod) do
-		totstat = totstat + self:getStat(stat) * mod
-	end
-	if adddammod then
-		for stat, mod in pairs(adddammod) do
-			totstat = totstat + self:getStat(stat) * mod
-		end
-	end
-	--handle owner bonus to damage
-	local owner = self.owner
-	if owner and owner:knowTalent(owner.T_OUTRIDER_CHALLENGE_THE_WILDS) then
-		totstat = totstat + owner:getStat("cun") *.6
-	end
-
-	local talented_mod = 1 + self:combatTrainingPercentInc(weapon)
-
-	local power = self:combatDamagePower(weapon)
---	print(("[COMBAT DAMAGE] power(%f) totstat(%f) talent_mod(%f)"):format(power, totstat, talented_mod))
-	return self:rescaleDamage(0.3*(self:combatPhysicalpower(nil, weapon) + totstat) * power * talented_mod)
-end
-
 return _M

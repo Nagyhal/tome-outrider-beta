@@ -484,9 +484,9 @@ newTalent{
 		local res = t.getRes(self, t)
 		local dam = t.getDam(self, t)
 		local radius = self:getTalentRadius(t)
-		return ([[Increase your Magic by %d, spell save by %d, and arcane, temporal blight and darkness resistance by %d%%.
+		return ([[Increase your Magic by %d, spell save by %d, and arcane, temporal, blight and darkness resistance by %d%%.
 
-			Using runes will grant a single-turn aura that deals %d arcane and darkness damage to attackers within a %d radius, scaling with your spellpower as well as your owner's spellpower.]]):
+			Using runes will grant a single-turn aura that deals %d arcane and darkness damage to attackers within a %d radius, scaling with your spellpower as well as with your owner's spellpower.]]):
 		format(mag, save, res, dam, radius)
 	end,
 	getMag = function(self, t) return self:combatTalentScale(t, 3, 15) end,

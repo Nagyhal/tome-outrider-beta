@@ -1,5 +1,5 @@
 -- ToME - Tales of Maj'Eyal
--- Copyright (C) 2009 - 2019 Nicolas Casalini
+-- Copyright (C) 2009 - 2020 Nicolas Casalini
 --
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -17,23 +17,46 @@
 -- Nicolas Casalini "DarkGod"
 -- darkgod@te4.org
 
-function hasNonTwoHander(self)
-	if self:attr("disarmed") then
-		return nil, "disarmed"
+function reduceDamageShieldByPct(src, target, eff_id, pct)
+	pct = pct or 50
+
+	local shields = {
+		EFF_STORMSHIELD = "blocks",
+		EFF_DAMAGE_SHIELD = "damage_shield_absorb",
+		EFF_DISPLACEMENT_SHIELD = "displacement_shield",
+		EFF_ELDRITCH_STONE = "power",
+		EFF_KINSPIKE_SHIELD = "kinspike_shield_absorb",
+		EFF_THERMSPIKE_SHIELD = "thermspike_shield_absorb",
+		EFF_CHARGESPIKE_SHIELD = "chargespike_shield_absorb",
+		EFF_RESONANCE_FIELD = "resonance_field_absorb",
+		EFF_SHADOW_DECOY = "power",
+		EFF_PSI_DAMAGE_SHIELD = "damage_shield_absorb",
+		EFF_STEAM_SHIELD = "damage_shield_absorb",
+		EFF_OVERCLOCK = "static_shield_absorb",
+	}
+
+	local eff=target:getEffectFromId(eff_id); if not eff then return end
+	local shield_param = shields[eff_id]
+
+	if not shield_param then
+		local change = math.ceiling(eff.dur * (1-pct/100))
+		target:alterEffectDuration(eff_id, -change)
+		if target:hasEffect(eff_id) then
+			game.logSeen(src, "#CRIMSON#%s reduces the duration of %s's shield by %d%%!", src.name:capitalize(), target.name, pct)
+		else
+			game.logSeen(src, "#CRIMSON#%s completely destroys %s's shield!", src.name:capitalize(), target.name)
+		end
+		return true
 	end
 
-	if not self:getInven("MAINHAND") then return end
-	local weapon = self:getInven("MAINHAND")[1]
-	if not weapon or weapon.twohanded or weapon.archery then
-		return nil
+	eff[shield_param] = math.floor(eff[shield_param] * (1-pct/100))
+	if eff[shield_param] > 0 then
+		game.logSeen(src, "#CRIMSON#%s takes off %d%% of %s's shield!", src.name:capitalize(), pct, target.name)
+	else
+		target:removeEffect(target[eff_id])
+		game.logSeen(src, "#CRIMSON#%s completely destroys %s's shield!", src.name:capitalize(), target.name)
 	end
-	return weapon
-end
-
-function hasFreeOffhand(self)
-	local mainhand = self:getInven("MAINHAND")[1]
-	if mainhand and (mainhand.twohanded or mainhand.archery) then return nil end
-	if not (self:getInven("OFFHAND") and self:getInven("OFFHAND")[1]) then return true else return nil end
+	return true
 end
 
 newTalent{
@@ -44,132 +67,88 @@ newTalent{
 	mode = "sustained",
 	cooldown = 30,
 	sustain_stamina = 40,
-	tactical = { BUFF = 2 },
-	on_pre_use = function(self, t, silent)
-		-- if not hasOneHandedWeapon(self) then
-		if not t.checkBothWeaponSets(self, t) then
-			if not silent then
-				game.logPlayer(self, "You require a one-handed weapon to use this talent.")
+	tactical = { BUFF = 3 },
+	on_pre_use = function(self, t, silent, fake)
+		return preCheckOutriderWeaponBothSlots(self, t, silent, fake)
+	end,
+	callbackOMeleeAttackBonuses = function(self, t, hd)
+		local dam = t.getBonusDamagePct(self, t)/100
+		local num = #hd.target:effectsFilter({
+			type="mental",
+			status={detrimental=true}
+		}) or 0
+		hd.mult = hd.mult + dam*num
+	end,
+	clearTempVals = function(self, t, p)
+		for i = #(p.__tmpvals or {}), 1, -1  do
+			self:removeTemporaryValue(p.__tmpvals[i][1], p.__tmpvals[i][2])
+			p.__tmpvals[i] = nil
+		end
+	end,
+	addTempVals = function(self, t, tab)
+		tab.free_off=false
+		if hasOutriderWeapon(self) then
+			if hasFreeOffhand(self) then
+				self:talentTemporaryValue(tab, "combat_mindpower", t.getMindpower(self, t))
+				self:talentTemporaryValue(tab, "combat_critical_power", t.getCritPower2(self, t))
+				self:talentTemporaryValue(tab, "combat_apr", t.getApr2(self, t))
+				tab.free_off=true
+			else
+				self:talentTemporaryValue(tab, "combat_mindpower", t.getMindpower(self, t))
+				self:talentTemporaryValue(tab, "combat_critical_power", t.getCritPower(self, t))
+				self:talentTemporaryValue(tab, "combat_apr", t.getApr(self, t))
 			end
-			return false
 		end
-		return true
+		return tab
 	end,
-	--TODO: This code is virtually nonsensical at this stage, let's delete most of it.
-	checkBothWeaponSets = function(self, t)
-		local mains = {main=self:getInven("MAINHAND") and self:getInven("MAINHAND")[1],
-			qs = self:getInven("QS_MAINHAND") and self:getInven("QS_MAINHAND")[1]}
-		local offhands = {main=self:getInven("OFFHAND") and self:getInven("OFFHAND")[1],
-			qs = self:getInven("QS_OFFHAND") and self:getInven("QS_OFFHAND")[1]}
-		local one_handed = false
-		local free_off = false
-		for _, set in ipairs{"main"} do
-			local main = mains[set]
-			if main and not main.twohanded then--and not main.archery then
-				one_handed = true
-				free_off = true
-				if offhands[set] or main.archery then free_off = false end
-			end
-		end
-		return one_handed, free_off
-	end,
-	callbackOnCrit = function(self, t, type, dam, chance, target)
-		if not type=="physical" then return end
-		local val = t.getPhysPen(self, t)
-		target:setEffect(target.EFF_WEAKENED_DEFENSES, 3, {inc=-val, max=-val})
-	end,
-	activate = function(self, t)
-		-- local weapon = hasOneHandedWeapon(self)
-		-- if not weapon then
-		-- 	game.logPlayer(self, "You cannot use Master of Brutality without a one-handed weapon!")
-		-- 	return false
-		-- end
-
-		local ret = {free_off=false}
-		if hasFreeOffhand(self) then
-				self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower2(self, t))
-				self:talentTemporaryValue(ret, "combat_physcrit", t.getPhysCrit2(self, t))
-				self:talentTemporaryValue(ret, "combat_critical_power", t.getCritPower2(self, t))
-				self:talentTemporaryValue(ret, "combat_apr", t.getApr2(self, t))
-				free_off=true
-		else
-			self:talentTemporaryValue(ret, "combat_mindpower", t.getMindpower(self, t))
-			self:talentTemporaryValue(ret, "combat_physcrit", t.getPhysCrit(self, t))
-			self:talentTemporaryValue(ret, "combat_critical_power", t.getCritPower(self, t))
-			self:talentTemporaryValue(ret, "combat_apr", t.getApr(self, t))
-		end
-		return ret
-	end,
-	callbackOnWear  = function(self, t, o, bypass_set) t.checkWeapons(self, t, o, bypass_set) end,
-	callbackOnTakeoff  = function(self, t, o, bypass_set) t.checkWeapons(self, t, o, bypass_set) end,
-	checkWeapons = function(self, t, o, bypass_set)
+	callbackOnWear  = function(self, t, o, bypass_set) t.checkOnWeaponSwap(self, t, o) end,
+	callbackOnTakeoff  = function(self, t, o, bypass_set) t.checkOnWeaponSwap(self, t, o) end,
+	checkOnWeaponSwap = function(self, t, o)
 		if o.type and o.type=="weapon" then
 			game:onTickEnd(function()
-				local one_handed, free_off = t.checkBothWeaponSets(self, t)
-				if one_handed then
-					local p = self:isTalentActive(t.id); if not p then return end
-					for i = #p.__tmpvals, 1, -1  do
-						self:removeTemporaryValue(p.__tmpvals[i][1], p.__tmpvals[i][2])
-						p.__tmpvals[i] = nil
-					end
-					if free_off then
-						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower2(self, t))
-						self:talentTemporaryValue(p, "combat_physcrit", t.getPhysCrit2(self, t))
-						self:talentTemporaryValue(p, "combat_critical_power", t.getCritPower2(self, t))
-						self:talentTemporaryValue(p, "combat_apr", t.getApr2(self, t))
-						p.free_off=true
-					else
-						self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower(self, t))
-						self:talentTemporaryValue(p, "combat_physcrit", t.getPhysCrit(self, t))
-						self:talentTemporaryValue(p, "combat_critical_power", t.getCritPower(self, t))
-						self:talentTemporaryValue(p, "combat_apr", t.getApr(self, t))
-						p.free_off=false
-					end
+				local p = self:isTalentActive(t.id)
+				if p and hasOutriderWeapon(self) or hasOutriderWeaponQS(self) then 
+					t.clearTempVals(self, t, p)
+					t.addTempVals(self, t, p)
 				else
 					self:forceUseTalent(t.id, {no_energy=true})
 				end
 			end)
 		end
 	end,
+	activate = function(self, t)
+		local ret = {}
+		return t.addTempVals(self, t, ret)
+	end,
 	deactivate = function(self, t, p)
 		return true
 	end,
 	info = function(self, t)
-		local apr = t.getApr(self, t)
-		local apr2 = t.getApr2(self, t)
+		local mindpower = t.getMindpower(self, t)
 		local crit_power = t.getCritPower(self, t)
 		local crit_power2 = t.getCritPower2(self, t)
-		local phys_crit = t.getPhysCrit(self, t)
-		local phys_crit2 = t.getPhysCrit2(self, t)
-		local mindpower = t.getMindpower(self, t)
-		local mindpower2 = t.getMindpower2(self, t)
-		local phys_pen = t.getPhysPen(self, t)
-		return ([[While you prefer weapons less visibily impressive than some, the merciless precision with which you wield them makes them no less intimidating in your hands.
+		local apr = t.getApr(self, t)
+		local apr2 = t.getApr2(self, t)
+		local bonus_damage_pct = t.getBonusDamagePct(self, t)
+		return ([[While the profession of an Outrider calls for lighter weapons than some, the merciless precision with which you wield them makes them no less intimidating in your hands. As an Outrider, you have mounted proficiency with one-handed weapons, tridents, bows and slings, and lances - if you can find a lance! Wielding one of these weapons, you gain bonuses:
 
-		Also, while wielding a one-handed or an archery weapon, gain the following bonuses:
-		+%d mindpower
-		+%d%% physical crit chance
-		+%d%% critical power
-		+%d APR
-		Critical hits will reduce the physical resistance of the target by %d%% for 3 turns.
+			+%d mindpower
+			+%d%% critical power
+			+%d APR
 
-		If you hold nothing in your off-hand, instead gain the following benefits:
-		+%d mindpower
-		+%d%% physical crit chance
-		+%d%% critical power
-		+%d APR
-		Critical hits will reduce the physical resistance of the target by %d%% for 3 turns.]]):
-		format(mindpower, phys_crit, crit_power, apr, phys_pen, mindpower2, phys_crit2, crit_power2, apr2, phys_pen)
+			If you have nothing in your offhand, these increase to:
+			+%d%% critical power
+			+%d APR
+
+			Also, the terror of your foes only heightens your lethality unto them - but you must close the gap from range to take advantage of this. Gain %.1f%% damage in melee for each detrimental mental effect on your foes.]]):
+		format(mindpower, crit_power, apr, crit_power2, apr2, bonus_damage_pct)
 	end,
 	getApr = function(self, t) return self:combatTalentScale(t, 5, 12) end,
 	getApr2 = function(self, t) return self:callTalent(t.id, "getApr")*1.65 end,
-	getPhysCrit = function(self, t) return self:combatTalentScale(t, 3, 7) end,
-	getPhysCrit2 = function(self, t) return self:callTalent(t.id, "getPhysCrit")*1.85 end,
 	getCritPower = function(self, t) return self:combatTalentScale(t, 15, 30) end,
 	getCritPower2 = function(self, t) return self:callTalent(t.id, "getCritPower")*1.65 end,
 	getMindpower = function(self, t) return self:combatTalentScale(t, 6, 15) end,
-	getMindpower2 = function(self, t) return self:callTalent(t.id, "getMindpower")*1.65 end,
-	getPhysPen = function(self, t) return self:combatTalentScale(t, 15, 35) end,
+	getBonusDamagePct = function(self, t) return self:combatTalentScale(t, 5, 7) end,
 }
 
 newTalent{
@@ -181,39 +160,59 @@ newTalent{
 	stamina = 15,
 	random_ego = "attack",
 	range = function(self, t) return t.getKnockbackRange(self, t)-1 end,
+		--TODO (AI): Return a tactical table dependent on current situation
 	tactical = { ATTACK = { weapon = 1 }, DISABLE = { pin = 2 } },
+		--TODO (AI): We need to draw past the target and check behind them
+	-- onAIGetTarget = function(self, t)
+	-- end,
+	-- on_pre_use_ai = function(self, t, silent, fake) return t.onAIGetTarget(self, t) and true or false end,
 	requires_target = true,
-	on_pre_use = function(self, t, silent) --No longer a ranged-focussed tree!
-		if not self:hasArcheryWeapon("bow") and not self:hasArcheryWeaponQS("bow") then
-			if not silent then 
-				game.logPlayer(self, "You require a bow in one of your weapon slots for this talent.")
-				return false
-			end
-		end
-	return true
+	on_pre_use = function(self, t, silent, fake)
+		return preCheckArcheryInAnySlot(self, t, silent, fake)
+	end,
+		--TODO (AI): We need to draw past the target and check behind them
+	getArcheryTargetType = function(self, t)
+		local weapon, ammo = self:hasArcheryWeapon()
+		return {
+			range=self:getTalentRange(t),
+			weapon=weapon, ammo=ammo, 
+			selffire=false, friendlyfire=false, friendlyblock=false
+		}
 	end,
 	archery_onhit = function(self, t, target, x, y)
-		--TODO: Clean up this nonsense.
-		dx, dy = target.x - self.x, target.y - self.y
-		if math.max(math.abs(dx), math.abs(dy))>1 then
-			dx, dy = dx / math.max(dx, dy), dy / math.max(dx, dy)
-		end
+		local dir = util.getDir(target.x, target.y, self.x, self.y)
 		local dist = core.fov.distance(self.x, self.y, target.x, target.y)
-		local total_knockback = t.getKnockbackRange(self, t) - dist
-		target:knockback(self.x, self.y, total_knockback)
-		--we need to detect if the target hits an obstacle, and the obstacle must be within knockback range
-		local tx, ty = target.x + dx, target.y + dy
-		local ter = game.level.map(tx, ty, engine.Map.TERRAIN)
+		local knockback = t.getKnockbackRange(self, t) - dist
+		target:knockback(self.x, self.y, knockback)
+
+		--We need to detect if the target hits an obstacle, and the obstacle must be within knockback range
+		local dx, dy = util.dirToCoord(dir, target.x, target.y)
+		local wall_x, wall_y = target.x + dx, target.y +dy
+
+		local ter = game.level.map(wall_x, wall_y, engine.Map.TERRAIN)
 		if ter and ter.does_block_move then
 			if target:canBe("pin") then
-				target:setEffect(target.EFF_OUTRIDER_PINNED_TO_THE_WALL, t.getDuration(self, t), {tile={x=tx, y=ty}, ox=target.x, oy=target.y, apply_power=self:combatAttack()})
+				target:setEffect(target.EFF_OUTRIDER_PINNED_TO_THE_WALL, t.getDur(self, t), 
+					{tile={x=wall_x, y=wall_y}, ox=target.x, oy=target.y, apply_power=self:combatAttack()})
 			else
 				game.logSeen(target, "%s resists!", target.name:capitalize())
 			end
 		end
+
+		if self:getTalentLevel(t) >= 3 and rng.percent(t.getShatterChance(self, t)) then
+			local effs=target:effectsFilter({shield=true}, 1)
+			local eff_id = effs and effs[1]; if not eff_id then return end
+
+			if rng.percent(50) then --Half of the time, does only a half-shatter:
+				target:removeEffect(eff_id)
+				game.logSeen(self, "#CRIMSON#%s impales %s's shield!", self.name:capitalize(), target.name)
+			else
+				reduceDamageShieldByPct(self, target, eff_id, 50) --log handled in this function
+			end
+		end
 	end,
 	action = function(self, t)
-		if not self:hasArcheryWeapon("bow") then --do nothing
+		if not self:hasArcheryWeapon("bow") then
 			if self:hasArcheryWeaponQS("bow") then
 				self:quickSwitchWeapons(true, nil, true)
 			end
@@ -221,73 +220,150 @@ newTalent{
 		if not self:hasArcheryWeapon("bow") then return end
 		local targets = self:archeryAcquireTargets(t.getArcheryTargetType(self, t), {one_shot=true})
 		if not targets then return end
-		self:archeryShoot(targets, t, nil, {mult=self:combatTalentWeaponDamage(t, 1, 1.4)})
+		self:archeryShoot(targets, t, nil, {mult=t.getDam(self, t)})
 		return true
 	end,
 	info = function(self, t)
-		local dam_pct = t.getDamage(self, t) * 100
+		local dam_pct = t.getDam(self, t) * 100
 		local range = self:getTalentRange(t)
 		local knockback_range = t.getKnockbackRange(self, t)
-		local dur = t.getDuration(self, t)
-		return ([[Take a point-blank shot for %d%% damage at a maximum range of %d, pushing your enemy back up to a maximum distance of %d and pinning it (for %d turns) against any suitable obstacle, natural or man-made. You may perform this manoeuvre with a melee weapon; but doing so will force you to switch to your secondary weapon set.]]):
-		format(dam_pct, range, knockback_range, dur)
-	end,
-	getArcheryTargetType = function(self, t)
-		local weapon, ammo = self:hasArcheryWeapon()
-		return {range=self:getTalentRange(t)}
+		local dur = t.getDur(self, t)
+		local shatter_chance = t.getShatterChance(self, t)
+		local half_shatter_chance = t.getHalfShatterChance(self, t)
+		return ([[Take a point-blank shot for %d%% damage at a maximum range of %d, pushing your enemy back up to a maximum distance of %d and pinning it (for %d turns) against any suitable obstacle, natural or man-made. You may perform this manoeuvre with a melee weapon; but doing so will force you to switch to your secondary weapon set.
+
+			This damage even goes straight through damage shields. At talent level 3, you attack with such timing that you overload the energies of the shield, shattering it. This has a %d%% chance of happening (%d%% half effect).]]):
+		format(dam_pct, range, knockback_range, dur, shatter_chance, half_shatter_chance)
 	end,
 	getKnockbackRange = function (self, t) return math.round(self:combatTalentScale(t, 2.7, 4.2)) end,
-	getDuration = function (self, t) return math.round(self:combatTalentScale(t, 3, 6))  end,
-	getDamage = function (self, t) return self:combatTalentWeaponDamage(t, 1.0, 1.6) end,
+	getDur = function (self, t) return math.round(self:combatTalentScale(t, 3, 6))  end,
+	getDam = function (self, t) return self:combatTalentWeaponDamage(t, 1.0, 1.6) end,
+	getShatterChance = function(self, t)
+		local mod = self:getTalentTypeMastery(t.type[1])
+		local tl = math.max(self:getTalentLevel(t), 3*mod) - 2*mod --Start from TL 3
+		return self:combatTalentLimit(tl, 100, 34, 87.1)
+	end,
+	getHalfShatterChance = function(self, t) return t.getShatterChance(self, t)/2 end,
 }
 
 newTalent{
 	name = "Feigned Retreat", short_name = "OUTRIDER_FEIGNED_RETREAT", image="talents/feigned_retreat.png",
 	type = {"technique/dreadful-onset", 3},
+	hide="always", --DEBUG : Hiding untested talents 
 	require = mnt_dexcun_req3,
 	points = 5,
-	-- random_ego = "attack",
+	range = 7,
 	cooldown = 30,
-	stamina = -25,
-	-- tactical = { DISABLE = { fear = 4 } },
-	range = function (self, t) return math.floor(self:getTalentLevel(t) +4)  end,
-	radius = 2,
-	requires_target = true,
-	target = function(self, t)
-		-- return {type="ball", radius=self:getTalentRadius(t), range=self:getTalentRange(t), talent=t, friendlyfire=false, selffire=false}
+	stamina = 25,
+	--AI : Increase viability as an escape option as the enemy loses health
+	tactical = function(self, t)
+		local a = self.ai_target.actor
+		if a and self:getReactionToward(a) > 0 then
+			local coeff = util.bound(1-a.life/a.max_life, 0, 1)
+			return { ESCAPE = util.lerp(1, 4, coeff) }
+		else
+			return { ESCAPE = 2 }
+		end
 	end,
-	-- on_pre_use = function(self, t, silent)
-	-- 	if not self:hasEffect(self.EFF_OUTRIDER_CATCH) then
-	-- 		if not silent then
-	-- 			game.logPlayer(self, "You must have recently slain an aenemy wih a critical hit to use Catch!")
-	-- 		end
-	-- 		return false
-	-- 	end
-	-- 	return true
-	-- end,
+	requires_target = true,
+	target = function(self, t) return {type="hit", range=self:getTalentRange(t)} end,
+	getTarget2ForPlayer = function(self, t, move_dist)
+		local tg2 = {type="beam", source_actor=self, selffire=false, range=move_dist, talent=t, no_start_scan=true, no_move_tooltip=true}
+		tg2.display_line_step = function(self, d) -- highlight permissible grids for the player
+			local t_range = core.fov.distance(self.target_type.start_x, self.target_type.start_y, d.lx, d.ly)
+			if t_range >= 1 and t_range <= tg2.range and not d.block and check_dest(d.lx, d.ly) then
+				d.s = self.sb
+			else
+				d.s = self.sr
+			end
+			d.display_highlight(d.s, d.lx, d.ly)
+		end
+		return tg2
+	end,
+	getTarget2ForAI = function(self, t, move_dist, tgt_dist)
+		local cone_angle = 180/math.pi*math.atan(1/(tgt_dist + 1)) + 5 --5° extra angle
+		return {type="cone", cone_angle=cone_angle, source_actor=self, selffire=false, range=0, radius=move_dist, talent=t}
+	end,
+	on_pre_use = function(self, t, silent, fake) return preCheckCanMove(self, t, silent, fake) end,
+	callbackOnActBase = function(self, t)
+		if self:hasEffect(self.EFF_OUTRIDER_FEIGNED_RETREAT) then
+			if self.talents_cd[t.id] then
+				self.talents_cd[t.id] = 30
+			else
+				print("OUTRIDER DEBUG: T_OUTRIDER_FEIGNED_RETREAT cooled down without "..
+					"removing EFF_OUTRIDER_FEIGNED_RETREAT")
+			end
+		end
+	end,
+	--Shamelessly stolen from Disengage - which seems very thoughtfully coded!
+	--I've tried to take it and make it understandable for myself.
 	action = function(self, t)
+		local tg = self:getTalentTarget(t)
+		local tx, ty, target = self:getTarget(tg)
+		if not (target and self:canSee(target) and self:canProject(tg, tx, ty)) then return end
+		
+		local tgt_dist, move_dist = core.fov.distance(self.x, self.y, tx, ty), t.getDist(self,t)
+
+		--Get our secondary target
+		local dx, dy
+		if self.player then
+			local possible_x, possible_y = projectLineBehind(self, target.x, target.y, move_dist)
+			dx, dy = self:getTarget(t.getTarget2ForPlayer(self, t, move_dist))
+		else 
+			local tg2 = t.getTarget2ForAI(self, t, move_dist, tgt_dist)
+			local grids = getFreeGridsFromTarget(self, tg)
+			grids:sort(function(gs1, gs2) end) --sort by distance here
+
+			dx, dy = grids[1][1], grids[1][2]
+		end
+
+		if not (dx and dy) or not game.level.map:isBound(dx, dy) or core.fov.distance(dx, dy, self.x, self.y) > move_dist then return end
+		if not check_dest(dx, dy) then
+			game.logPlayer(self, "You must retreat directly away from your target in a straight line.")
+			return
+		end
+
+		if not rushTargetTo(self, dx, dy, {}) then
+			game.logPlayer(self, "You can't use Feigned Retreat in that direction.")
+			return false
+		end
+
+		if not target:setEeffect(target.EFF_OUTRIDER_FEIGNED_RETREAT_TARGET, 1, {src=self}) then return true end
+		self:setEeffect(
+			self.EFF_EVASION,
+			t.getEvasionDur(self, t),
+			{chance=t.getCurrentEvasion(self, t)})
+		self:setEffect(self.EFF_OUTRIDER_FEIGNED_RETREAT, 2, {target=target, damage=t.getDamPct(self, t)/100})
+
+		return true
 	end,
 	info = function(self, t)
-		local dur = t.getDur(self, t)
-		local window = t.getUsageWindow(self, t)
-		local passive_cooldown = t.getPassiveCooldown(self, t)
-		local life_pct = t.getLifePct(self, t)
-		local crit_bonus = t.getCritBonus(self, t)
-		return ([[Hurl the severed head of your enemies' comrade back at them, causing them to gape in terror and flee for %d turns. You may use this talent only after killing an adjacent enemy (up to %d turns afterward), and then only with a critical hit.
+		local evasion_dur = t.getEvasionDur(self, t)
+		local distance = t.getDistance(self, t)
+		local dam_pct = t.getDamPct(self, t)
+		local attacks_no = t.getAttacksNo(self, t)
+		return ([[One of the most famous tools in the Outrider repertory of mobile combat strategy and psychological warfare.
 
-			Levelling Catch also gives you a passive chance to perform a swift execution strike when adjacent to an enemy with less than %d%% health (cooldown %d). You must use a 1-handed weapon for this, but if one is in your off-slot, you will use that instead of your currently equipped weaponry. This strike will have a critical chance bonus of %d%%.]]):
-		format(dur, window, life_pct, passive_cooldown, crit_bonus)
+			Turn suddenly and flee the battle, as you rush up to %d squares away from your target. The more you seem at a genuine disadvantage, the more your enemies are taken in; for %d turns, gain 20%% evasion which increases to 50%% if you are on death's door.
+
+			But it is only a ruse! For when you turn to face the enemy anew, you do so at the moment it is most vulnerable; gain %d%% damage to your next %d attacks. But you MUST turn back, to regain your honour, or you can't use this strategem again. Feigned Retreat stays on cooldown until you either defeat the original target, or move on and kill 30 more combatants.]]):
+		format(distance, evasion_dur, dam_pct, attacks_no)
 	end,
-	getDur = function(self, t) return self:combatTalentScale(t, 4,  7) end,
-	getUsageWindow = function(self, t) return self:combatTalentLimit(t, 5, 2, 3.5) end,
-	getPassiveCooldown = function(self, t) return self:combatTalentLimit(t, 6, 12, 8) end,
-	getLifePct = function(self, t) return self:combatTalentLimit(t, 30, 10, 20) end,
-	getCritBonus = function(self, t) return self:combatTalentScale(t, 15, 30) end,
+	getEvasionDur = function(self, t) return self:combatTalentScale(t, 3, 7) end,
+	getDistance = function(self, t) return self:combatTalentScale(t, 4,  7) end,
+	getDamPct = function(self, t) return self:combatTalentScale(t, 110, 140) end,
+	getAttacksNo = function(self, t) return math.floor(self:combatTalentScale(t, 1, 2.8)) end,
+	getCurrentEvasion = function(self, t)
+		local life_portion_left = util.bound(self.life, 0, self.max_life) / self.max_life
+		--LERP, a fantastic and underused utility function. Do you LERP?
+		return util.lerp(20, 50, life_portion_left)
+	end,
 }
 
 newTalent{
 	name = "Living Shield", short_name = "OUTRIDER_LIVING_SHIELD", image="talents/living_shield.png",
 	type = {"technique/dreadful-onset", 4},
+	hide="always", --DEBUG: Hiding untested talents 
 	require = mnt_dexcun_req4,
 	points = 5,
 	random_ego = "attack",
@@ -306,11 +382,6 @@ newTalent{
 		if core.fov.distance(self.x, self.y, x, y) > 1 then return nil end
 
 		local grappled = false
-
-		--force stance change
-		-- if target and not self:isTalentActive(self.T_GRAPPLING_STANCE) then
-			-- self:forceUseTalent(self.T_GRAPPLING_STANCE, {ignore_energy=true, ignore_cd = true})
-		-- end
 
 		-- breaks active grapples if the target is not grappled
 		if target:isGrappled(self) then

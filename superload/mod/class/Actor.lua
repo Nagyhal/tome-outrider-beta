@@ -22,10 +22,14 @@ function _M:onTakeHit(value, src)
 	if self:isMounted() then
 		local has_taunt = src:hasEffect(src.EFF_OUTRIDER_TAUNT) --Rider can tank using taunts
 		local m = self:hasMount()
-		if rng.percent(m.mount_data.share_damage) and not (has_taunt and has_taunt.src==self) then
-			m:takeHit(value, src)
-			game.logSeen(self, "%s takes %d damage in %s's stead!", m.name:capitalize(), value, self.name)
-			value = 0
+		if rng.percent(m.mount_data.share_damage) then
+			if has_taunt and has_taunt.src==self then
+				game.logSeen(self, "%s taunts the damage away from %s!", self.name:capitalize(), m.name:capitalize())
+			else
+				m:takeHit(value, src)
+				game.logSeen(self, "%s takes %d damage in %s's stead!", m.name:capitalize(), value, self.name)
+				value = 0
+			end
 		end
 	end
 	return base_onTakeHit(self, value, src)
@@ -39,6 +43,11 @@ end
 
 function _M:getMount()
 	if self:isMounted() then return self.mount else return nil end
+end
+
+function _M:getOutriderPet()
+	local pet = self.outrider_pet
+	if pet and not pet.dead and game.level:hasEntity(pet) then return pet end
 end
 
 function _M:canMount(mount)
@@ -59,11 +68,6 @@ function _M:hasMountPresent()
 	local mount = self:hasMount(); if not mount then return false end
 	if self:isMounted() or self:hasLOS(mount.x, mount.y, "block_sight", self.sight) then return true else return false end
 end
-
--- function _M:getOutriderPet()
--- 	return self.outrider_pet or nil
--- end
-
 
 local Map = require "engine.Map"
 
@@ -92,6 +96,7 @@ function _M:mountTarget(target)
 		self:setEffect(self.EFF_OUTRIDER_MOUNT, 100, {mount=target})
 		target:setEffect(self.EFF_OUTRIDER_RIDDEN, 100, {rider=self})
 		game.logSeen(self, "%s mounts %s!", self.name:capitalize(), target.name:capitalize())
+		self:fireTalentCheck("callbackOnMount")
 		target:fireTalentCheck("callbackOnMounted")
 		--Looks like our attempt was successful.
 		--Now to switch the talent icon to Dismount.
@@ -113,30 +118,31 @@ function _M:mountTarget(target)
 end
 
 --Should be just a _M:dismount
-function _M:dismountTarget(target, x, y)
-	if not self:isMounted() then game.logPlayer(self, "You're not mounted!") return false end
-	if target ~= self.mount then game.logPlayer(self, "That is not your mount!") return false end
-	if not target.dead and (not x or not y) or (x==target.x and y==target.y) then
+function _M:dismount(x, y, silent)
+	local mount = self:getMount()
+	if not self:isMounted() or not mount then if not silent then game.logPlayer(self, "You're not mounted!") return false end end
+	if not mount.dead and (not x or not y) or (x==mount.x and y==mount.y) then
 		x, y = util.findFreeGrid(self.x, self.y, 10, true, {[engine.Map.ACTOR]=true})
 	end
 	if x then
-		game.level:addEntity(target)
-		-- game.zone:addEntity(game.level, target, "actor", target.x, target.y)
+		game.level:addEntity(mount)
+		-- game.zone:addEntity(game.level, mount, "actor", mount.x, mount.y)
 		local ox, oy = self.x, self.y
 		local ok = self:move(x, y, true)
 		self:removeEffect(self.EFF_OUTRIDER_MOUNT, false, true)
-		target:removeEffect(self.EFF_OUTRIDER_RIDDEN, false, true)
-		game.logSeen(self, "%s dismounts from %s", self.name:capitalize(), target.name:capitalize())
+		mount:removeEffect(self.EFF_OUTRIDER_RIDDEN, false, true)
+		game.logSeen(self, "%s dismounts from %s", self.name:capitalize(), mount.name:capitalize())
 		game.level:addEntity(self)
 		-- game.zone:addEntity(game.level, self, "actor", self.x, self.y)
 		if not ok then return end
 
-		--game.level:addEntity(target)
-		target:added()
-		target:move(ox, oy, true)
-		target.changed = true
+		--game.level:addEntity(mount)
+		mount:added()
+		mount:move(ox, oy, true)
+		mount.changed = true
 		self.changed = true
-		target:fireTalentCheck("callbackOnDismounted")
+		self:fireTalentCheck("callbackOnDismount")
+		mount:fireTalentCheck("callbackOnDismounted")
 		if self.hotkey and self.isHotkeyBound then
 			local pos = self:isHotkeyBound("talent", self.T_OUTRIDER_DISMOUNT)
 			if pos then
@@ -306,7 +312,7 @@ function _M:knockback(srcx, srcy, dist, recursive, on_terrain)
 	if self:isMounted() and self.x~=ox or self.y~=oy then
 		if rng.percent(25) then
 			local mount = self:hasMount()
-			self:dismountTarget(mount)
+			self:dismount()
 		end
 	end
 end
@@ -364,6 +370,8 @@ function _M:loyaltyCheck(pet, silent)
 	end
 end
 
+_M.sustainCallbackCheck.callbackOnMount = "talents_on_mount"
+_M.sustainCallbackCheck.callbackOnDismount = "talents_on_dismount"
 _M.sustainCallbackCheck.callbackOnMounted = "talents_on_mounted"
 _M.sustainCallbackCheck.callbackOnDismounted = "talents_on_dismounted"
 

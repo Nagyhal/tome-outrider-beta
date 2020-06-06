@@ -17,30 +17,6 @@
 -- Nicolas Casalini "DarkGod"
 -- darkgod@te4.org
 
--- newTalent{
--- 	name = "Barbarous Archery",
--- 	short_name = "OUTRIDER_MOUNTED_ARCHERY_MASTERY", image="talents/mounted_archery_mastery.png",
--- 	type = {"mounted/skirmish-tactics", 1},
--- 	points = 5,
--- 	require = { stat = { dex=function(level) return 12 + level * 6 end }, },
--- 	mode = "passive",
--- 	getDamage = function(self, t) return 30 end,
--- 	getPercentInc = function(self, t) return math.sqrt(self:getTalentLevel(t) / 5) / 1.5 end,
--- 	ammo_mastery_reload = function(self, t)
--- 		return math.floor(self:combatTalentScale(t, 0, 2.7, "log"))
--- 	end,
--- 	passives = function(self, t, p)
--- 		self:talentTemporaryValue(p, 'ammo_mastery_reload', t.ammo_mastery_reload(self, t))
--- 	end,
--- 	info = function(self, t)
--- 		local damage = t.getDamage(self, t)
--- 		local inc = t.getPercentInc(self, t)
--- 		local reloads = t.ammo_mastery_reload(self, t)
--- 		return ([[You are a master of brutal ranged harrying techniques, both mounted and on foot, increasing your weapon damage by %d%% and physical power by 30 when using bows.
--- 		Your reload rate is also increased by %d.]]):format(inc * 100, reloads)
--- 	end,
--- }
-
 newTalent{
 	name = "Beastmaster's Mark", short_name = "OUTRIDER_BEASTMASTERS_MARK", image = "talents/beastmasters_mark.png",
 	type = {"mounted/skirmish-tactics", 1},
@@ -51,17 +27,25 @@ newTalent{
 	range = archery_range,
 	requires_target = true,
 	tactical = { ATTACK = { weapon = 2 } },
-	on_pre_use = function(self, t, silent) if not self:hasArcheryWeapon() then if not silent then game.logPlayer(self, "You require a bow or sling for this talent.") end return false end return true end,
-	action = function(self, t)
-		local targets = self:archeryAcquireTargets(nil, {one_shot=true})
-		if not targets then return end
-		self:archeryShoot(targets, t, nil, {mult=self:combatTalentWeaponDamage(t, 1.1, 2.2)})
-		local target = targets[1]
-		if not target then return true end
-		if target:canBe("cut") then target:setEffect(mount.EFF_BLEED,  t.getDur(self, t), {power=t.getBleed(self, t)}) end
+	on_pre_use = function(self, t, silent, fake) return preCheckArcheryInAnySlot(self, t, silent, fake) end,
+	on_learn = function(self ,t)
+		-- if not self:knowTalent(self.T_OUTRIDER_MOUNTED_ARCHERY_MASTERY) then
+		-- 	self:learnTalent(self.T_OUTRIDER_MOUNTED_ARCHERY_MASTERY, true) 
+		-- end
+		if not self.__show_special_talents[self.T_OUTRIDER_MOUNTED_ARCHERY_MASTERY] then
+			table.set(self, "__show_special_talents", "T_OUTRIDER_MOUNTED_ARCHERY_MASTERY", true)
+		end
+	end,
+	archery_onhit = function(self, t, target, x, y)
 		local mount = self:hasMount()
+		if target:canBe("cut") then target:setEffect(target.EFF_CUT, t.getDur(self, t), {power=t.getBleed(self, t)}) end
 		if not mount then return true end
 		mount:setEffect(mount.EFF_OUTRIDER_BEASTMASTER_MARK,  t.getDur(self, t), {target=target})
+	end,
+	action = function(self, t)
+		local targets = getArcheryTargetsWithSwap(self)
+		if not targets then return nil end
+		self:archeryShoot(targets, t, nil, {mult=t.getDam(self, t)})
 		return true
 	end,
 	info = function(self, t)
@@ -71,7 +55,9 @@ newTalent{
 		local speed = t.getSpeed(self, t)*100
 		local loyalty = t.getLoyalty(self, t)
 		-- local range = t.getRushRange(self, t)
-		return ([[You let off a jagged missile that fills your steed with a savage thirst for blood, enraging it. You shoot your enemy for %d%% damage, bleeding it for %d damage and marking it with the Beastmaster's Mark for %d turns. While this is in effect, your steed concentrates solely upon this foe, moving and attacking %d%% faster, but if you hold it back it will lose %.1f Loyalty per turn that you do this.]]):
+		return ([[You let off a jagged missile that fills your steed with a savage thirst for blood, enraging it. You shoot your enemy for %d%% damage, bleeding it for %d damage and marking it with the Beastmaster's Mark for %d turns. While this is in effect, your steed concentrates solely upon this foe, moving and attacking %d%% faster, but if you hold it back it will lose %.1f Loyalty per turn that you do this.
+
+			Investing in the Skirmish Tactics tree also teaches you the Mounted Combat Mastery skill.]]):
 		format(dam, bleed, dur, speed, loyalty, range)
 	end,
 	getDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
@@ -83,31 +69,76 @@ newTalent{
 	-- getRushRange = function(self, t) return math.min(10, self:combatTalentScale(t, 3, 8)) end,
 }
 
+
+--4: Cacophonous Downpour
+--How should it work? Fire arrows against everyone, then over 2 turns repeat
 newTalent{
-	name = "Spring Attack", short_name = "OUTRIDER_SPRING_ATTACK", image = "talents/spring_attack.png",
+	name = "Cacophonous Downpour", short_name = "OUTRIDER_CACOPHONOUS_DOWNPOUR", image = "talents/cacophonous_downpour.png",
 	type = {"mounted/skirmish-tactics", 2},
-	mode = "passive",
-	require = techs_dex_req3,
- 	points = 5,
-	info = function(self, t)
-		local dur = t.getDur(self, t)
-		local min_pct = t.getMinPct(self, t)
-		local max_pct = t.getMaxPct(self, t)
-		return ([[After charging, for %d turns, the defense and movement speed components of your Strike at the Heart bonuses will persist.
-
-			Also, you gain a bonus to ranged damage against the foe struck for the duration. This bonus is dependent on the distance you gain after that attack: %d%% at 2 tiles, increasing to %d%% at 5 or more.
-
-			Only distance gained from the moment of your attack will count.]]):
-		format(dur, min_pct, max_pct)
+	no_energy = "fake",
+	points = 5,
+	random_ego = "attack",
+	cooldown = 8,
+	stamina = 16,
+	require = techs_dex_req2,
+	range = archery_range,
+	radius = function(self, t) return math.floor(self:combatTalentScale(t, 2, 3.7)) end,
+	tactical = { ATTACKAREA = { weapon = 2 }, DISABLE = { confusion = 1, silence = 1 }},
+	requires_target = true,
+	target = function(self, t)
+		local weapon, ammo = self:hasArcheryWeapon()
+		return {type="ball", radius=self:getTalentRadius(t), range=self:getTalentRange(t), display=self:archeryDefaultProjectileVisual(weapon, ammo)}
 	end,
-	getDur = function(self, t) return self:combatTalentScale(t, 2, 5) end,
-	getMinPct = function(self, t) return self:combatTalentScale(t, 10, 22.5) end,
-	getMaxPct = function(self, t) return self:combatTalentScale(t, 20, 35) end,
+	on_pre_use = function(self, t, silent, fake) return archerPreUse(self, t, silent, fake) end,
+	action = function(self, t)
+		local tg = self:getTalentTarget(t)
+		
+		local x, y, target = self:getTarget(tg)
+		if not x or not y then return nil end
+		-- local _ _, x, y = self:canProject(tg, x, y)
+		local targets = self:archeryAcquireTargets(tg)
+		if not targets then return nil end
+
+		local dam = t.getDam(self,t)
+		local radius = self:getTalentRadius(t)
+
+		self:archeryShoot(targets, t, {type = "hit", selffire=false}, {mult=dam})
+
+		local dur = t.getDur(self, t)
+		local power = t.getConfusePower(self, t)
+		local phys_power = self:combatPhysicalpower()
+
+		for _, target in ipairs(targets) do
+			target:setEffect(target.EFF_CONFUSED, dur, {{power=power}, apply_power=phys_power})
+
+			if self:getTalentLevel(t) >= 3 and rng.percent(t.getSilenceChance(self, t)) then
+				target:setEffect(target.EFF_SILENCED, dur, {apply_power=phys_power})
+			end
+		end
+
+		game.level.map:particleEmitter(x, y, radius, "volley", {radius=radius})
+	end,
+	info = function(self, t)
+		local rad = self:getTalentRadius(t)
+		local dam = t.getDam(self,t)*100
+		local confuse_power = t.getConfusePower(self, t)
+		local silence_chance = t.getSilenceChance(self, t)
+		local dur = t.getDur(self, t)
+		return ([[Taking specially notched arrows from your quiver, you let loose a rain of horridly screeching missiles upon your foes. Your arrows rain down for 3 turns upon targets in radius of %d, striking 3 per turn. Each target stands a chance to be confused by the cacophony (%d power, duration).
+
+			At talent level 3 there is also a %d%% chance to inflict silence, as the screeching becomes loud enough to drown out the chants of spellcasters.]])
+		:format(dam, rad, confuse_power, dur, silence_chance)
+	end,
+	getDam = function(self, t) return self:combatTalentWeaponDamage(t, 0.87, 1.42) end,
+	getDur = function(self, t) return self:combatTalentScale(t, 3, 5) end,
+	getConfusePower = function(self, t) return self:combatTalentLimit(t, 60, 27, 52) end,
+	getSilenceChance = function(self, t) return math.max(50, self:combatTalentLimit(t, 90, 19, 54)) end,
 }
 
 newTalent{
 	name = "Loose in the Saddle", short_name = "LOOSE_IN_THE_SADDLE", image = "talents/loose_in_the_saddle.png",
 	type = {"mounted/skirmish-tactics", 3},
+	hide="always", --DEBUG: Hiding untested talents 
 	points = 5,
 	mode = "sustained",
 	sustain_stamina = 50,
@@ -151,66 +182,44 @@ newTalent{
 	getSpeed = function(self, t) return self:combatTalentScale(t, 400, 650) end,
 }
 
---4: Cacophonous Downpour
---How should it work? Fire arrows against everyone, then over 2 turns repeat
 newTalent{
-	name = "Cacophonous Downpour", short_name = "OUTRIDER_CACOPHONOUS_DOWNPOUR", image = "talents/cacophonous_downpour.png",
+	name = "Spring Attack", short_name = "OUTRIDER_SPRING_ATTACK", image = "talents/spring_attack.png",
 	type = {"mounted/skirmish-tactics", 4},
-	no_energy = "fake",
-	points = 5,
-	random_ego = "attack",
-	cooldown = 8,
-	stamina = 16,
+	hide="always", --DEBUG: Hiding untested talents
 	require = techs_dex_req4,
+	no_energy = true,
+	points = 5,
+	cooldown = 10,
+	stamina = 10,
 	range = archery_range,
-	radius = function(self, t) return math.floor(self:combatTalentScale(t, 2, 3.7)) end,
-	tactical = { ATTACKAREA = { weapon = 2 }, DISABLE = { confusion = 1, silence = 1 }},
+	on_pre_use = function(self, t, silent, fake) return preCheckArcheryInAnySlot(self, t, silent, fake) end,
 	requires_target = true,
-	target = function(self, t)
-		local weapon, ammo = self:hasArcheryWeapon()
-		return {type="ball", radius=self:getTalentRadius(t), range=self:getTalentRange(t), display=self:archeryDefaultProjectileVisual(weapon, ammo)}
+	tactical = { ATTACK = { weapon = 1 }, DISABLE = { pin = 2 } },
+	archery_onhit = function(self, t, target, x, y)
+		self:setEffect(self.EFF_OUTRIDER_SPRING_ATTACK, t.getDur(self, t), {target=target})
+		target:setEffect(target.EFF_OUTRIDER_SPRING_ATTACK_TARGET, t.getDur(self, t), {src=self})
 	end,
-	on_pre_use = function(self, t, silent) return archerPreUse(self, t, silent) end,
 	action = function(self, t)
-		local tg = self:getTalentTarget(t)
-		
-		local x, y, target = self:getTarget(tg)
-		if not x or not y then return nil end
-		-- local _ _, x, y = self:canProject(tg, x, y)
-		local targets = self:archeryAcquireTargets(tg)
+		local targets = getArcheryTargetsWithSwap(self)
 		if not targets then return nil end
 
-		local dam = t.getDam(self,t)
-		local radius = self:getTalentRadius(t)
+		self:archeryShoot(targets, t, nil, {mult=t.getDam(self, t)})
 
-		self:archeryShoot(targets, t, {type = "hit", selffire=false}, {mult=dam})
-
-		local dur = t.getDur(self, t)
-		local power = t.getConfusePower(self, t)
-		local phys_power = self:combatPhysicalpower()
-
-		for _, target in ipairs(targets) do
-			target:setEffect(target.EFF_CONFUSED, dur, {{power=power}, apply_power=phys_power})
-
-			if self:getTalentLevel(t) >= 3 and rng.percent(t.getSilenceChance(self, t)) then
-				target:setEffect(target.EFF_SILENCED, dur, {apply_power=phys_power})
-			end
-		end
-
-		game.level.map:particleEmitter(x, y, radius, "volley", {radius=radius})
+		return true
 	end,
+ 	points = 5,
 	info = function(self, t)
-		local rad = self:getTalentRadius(t)
-		local dam = t.getDam(self,t)*100
-		local confuse_power = t.getConfusePower(self, t)
-		local silence_chance = t.getSilenceChance(self, t)
-		return ([[Taking specially notched arrows from your quiver, you let loose a rain of horridly screeching missiles upon your foes. Your arrows deal %d%% ranged weapon damage in a radius of %d, but any target standing within the cacophony also has a chance to be confused (%d power).
+		local dam_pct = t.getDam(self, t)*100
+		local dur = t.getDur(self, t)
+		local min_pct = t.getMinPct(self, t)
+		local max_pct = t.getMaxPct(self, t)
+		return ([[Weaving in and out of your enemies' battle lines, you take advantage of the confusion wrought in the fray. Dart in with a quick attack for %d%% damage, targeting your foe with your Spring Attack for %d turns. You gain a bonus to ranged damage against the foe for the duration. This bonus is dependent on the distance you gain after that attack: %d%% at 2 tiles, increasing to %d%% at 5 or more.
 
-			At talent level 3 there is also a %d%% chance to inflict silence, as the screeching becomes loud enough to drown out the chants of spellcasters.]])
-		:format(dam, rad, confuse_power, silence_chance)
+			Only distance gained from the moment of your attack will count.]]):
+		format(dam_pct, dur, min_pct, max_pct)
 	end,
-	getDam = function(self, t) return self:combatTalentWeaponDamage(t, 0.87, 1.42) end,
-	getDur = function(self, t) return self:combatTalentScale(t, 3, 5) end,
-	getConfusePower = function(self, t) return self:combatTalentLimit(t, 60, 27, 52) end,
-	getSilenceChance = function(self, t) return math.max(50, self:combatTalentLimit(t, 90, 19, 54)) end,
+	getDam = function(self, t) return self:combatTalentScale(t, 0.6, 1.1) end,
+	getDur = function(self, t) return self:combatTalentScale(t, 4, 7) end,
+	getMinPct = function(self, t) return self:combatTalentScale(t, 10, 22.5) end,
+	getMaxPct = function(self, t) return self:combatTalentScale(t, 20, 35) end,
 }

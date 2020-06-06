@@ -235,7 +235,7 @@ newTalent{
 	getBonusPct = function (self, t) return self:combatTalentScale(t, 130, 170) end,
 	getReduction = function (self, t) return self:combatTalentScale(t, 5, 12) end,
 	getDur = function(self, t) return self:combatTalentScale(t, 4, 7) end,
-	on_pre_use= function(self, t, silent)
+	on_pre_use= function(self, t, silent, fake)
 		return false
 	end,
 	shared_talent = "T_OUTRIDER_COMMAND_FETCH",
@@ -478,15 +478,13 @@ newTalent{
 }
 
 newTalent{
-	name = "Predatory Flanking", short_name = "OUTRIDER_PREDATORY_FLANKING", image="talents/predatory_flanking.png",
+	name = "Predatory Flanking : Specialization", short_name = "OUTRIDER_WOLF_FLANKING", image="talents/predatory_flanking.png",
 	type = {"wolf/pack-hunter", 3},
 	points = 5,
 	require = mnt_cun_req3,
 	mode = "passive",
-	getPct = function(self, t) return 15 + (self:getTalentLevel(t) + self:getTalentLevelRaw(t))/2 * 10 end,
-	getSecondaryPct = function(self, t)
-		return math.round(self:combatTalentScale(t, 5, 15), .5)
-	end,
+	shared_talent = "T_OUTRIDER_COMMAND_WOLF_FLANKING",
+	learn_shared_talent_at = 3,
 	--Might want to do this as often as possible
 	doCheck = function(self, t)
 		local tgts = {}
@@ -505,6 +503,16 @@ newTalent{
 			end
 		end
 	end,
+	on_learn = function(self, t)
+		if self:getTalentLevelRaw(t) >= t.learn_shared_talent_at then
+			shareTalentWithOwner(self, t)
+		end
+	end,
+	on_unlearn = function(self, t, p)
+		if self:getTalentLevelRaw(t) < t.learn_shared_talent_at then
+			unshareTalentWithOwner(self, t)
+		end
+	end,
 	callbackOnActBase = function(self, t)
 		t.doCheck(self, t)
 	end,
@@ -512,11 +520,68 @@ newTalent{
 		t.doCheck(self, t)
 	end,
 	info = function(self, t)
-		local pct = t.getPct(self, t)
-		local secondary = t.getSecondaryPct(self, t)
-		return ([[If you and one of your allies both stand adjacent to the same enemy (but not adjacent to one another), then your damage against that foe is increased by %d%%, and your flanking ally's damage by %.1f%%.]])
-			:format(pct, secondary)
+		local bonus_dam_pct = t.getBonusDamPct(self, t)
+		local dam_reduction_pct = t.getDamReductionPct(self, t)
+		local command_range = self:getTalentRange(self.T_OUTRIDER_COMMAND_WOLF_FLANKING)
+		local attack_dam_pct = t.getAttackDam(self, t)*100
+		local bleed_dam_pct = t.getBleedDamPct(self, t)
+		return ([[When using Predatory Flanking, both the wolf and its allies gain an additional %d%% damage (you can take advantage of this even without learning the Predatory Flanking talent). When fighting this way, the wolf's positional advantage reduces incoming damage by %d%%.
+
+			At talent level 3, the wolf's owner can used Command: Flank Enemy, instantly sending the wolf behind target enemy's back (in range %d) and inciting a %d%% damage attack which bleeds for %d%% damage.]])
+			:format(bonus_dam_pct, dam_reduction_pct, command_range, attack_dam_pct, bleed_dam_pct)
 		end,
+	getBonusDamPct = function(self, t) return self:combatTalentScale(t, 3, 15, 0.8) end,
+	getDamReductionPct = function(self, t) return self:combatTalentScale(t, 5, 25, 0.8) end,
+	getAttackDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.6) end,
+	getBleedDamPct = function(self, t) return t.getAttackDam(self, t) * 100  * 1.75
+	end
+}
+
+newTalent{
+	name = "Command: Flank Enemy",
+	short_name = "OUTRIDER_COMMAND_WOLF_FLANKING", image = "talents/predatory_flanking.png",
+	type = {"mounted/mounted-base", 1},
+	points = 1,
+	cooldown = 10,
+	requires_target = true,
+	base_talent = "T_OUTRIDER_GO_FOR_THE_THROAT",
+	--TODO: Tactical arrays for all commands
+	tactical = { ATTACK = 2 },
+	getDamage = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_OUTRIDER_GO_FOR_THE_THROAT, "getDamage") end,
+	range = function (self, t) return self.outrider_pet:callTalent(self.outrider_pet.T_OUTRIDER_GO_FOR_THE_THROAT, "range") end,
+	targetTry = function(self, t)
+		return {type="ball", radius=self:getTalentRange(t), 0}
+	end,
+	on_pre_use = function(self, t)
+		local mount = self.outrider_pet
+		return mount and true or false
+	end,
+	action = function(self, t)
+		local mount = self.outrider_pet
+		-- local t2 = mount:getTalentFromId(mount.T_OUTRIDER_GO_FOR_THE_THROAT)
+
+		local tg = {type="hit", start_x=mount.x, start_y=mount.y, range=mount:getTalentRange(t2)}
+		if self:attr("never_move") then tg.range=1 end
+		local x, y, target = self:getTarget(tg)
+		if not x or not y or not target then return nil end
+		if core.fov.distance(mount.x, mount.y, x, y) > mount:getTalentRange(t2) then return nil end
+
+		-- local mover
+		-- if self:isMounted() then mover = self else mover = mount end
+		-- local ret = mount:callTalent(mount.T_OUTRIDER_GO_FOR_THE_THROAT, "doAttack", mover, target)
+		-- if ret then mount:startTalentCooldown(mount.T_OUTRIDER_GO_FOR_THE_THROAT) end
+		-- return ret
+	end,
+	info = function(self, t)
+		if not self.outrider_pet then return [[Without a wolf, you cannot use Command: Go For The Throat.]] end
+		local mount = self:hasMount()
+		local t2 = self:getTalentFromId(t.base_talent)
+		local range = mount:getTalentRange(t2)
+		local attack_dam_pct = t2.getAttackDam(mount, t2)*100
+		local bleed_dam_pct = t2.getBleedDamPct(mount, t2)
+		return ([[The wolf tears forth to flank an enemy in range %d; it will rush to the enemy, then instantly duck behind it if a space is free. Once in the place the wolf will bite savagely for %d%% damage, bleeding a susceptible target for %d%% damage over 5 turns.]]):
+		format(range, attack_dam_pct, bleed_dam_pct)
+	end,
 }
 
 newTalent{
@@ -624,5 +689,33 @@ newTalent{
 
 			Learning Howl to the Moon will increase your wolf's mindpower by %d.]]):
 		format(min, max, dur, rare_chance, convert_chance, mindpower)
+	end,
+}
+
+newTalent{
+	name = "Command: Howl To The Moon",
+	short_name = "OUTRIDER_COMMAND_HOWL_TO_THE_MOON", image = "talents/howl_to_the_moon.png",
+	type = {"mounted/mounted-base", 1},
+	points = 1,
+	cooldown = 10,
+	requires_target = true,
+	base_talent = "T_OUTRIDER_HOWL_TO_THE_MOON",
+	--TODO: Tactical arrays for all commands
+	tactical = { BUFF = 2 },
+	range = 1,
+	on_pre_use = function(self, t)
+		local mount = self.outrider_pet
+		return mount and true or false
+	end,
+	action = function(self, t)
+	end,
+	info = function(self, t)
+		if not self.outrider_pet then return [[Without a wolf, you cannot use Command: Go For The Throat.]] end
+		local mount = self:hasMount()
+		local t2 = self:getTalentFromId(t.base_talent)
+
+		return ([[Command your wolf to use Howl to the Moon:
+
+			]])..t2.info(mount, t2)
 	end,
 }

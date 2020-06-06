@@ -9,7 +9,9 @@ local DamageType = require "engine.DamageType"
 local Chat = require "engine.Chat"
 
 class:bindHook("ToME:load", function(self, data)
-	ActorTalents:loadDefinition("/data-outrider/talents/mounted/mounted.lua")
+	dofile "nagyhal/utils.lua"
+
+	ActorTalents:loadDefinition("/data-outrider/talents/outrider.lua")
 	Birther:loadDefinition("/data-outrider/birth/mounted.lua")
 	ActorResource:defineResource("Loyalty", "loyalty", ActorTalents.T_LOYALTY_POOL, "loyalty_regen", "Loyalty represents the devotion of your pet.", nil, nil, {
 		color = "#f88072#",
@@ -60,12 +62,13 @@ class:bindHook("DamageProjector:base", function(self, data)
 	local a = game.level.map(self.x, self.y, engine.Map.ACTOR)
 	if not a or a~=self then return ret end
 
+	local target = game.level.map(data.x, data.y, engine.Map.ACTOR)
 	local eff = self.hasEffect and self:hasEffect(self.EFF_OUTRIDER_SPRING_ATTACK)
-	if eff then
-		local dist = core.fov.distance(self.x, self.y, data.x, data.y)
+	if eff and target and eff.target==target then
+		local dist = core.fov.distance(self.x, self.y, target.x, target.y)
 		if dist >= 2 then
 			dist = util.bound(dist, 2, 5)
-			local pct = 100 + self:combatScale(dist, eff.min_pct, 2, eff.max_pct, 5)
+			local pct = 100 + util.lerp(eff.min_pct, eff.max_pct, (dist-2)/3)
 			data.dam = data.dam * pct/100
 			ret = true
 		end
@@ -73,13 +76,12 @@ class:bindHook("DamageProjector:base", function(self, data)
 	local a = game.level.map(data.x, data.y, engine.Map.ACTOR)
 	if self:knowTalent(self.T_OUTRIDER_TRAIT_OPPORTUNISTIC) then
 		if a.life <= a.max_life*.25 then
-			local p = self;getTalentFromId(self.T_OUTRIDER_TRAIT_OPPORTUNISTIC)
+			local p = self:getTalentFromId(self.T_OUTRIDER_TRAIT_OPPORTUNISTIC)
 			local pct = p.getPct(self, t)
 			data.dam = data.dam * pct/100
 		end
 	end
 
-	local target = game.level.map(data.x, data.y, engine.Map.ACTOR)
 	if target then
 		local eff = a:hasEffect(a.EFF_OUTRIDER_PREDATORY_FLANKING)
 		if eff then
@@ -196,7 +198,8 @@ class:bindHook("Actor:takeHit", function(self, data)
 	if owner and owner.loyalty then
 		local coeff = self.loyalty_loss_coeff or 1
 		local pct = data.value / self.max_life * 100
-		local loyalty_loss = pct / 3
+		local loyalty_loss = pct / 6
+		-- game.log(("DEBUG: %s losing %.1f loyalty on hit."):format(owner.name:capitalize(), loyalty_loss))
 		if self:hasEffect(self.EFF_OUTRIDER_UNBRIDLED_FEROCITY) then
 			--Increase rather than decrease
 			owner:incLoyalty(loyalty_loss)
@@ -210,7 +213,7 @@ class:bindHook("Actor:takeHit", function(self, data)
 	if rider and data.value / self.max_life > .1 then
 		--Maybe do a getDismountChance() so Loyalty can be factored in?
 		local pct = self:combatScale(data.value, 10, self.max_life*1, 50, self.max_life*.25)
-		if rng.percent(25) then rider:dismountTarget(self) end
+		if rng.percent(25) then rider:dismount() end
 	end
 end)
 
@@ -225,10 +228,14 @@ end)
 -- 	return data
 -- end)
 
-class:bindHook("Combat:attackTargetWith", function(self, data)
+local function handleStrikeAtTheHeart(self, data)
 	if self:hasEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART) then
 		self:callTalent(self.T_OUTRIDER_STRIKE_AT_THE_HEART, "handleStrike", data.target, data.hitted)
 	end
+end
+
+class:bindHook("Combat:attackTargetWith", function(self, data)
+	handleStrikeAtTheHeart(self, data)
 	return data
 end)
 
@@ -245,81 +252,45 @@ class:bindHook("Combat:attackTarget", function(self, data)
 		data.stop = true
 	end
 
-	if self:hasEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART) then 
-		self:callTalent(self.T_OUTRIDER_STRIKE_AT_THE_HEART, "handleStrike", data.target, data.hitted)
-	end
+	handleStrikeAtTheHeart(self, data)
 	return data
 end)
 
-local Shader = require "engine.Shader"
+class:bindHook("Actor:updateModdableTile:middle", function(self, data)
+	local mount, add = self:getMount(), data.add
+	if mount then
+		-- local sort_table = function()
+		add[#add+1] = {image = mount.image, mount=true}
+	end
+end)
 
-local loyalty_c = {colors.SALMON.r/255, colors.SALMON.g/255, colors.SALMON.b/255}
-local loyalty_sha = Shader.new("resources", {require_shader=4, delay_load=true, color=loyalty_c, speed=2000, distort={0.4,0.4}})
+class:bindHook("Actor:updateModdableTile:front", function(self, data)
+	local mount, add = self:getMount(), data.add; if not mount then return end
+	local mount_index
 
-local fshat_loyalty = {core.display.loadImage("/data/gfx/ui/resources/front_psi.png"):glTexture()}
-local fshat_loyalty_dark = {core.display.loadImage("/data/gfx/ui/resources/front_psi_dark.png"):glTexture()}
+	for i, mo in ipairs(add) do
+		if not mo.mount then mo.display_y = -.45 end
 
-local sshat = {core.display.loadImage("/data/gfx/ui/resources/shadow.png"):glTexture()}
-local bshat = {core.display.loadImage("/data/gfx/ui/resources/back.png"):glTexture()}
-local shat = {core.display.loadImage("/data/gfx/ui/resources/fill.png"):glTexture()}
-local fshat = {core.display.loadImage("/data/gfx/ui/resources/front.png"):glTexture()}
-
-
-local font_sha = core.display.newFont("/data/font/DroidSans.ttf", 14, true)
-font_sha:setStyle("bold")
-local sfont_sha = core.display.newFont("/data/font/DroidSans.ttf", 12, true)
-sfont_sha:setStyle("bold")
-
--- class:bindHook("UISet:Minimalist:Resources", function(self, data)
--- 	local player = data.player
--- 	local a = data.a
--- 	local x, y, bx, by = data.x, data.y, data.bx, data.by
--- 	local orient, scale = data.orient, data.scale
--- 	local src = player.show_owner_loyalty_pool and player.summoner or player
--- 	if src:knowTalent(src.T_LOYALTY_POOL) and src.outrider_pet and not src._hide_resource_loyalty then
--- 		sshat[1]:toScreenFull(x-6, y+8, sshat[6], sshat[7], sshat[2], sshat[3], 1, 1, 1, a)
--- 		bshat[1]:toScreenFull(x, y, bshat[6], bshat[7], bshat[2], bshat[3], 1, 1, 1, a)
--- 		if loyalty_sha.shad then loyalty_sha:setUniform("a", a) loyalty_sha.shad:use(true) end
--- 		local p = src:getLoyalty() / src.max_loyalty
--- 		shat[1]:toScreenPrecise(x+49, y+10, shat[6] * p, shat[7], 0, p * 1/shat[4], 0, 1/shat[5], loyalty_c[1], loyalty_c[2], loyalty_c[3], a)
--- 		if loyalty_sha.shad then loyalty_sha.shad:use(false) end
-
--- 		if not self.res.loyalty or self.res.loyalty.vc ~= src.loyalty or self.res.loyalty.vm ~= src.max_loyalty or self.res.loyalty.vr ~= src.loyalty_regen then
--- 			self.res.loyalty = {
--- 				hidable = "Loyalty",
--- 				vc = src.loyalty, vm = src.max_loyalty, vr = src.loyalty_regen,
--- 				cur = {core.display.drawStringBlendedNewSurface(font_sha, ("%d/%d"):format(src.loyalty, src.max_loyalty), 255, 255, 255):glTexture()},
--- 				regen={core.display.drawStringBlendedNewSurface(sfont_sha, ("%+0.2f"):format(src.loyalty_regen), 255, 255, 255):glTexture()},
--- 			}
--- 		end
-
--- 		local dt = self.res.loyalty.cur
--- 		dt[1]:toScreenFull(2+x+64, 2+y+10 + (shat[7]-dt[7])/2, dt[6], dt[7], dt[2], dt[3], 0, 0, 0, 0.7 * a)
--- 		dt[1]:toScreenFull(x+64, y+10 + (shat[7]-dt[7])/2, dt[6], dt[7], dt[2], dt[3], 1, 1, 1, a)
--- 		dt = self.res.loyalty.regen
--- 		dt[1]:toScreenFull(2+x+144, 2+y+10 + (shat[7]-dt[7])/2, dt[6], dt[7], dt[2], dt[3], 0, 0, 0, 0.7 * a)
--- 		dt[1]:toScreenFull(x+144, y+10 + (shat[7]-dt[7])/2, dt[6], dt[7], dt[2], dt[3], 1, 1, 1, a)
-
--- 		TOOLTIP_LOYALTY =  "#GOLD#Loyalty#LAST#\nLoyalty represents the devotion of an ally to you - devotion that can be lost should you disabuse it.\nIn the case of a mount, at less than 50% Loyalty there is a chance it will struggle to obey orders when under threat. At less than 25% Loyalty, you will have to treat it with great care to keep it under your control."
--- 		local front = fshat_loyalty_dark
--- 		if src.loyalty >= src.max_loyalty then front = fshat_loyalty end
--- 		front[1]:toScreenFull(x, y, front[6], front[7], front[2], front[3], 1, 1, 1, a)
--- 		self:showResourceTooltip(bx+x*scale, by+y*scale, fshat[6], fshat[7], "res:loyalty", TOOLTIP_LOYALTY)
--- 		x, y = self:resourceOrientStep(orient, bx, by, scale, x, y, fshat[6], fshat[7])
--- 	elseif game.mouse:getZone("res:loyalty") then
--- 		game.mouse:unregisterZone("res:loyalty")
--- 	end
--- 	data.x, data.y = x, y
--- 	return data
--- end)
+		if mo.mount then mount_index = i end
+		if string.find(mo.image, "quiver") and mount_index then
+			--Put it behind the mount
+			add[i] = nil
+			table.insert(add, mount_index, mo)
+		end 
+	end
+end)
 
 class:bindHook("Combat:archeryTargetKind", function(self, data)
-	game.log("DEBUG")
-        -- if self:hasArcheryWeapon("bow") and self:knowTalent(self.T_BOW_MASTERY) then
-                data.tg.friendlyfire=false
-                data.tg.friendlyblock=false
-        -- elseif self:hasArcheryWeapon("sling") and self:knowTalent(self.T_SLING_MASTERY) then
-                data.tg.friendlyfire=false
-                data.tg.friendlyblock=false
-        -- end
+	if self:knowTalent(self.T_OUTRIDER_CHALLENGE_THE_WILDS) then
+        data.tg.friendlyfire=false
+        data.tg.friendlyblock=false
+    end
+end)
+
+class:bindHook("Combat:getDammod:subs", function(self, data)
+	local owner = self.owner
+	if owner and owner:knowTalent(owner.T_OUTRIDER_CHALLENGE_THE_WILDS) then
+		local dammod = data.dammod
+		dammod['cun'] = (dammod['cun'] or 0) + 0.6
+	end
 end)

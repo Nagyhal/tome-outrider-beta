@@ -93,7 +93,7 @@ newTalent{
 	range = function(self, t) return t.getKnockbackRange(self, t)-1 end,
 	tactical = { ATTACK = { weapon = 1 }, DISABLE = { pin = 2 } },
 	requires_target = true,
-	on_pre_use = function(self, t, silent) --No longer a ranged-focussed tree!
+	on_pre_use = function(self, t, silent, fake) --No longer a ranged-focussed tree!
 		if not self:hasArcheryWeapon("bow") and not self:hasArcheryWeaponQS("bow") then
 			if not silent then 
 				game.logPlayer(self, "You require a bow in one of your weapon slots for this talent.")
@@ -172,7 +172,7 @@ newTalent{
 	on_unlearn = function(self, t)
 		if self:getTalentLevel(t) == 0 and self:knowTalent(self.T_OUTRIDER_CATCH_PASSIVE) then self:unlearnTalentFull(self.T_OUTRIDER_CATCH_PASSIVE) end
 	end,
-	on_pre_use = function(self, t, silent)
+	on_pre_use = function(self, t, silent, fake)
 		if not self:hasEffect(self.EFF_OUTRIDER_CATCH) then
 			if not silent then
 				game.logPlayer(self, "You must have recently slain an aenemy wih a critical hit to use Catch!")

@@ -6,6 +6,8 @@ function checkEffectHasParameter(self, eff, name)
 	end
 end
 
+local Particles = require "engine.Particles"
+
 load("/data-outrider/timed_effects/disobedience.lua")
 
 --Effects for basic mount functionality
@@ -29,41 +31,20 @@ newEffect{
 			self:removeEffect(self.EFF_OUTRIDER_MOUNT, false, true)
 		end
 	end,
-	generateMountedMOs = function(self, eff)
-		add_mos = {
-			{image = eff.mount.image and eff.mount.image}
-		}
-		j = 1
-		for _, mo in ipairs(self.add_mos or {}) do
-			new_mo = table.clone(mo)
-			new_mo.display_y = -.5
-			if mo.image and string.find(mo.image, "base") or string.find(mo.image, "body") or string.find(mo.image, "quiver") then
-				table.insert(add_mos, j, new_mo)
-				j = j+1
-				else
-				table.insert(add_mos, #add_mos+1, new_mo)
-			end
-		end
-		for _, mo in ipairs(eff.mount.add_mos or {}) do
-			new_mo = table.clone(mo)
-			new_mo.display_y = -.5
-			add_mos[#add_mos+1] = new_mo
-		end	
-		self.replace_display = mod.class.Actor.new{
-			image=self.image, add_mos = add_mos
-		}
-	end,
 	activate = function(self, eff, ed)
 		if not eff.mount then
 			self:removeEffect(self.EFF_OUTRIDER_MOUNT, nil, true)
 			error("No mount sent to temporary effect Mounted.")
 		end
-		--DEBUG: Test!
-		ed.generateMountedMOs(self, eff)
+		-- DEBUG: Test!
+		-- ed.generateMountedMOs(self, eff)
+		self:updateModdableTile()
 		game.level.map:updateMap(self.x, self.y)
 	end,
 	deactivate = function(self, eff)
 		self.mount = nil
+		self:updateModdableTile()
+		game.level.map:updateMap(self.x, self.y)
 	end,
 }
 
@@ -354,22 +335,18 @@ newEffect{
 newEffect{
 	name = "OUTRIDER_SPRING_ATTACK", image = "talents/spring_attack.png",
 	desc = "Spring Attack",
-	long_desc = function(self, eff) return ("The target's onslaught has ended, but it retains a bonus of %d%% to movement speed and %d to defense. Also, the target gains a bonus to ranged damage against any marked targets for the duration. This bonus is dependent on distance: starting from %d%% at 2 tiles, increasing to %d%% at 5 tiles."):format(eff.move, eff.def, eff.min_pct, eff.max_pct) end,
+	long_desc = function(self, eff) return ("The rider gains a bonus to ranged damage against any marked targets for the duration. This bonus is dependent on distance: starting from %d%% at 2 tiles, increasing to %d%% at 5 tiles."):format(eff.min_pct, eff.max_pct) end,
 	type = "physical",
-	subtype = { tactic=true, speed=true },
+	subtype = { tactic=true },
 	status = "beneficial",
 	parameters = { move=10, def=6, min_pct=5, max_pct=15},
 	on_gain = function(self, eff) return "#Target# enters into a spring attack!", "+Spring Attack" end,
 	on_lose = function(self, eff) return "#Target#'s spring attack has ended.", "-Spring Attack" end,
 	--callbackonDealDamage is not useful so we handle the damage increment in load.lua's DamageProjector:base hook
 	activate = function(self, eff)
-		self:effectTemporaryValue(eff, "movement_speed", eff.move/100)
-		self:effectTemporaryValue(eff, "combat_def", eff.def)
+		assert (eff.target, "No target sent to effect OUTRIDER_SPRING_ATTACK.")
 	end,
 	deactivate = function(self, eff)
-		if self:hasEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART) then
-			self:callEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART, "doUnstoreBonuses")
-		end
 	end,
 }
 
@@ -849,7 +826,7 @@ newEffect{
 		self:effectTemporaryValue(eff, "combat_physspeed", eff.speed)
 	end,
 	callbackOnAct = function(self, eff)
-		if not eff.target or eff.target.dead or game.level.map:hasEntity(eff.target) then
+		if not eff.target or eff.target.dead or game.level:hasEntity(eff.target) then
 			self:removeEffect(self.EFF_OUTRIDER_BEASTMASTER_MARK, true)
 		end
 		self:setTarget(eff.target)
@@ -1151,5 +1128,207 @@ newEffect{
 
 		self:resetCanSeeCacheOf()
 		if self.updateMainShader then self:updateMainShader() end
+	end,
+}
+
+local hotkeySwap = function(self, eff, original_tid, new_tid)
+	if self.hotkey and self.isHotkeyBound then
+		local pos = self:isHotkeyBound("talent", self[original_tid])
+		if pos then
+			self.hotkey[pos] = {"talent", self[new_tid]}
+		end
+	end
+end
+
+newEffect{
+	name = "OUTRIDER_GIBLETS", image = "talents/giblets.png",
+	desc = "Gory Trophy",
+	display_desc = function(self, eff) 
+		if eff.giblets_name then
+			return "Gory Trophy: "..eff.giblets_name:capitalize()
+		else
+			return "Gory Trophy"
+		end
+	end,
+	long_desc = function(self, eff) return ("You've got %s %s! That's absolutely disgusting. But oh, what to do with it?"):format(eff.giblets_name, eff.indefinite_article_form) end,
+	-- old_desc = function(self, eff) return ("The Outrider retains a %s in inventory, a cruel trophy of %s's vivisection"):format(eff.giblets_name, eff.src) end,
+	type = "other",
+	no_remove = true,
+	cancel_on_level_change = true,
+	subtype = { miscellaneous = true },
+	status = "beneficial",
+	parameters = { src=nil, giblets_name="hunk of gore", indefinite_article_form="a", did_kill=false },
+	-- on_gain = function(self, err) return "#Target# indulges in a very strange collecting hobby.", "+Giblets" end,
+	-- on_lose = function(self, err) return "#Target# contemplates a more wholesome hobby, like embroidery.", "-Giblets" end,
+	activate = function(self, eff)
+		if not eff.src then self:removeEffect(eff.effect_id) return end
+
+		local bits = did_kill and {
+			{"%s heart", "a"},
+			{"%s intestines", "some"},
+			{"%s lungs", "some"},
+		} or {
+			{"%s ear", "a"},
+			{"chunk of %s gore", "a"},
+			{"scrap of %s flesh", "a"},
+			{"%s giblets", "some"},
+		}
+
+		local desc = rng.table(bits)
+
+		--This is some powerful procedural generation going on here!
+		local name = src.name
+		if src.unique then name = name.."'s" end
+		
+		eff.giblets_name = (desc[1]):format(src.name)
+		--Do we have a giblet or some giblets?
+		eff.indefinite_article_form = desc[2]
+
+		-- if string.find(desc[1], "%s") then
+		hotkeySwap(self, eff, self.T_OUTRIDER_GORY_SPECTACLE, SELF.T_OUTRIDER_GIBLETS)
+		self:learnTalent(self.T_OUTRIDER_GIBLETS, true, 1, {no_unlearn=true})
+	end,
+	deactivate = function(self, eff)
+		hotkeySwap(self, eff, self.T_OUTRIDER_GORY_SPECTACLE, SELF.T_OUTRIDER_GIBLETS)
+		self:unlearnTalent(self.T_OUTRIDER_GIBLETS, 1, nil, {no_unlearn=true})
+	end,
+}
+
+newEffect{
+	name = "OUTRIDER_ALL_OUT_ATTACK", image = "talents/feigned_retreat.png",
+	desc = "All-Out Attack!",
+	long_desc = function(self, eff) return ("After an all-out retreat, %s deals %d%% additional damage!"):format(self.name, eff.dam_pct) end,
+	type = "physical",
+	subtype = { tactic=true },
+	status = "beneficial",
+	parameters = { dam=1.1, dam_pct=10 },
+	on_gain = function(self, err) return "#Target# suddenly returns to the attack." end,
+	on_lose = function(self, err) return "#Target#'s bonus damage ends." end,
+	activate = function(self, eff)
+		eff.dam_pct = (eff.dam-1) * 100
+		self:effectTemporaryValue(eff, "inc_damage", {all=eff.dam_pct})
+	end,
+
+	deactivate = function(self, eff)
+	end,
+}
+
+newEffect{
+	name = "OUTRIDER_FEIGNED_RETREAT", image="talents/feigned_retreat.png",
+	desc = "Feigned Retreat",
+	long_desc = function(self, eff)
+		local his_her = string.his_her(self)
+		return ("The fighter has executed a feigned retreat against %s and deals %d%% damage in %s first %d attacks after re-initiating combat. If the target is not slain by the user, it will instead take %d more enemy kills to recharge Feigned Retreat." ):
+
+		format(eff.target_name, eff.dam*100, his_her, eff.attacks_no, eff.ct)
+	end,
+	parameters = {target, target_name="the victim", dam=1.1, attacks_no=1, ct=30},
+	charges = function(self, eff) return eff.ct end,
+	type = "other",
+	subtype = { miscellaneous=true },
+	status = "beneficial",
+	decrease = 0, no_remove=true,
+	no_stop_enter_worldmap = true, no_stop_resting = true,
+	callbackOnKill = function(self, eff, victim, death_note)
+		if victim == eff.target then
+			--TOOD: Make this more verbose?
+			self:removeEffect(eff[eff_id], false, true)
+		else
+			eff.ct = eff.ct-1
+			if eff.ct <= 0 then self:removeEffect(eff[eff_id], false, true) end
+		end
+	end,
+	-----------------------------------------------------------
+	--Main effect functionality.
+	--TODO: I need to re-work this to trigger /before/ the hit damage is calculated!
+	doOnAttack = function(self, eff, target)
+		if not eff.attack_done and target == eff.target then
+			if not target:hasEffect(target.EFF_OUTRIDER_FEIGNED_RETREAT_TARGET) then return end
+			self:setEffect(self.EFF_OUTRIDER_ALL_OUT_ATTACK, eff.attacks_no+1, {attacks_no=eff.attacks_no, dam=eff.dam})
+			target:removeEffect(target.EFF_OUTRIDER_FEIGNED_RETREAT_TARGET)
+		end
+		eff.attack_done = true
+	end,
+	callbackOnMeleeAttack = function(self, eff, target, hitted, crit, weapon, damtype, mult, dam, hd)
+		if not eff.attack_done then self:callEffect(self.EFF_OUTRIDER_FEIGNED_RETREAT, "doOnAttack", target) end
+	end,
+	callbackOnArcheryAttack = function(self, eff, target, hitted, crit, weapon, ammo, damtype, mult, dam, talent)
+		if not eff.attack_done then self:callEffect(self.EFF_OUTRIDER_FEIGNED_RETREAT, "doOnAttack", target) end
+	end,
+	-----------------------------------------------------------
+	activate = function(self, eff)
+		assert(eff.target, "No target sent to effect EFF_OUTRIDER_FEIGNED_RETREAT.")
+		eff.target_name = eff.target.name --In case it dies, disappears or horribly mutates
+	end,
+	deactivate = function(self, eff)
+	end,
+}
+
+newEffect{
+	name = "OUTRIDER_FEIGNED_RETREAT_TARGET", image="talents/feigned_retreat.png",
+	desc = "Feigned Reteat (Target)",
+	long_desc = function(self, eff)
+		local his_her = string.his_her(eff.src)
+		local attacks = eff.src_attacks_no > 1 and "attacks" or "attack"
+		return ("%d has used Feigned Retreat on the target and "..his_her.." next %s "..attacks.." will deal %d%% damage. Only killing %d or leaving the level will remove this mark." ):
+		format(eff.src, eff.src_attacks_no, eff.scr_dam, eff.src)
+	end,
+	parameters = {src, src_dam=1.1},
+	type = "other",
+	subtype = { miscellaneous=true },
+	status = "detrimental",
+	decrease = 0, no_remove=true,
+	no_stop_enter_worldmap = true, no_stop_resting = true,
+	callbackOnChangeLevel = function(self, eff)
+		self:removeEffect(self[eff.eff_id], false, true)
+	end,
+	callbackOnActBase = function(self, eff)
+		local src = eff.src
+		if not src or src.dead or not game.level:hasEntity(src) then
+			self:removeEffect(self.EFF_OUTRIDER_FEIGNED_RETREAT_TARGET, false, true)
+		end
+	end,
+	activate = function(self, eff)
+		assert(eff.src, "No source sent to effect EFF_OUTRIDER_FEIGNED_RETREAT.")
+	end,
+	deactivate = function(self, eff)
+	end,
+}
+
+newEffect{
+	name = "OUTRIDER_SPRING_ATTACK_TARGET", image="talents/spring_attack.png",
+	desc = "Feigned Reteat (Target)",
+	long_desc = function(self, eff)
+		local his_her = string.his_her(eff.src)
+		local attacks = eff.src_attacks_no > 1 and "attacks" or "attack"
+		return ("%d has used Spring Attack on the target and "..his_her.." attacks will deal an extra %d%% damage. Only killing %d or leaving the level will remove this effect." ):
+		format(eff.src, eff.scr_dam, eff.src)
+	end,
+	parameters = {src, src_dam=1.1},
+	type = "other",
+	subtype = { miscellaneous=true },
+	status = "detrimental",
+	decrease = 0, no_remove=true,
+	no_stop_enter_worldmap = true, no_stop_resting = true,
+	callbackOnChangeLevel = function(self, eff)
+		self:removeEffect(self[eff.eff_id], false, true)
+	end,
+	callbackOnActBase = function(self, eff)
+		local src = eff.src
+		local src_eff = src and src:hasEffect(src.EFF_OUTRIDER_SPRING_ATTACK) 
+		if not src or src.dead or not game.level:hasEntity(src) or not (src_eff and src_eff.target==self) then
+			self:removeEffect(self.EFF_OUTRIDER_SPRING_ATTACK_TARGET, false, true)
+			return
+		end
+	end,
+	activate = function(self, eff)
+		-- self:effectParticles(eff, type = "spring_attack", args = {})
+		-- eff.particle = self:addParticles(Particles.new("spring_attack", 1, {
+		-- 	base_size = 0.5,
+		-- }))
+		assert(eff.src, "No source sent to effect EFF_OUTRIDER_FEIGNED_RETREAT.")
+		eff.particle = self:addParticles(Particles.new("circle", 1, {base_rot=1, oversize=1, a=200, appear=12, speed=0, img="spring_attack", radius=0}))
+	end,
+	deactivate = function(self, eff)
 	end,
 }
