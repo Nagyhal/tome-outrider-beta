@@ -329,6 +329,13 @@ function _M:knockback(srcx, srcy, dist, recursive, on_terrain)
 	end
 end
 
+function _M:removeTalentTemporaryValues(p)
+	--I'm using pairs so that we really get everything in the __tmpval table.
+	for _, val in pairs(p.__tmpvals) do
+		self:removeTemporaryValue(val[1], val[2])
+	end
+end
+
 function _M:disobedienceChance()
 	local src = self.outrider_pet
 	if not src then return 0 end

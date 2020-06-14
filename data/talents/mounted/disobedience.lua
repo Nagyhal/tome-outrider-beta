@@ -44,15 +44,16 @@ newTalent{
 		--Watch how I've done this, next we check the high threshold
 		if pct >= t.getLoyaltyLowThreshold(self, t) and rng.percent(t.getLoyaltyHighChance(self, t)) then
 			local eff_id = rng.table{
-				"EFF_OUTRIDER_FLITFUL",
-				-- "EFF_OUTRIDER_FLITFUL",
+				"EFF_OUTRIDER_SKITTISH",
+				"EFF_OUTRIDER_RILED_UP",
 				-- "EFF_OUTRIDER_OBSTINATE"
 				}
 			self:setEffect(eff_id, 5, {})
 		--And then the low.
 		elseif rng.percent(t.getLoyaltyLowChance(self, t)) then
 			local eff_id = rng.table{
-				"EFF_OUTRIDER_FLITFUL",
+				"EFF_OUTRIDER_SKITTISH",
+				"EFF_OUTRIDER_RILED_UP",
 				-- "EFF_OUTRIDER_FRENZIED",
 				-- "EFF_OUTRIDER_TERROR-STRICKEN",
 				-- "EFF_OUTRIDER_DEFIANT"
@@ -82,7 +83,7 @@ newTalent{
 
 		return ([[Bestial mounts are wilful and not easily tamed. Moreover, their tamer must learn to survive by instilling constant mutual respect.
 
-			In combat, when your beast's Loyalty reserves are below %d%%, once per turn after taking damage it has a %d%% chance to turn either Riled Up, Flitful or Obstinate #RED#(DEBUG: Obstinate not yet implemented)#LAST#. 
+			In combat, when your beast's Loyalty reserves are below %d%%, once per turn after taking damage it has a %d%% chance to turn either Riled Up, Skittish or Obstinate #RED#(DEBUG: Obstinate not yet implemented)#LAST#. 
 
 			If your beast's Loyalty to you is below %d%%, the effects are more serious: It has a %d%% chance to become Frenzied, Terror-Stricken or Defiant. These effects are stronger versions of the above effects and will override them when they occur.
 

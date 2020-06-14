@@ -49,22 +49,22 @@ newEffect{
 }
 
 newEffect{
-	name = "OUTRIDER_FLITFUL", image = "talents/panic.png",
-	desc = "Flitful",
-	long_desc = function(self, eff) return ("The beast has become flitful and has a %d%% chance to flee in terror instead of acting."):format(eff.chance) end,
+	name = "OUTRIDER_SKITTISH", image = "talents/panic.png",
+	desc = "Skittish",
+	long_desc = function(self, eff) return ("The beast has become skittish and has a %d%% chance to flee in terror instead of acting."):format(eff.chance) end,
 	type = "mental",
 	lists = "outrider_disobedience",
 	subtype = { fear=true },
 	status = "detrimental",
 	parameters = {chance=33},
-	on_gain = function(self, err) return "#F53CBE##Target# becomes flitful!", "+Flitful" end,
-	on_lose = function(self, err) return "#Target# is no longer flitful", "-Flitful" end,
+	on_gain = function(self, err) return "#F53CBE##Target# becomes skittish!", "+Skittish" end,
+	on_lose = function(self, err) return "#Target# is no longer skittish", "-Skittish" end,
 	activate = function(self, eff)
 		self:effectTemporaryValue(eff, "terrified", eff.chance)
-		self:addShaderAura("flitful", "awesomeaura", {time_factor=4000, alpha=0.6,  flame_scale=0.9}, "particles_images/coldwings.png")
+		self:addShaderAura("skittish", "awesomeaura", {time_factor=4000, alpha=0.6,  flame_scale=0.9}, "particles_images/coldwings.png")
 	end,
 	deactivate = function(self, eff)
-		self:removeShaderAura("flitful")
+		self:removeShaderAura("skittish")
 	end,
 }
 

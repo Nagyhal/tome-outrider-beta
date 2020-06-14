@@ -49,14 +49,14 @@ newAI("pet_behaviour", function(self)
 	local target = getLiveAITarget(self)
 	local mover = self:getRider() or self
 
-	local flitful = self:hasEffect(self.EFF_OUTRIDER_FLITFUL)
+	local skittish = self:hasEffect(self.EFF_OUTRIDER_SKITTISH)
 	local riled_up = self:hasEffect(self.EFF_OUTRIDER_RILED_UP) 
 	--@todo local obstinate = self:hasEffect(self.EFF_OUTRIDER_OBSTINATE) 
 	--@todo local frenzied = self:hasEffect(self.EFF_OUTRIDER_FRENZIED) 
 	--@todo local terror_stricken = self:hasEffect(self.EFF_OUTRIDER_TERROR_STRICKEN) 
 
-	if target and flitful then
-		if rng.percent(flitful.chance) then
+	if target and skittish then
+		if rng.percent(skittish.chance) then
 			--Flee from target
 			--@todo Consider also "FLEE"-type talents
 			game.logSeen(

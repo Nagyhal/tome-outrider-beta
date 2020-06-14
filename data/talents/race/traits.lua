@@ -222,3 +222,84 @@ newTalent{
 	getSpeed = function(self, t) return self:combatTalentScale(t, .15, .3) end,
 	getDur = function(self, t) return self:combatTalentScale(t, 3, 6) end,
 }
+
+newTalent{
+	name = "High Back",
+	short_name = "OUTRIDER_TRAIT_HIGH_BACK", image = "talents/trait_high_back.png",
+	type = {"race/traits", 1},
+	mode = "passive",
+	points = 5,
+	hide = true,
+	callbackOnMount = function(self, t)
+		self:updateTalentPassives(t.id)
+	end,
+	callbackOnDismount = function(self, t)
+		self:updateTalentPassives(t.id)
+	end,
+	-- @todo Implement this properly, i.e. share it with the rider.
+	passives = function(self, t, p)
+		if self:isMounted() then
+			self:talentTemporaryValue(p, "combat_atk_ranged", t.getDam(self, t))
+			self:talentTemporaryValue(p, "combat_def", t.getDef(self, t))
+			self:talentTemporaryValue(p, "sight", t.getSight(self, t))
+		else
+			--This is a special Nagyhal function to make code simpler and cleaner
+			self:removeTalentTemporaryValues(p)
+		end
+	end,
+	info = function(self, t)
+		local dam_pct = t.getDam(self, t)*100
+		local def = t.getDef(self, t)
+		local sight = t.getSight(self, t)
+		return ([[This beast's back is high, seating you a fair bit higher than average; gain %d%% ranged weapon damage, %d defense and %d extra sight distance while riding your beast.]]):
+		format(dam_pct, def, sight)
+	end,
+	getDam = function(self, t) return self:combatTalentScale(t, .05, .11) end,
+	getDef = function(self, t) return self:combatTalentScale(t, 7, 19) end,
+	getSight = function(self, t) return self:getTalentLevelRaw(t) < 5 and 1 or 2 end,
+}
+
+-- @todo : Actually implement this
+newTalent{
+	name = "Aspect of Tyranny",
+	short_name = "OUTRIDER_TRAIT_ASPECT_OF_TYRANNY", image = "talents/trait_aspect_of_tyranny.png",
+	type = {"race/traits", 1},
+	mode = "passive",
+	points = 5,
+	hide = true,
+	passives = function(self, t, p)
+		self:talentTemporaryValue(p, "tyrannical_aspect", {t.getDur(self, t), t.getChance(self, t)})
+		self:talentTemporaryValue(p, "crit_vs_mental", t.getDef(self, t))
+	end,
+	info = function(self, t)
+		local dur = t.getDur(self, t)
+		local chance = t.getChance(self, t)
+		local crit_pct = t.getCritPct(self, t)
+		return ([[Your beast's character is cruel, with a streak of tyranny about it; it was born to menace and bully. If you use Tyranny of Steel while riding, your knockback effect gains an extra 1 radius. In addition, you'll frighten all targeted foes for %d turns, causing them to run away each turn (%d%% chance.) Your beast also gains an extra %d%% to crit against foes suffering a mental detrimental effect.]]):
+		format(dur, chance, crit_pct)
+	end,
+	getDur = function(self, t) return self:combatTalentScale(t, 2, 5) end,
+	getChance = function(self, t) return self:combatTalentLimit(t, 50, 30, 43) end,
+	getCritPct = function(self, t) return  self:combatTalentLimit(t, 20, 5, 8) end,
+}
+
+-- @todo : Actually implement this
+newTalent{
+	name = "Savage Acrobat",
+	short_name = "OUTRIDER_TRAIT_SAVAGE_ACROBAT", image = "talents/trait_savage_acrobat.png",
+	type = {"race/traits", 1},
+	mode = "passive",
+	points = 5,
+	hide = true,
+	passives = function(self, t, p)
+		self:talentTemporaryValue(p, "savage_acrobat", t.getDamPct(self, t))
+	end,
+	info = function(self, t)
+		local chance = t.getChance(self, t)
+		local dam_pct = t.getDamPct(self, t)
+		return ([[Your pet's bloodlust inspires a fearsome agility. When you use Savage Bound, you have a %d%% chance to reduce the cooldown by half. Also, your pet's Savage Bound, Run Them Down and Let 'Em Have It attacks increase in damage by %d%%.]]):
+		format(chance, dam_pct)
+	end,
+	getChance = function(self, t) return self:combatTalentLimit(t, 90, 20, 65) end,
+	getDamPct = function(self, t) return  self:combatTalentLimit(t, 220, 80, 150) end,
+}

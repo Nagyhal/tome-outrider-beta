@@ -291,50 +291,56 @@ local rules = {
 --- Create a dialog where the player can choose from generated mount names.
 -- @todo Make a new dialog type so we can have the mount icon displayed
 function doGeneratedNamesDialog(self, pet)
-	local Dialog = require "engine.ui.Dialog"
-	local NameGenerator = require("engine.NameGenerator")
-	local ng = NameGenerator.new(rules)
-
-	-- local str = [[]]
-	--We'll use patterns to make short names more interesting.
-	local patterns = {"The %s", "%s of the %s", "Big %s", "%s %s", "Mister %s", "%s Wolf", "The Great %s", "%s of %s"}
-
-	local function generateButtons()
-		local buttons = {}
-		for i = 1, 5 do
-			--Simply get and capitalize the basic generated name.
-			local name = (ng:generate()):capitalize()
-
-			--If the name is very short, we'll add a pattern to it to make it funkier.
-			if #name<=5 or (#name==6 and rng.percent(50)) then
-				local pattern = rng.table(patterns)
-				name = (pattern):format(name, (ng:generate()):capitalize())
-			end
-
-			--Now that we we have a name, generate a button for it!
-			buttons[#buttons+1] = {
-				name=name, 
-				fct=function(n) 
-					pet.name = name
-					pet.changed = true
-					return
-				end}
-		end
-		buttons[#buttons+1] = {
-			name="Try again", 
-			fct=function(n)
-				doGeneratedNamesDialog(self, pet)
-				return
-			end}
-		return buttons
-	end
-
-	return Dialog:multiButtonPopup(
-		("Choose a name for your %s!"):format(pet.original_name),
-		[[You dive deep into your memory, searching for a name which evokes courage, power and sheer domination. Which will it be? Remember, you can change or edit this choice afterward.]],
-		generateButtons()
-	)
+	local PetNameGenerator = require "mod.dialogs.PetNameGenerator"
+	local ds = PetNameGenerator:petNameGeneratorDialog(self, pet)
+	-- game:registerDialog(ds)
 end
+
+-- function doGeneratedNamesDialog(self, pet)
+-- 	local Dialog = require "engine.ui.Dialog"
+-- 	local NameGenerator = require("engine.NameGenerator")
+-- 	local ng = NameGenerator.new(rules)
+
+-- 	-- local str = [[]]
+-- 	--We'll use patterns to make short names more interesting.
+-- 	local patterns = {"The %s", "%s of the %s", "Big %s", "%s %s", "Mister %s", "%s Wolf", "The Great %s", "%s of %s"}
+
+-- 	local function generateButtons()
+-- 		local buttons = {}
+-- 		for i = 1, 5 do
+-- 			--Simply get and capitalize the basic generated name.
+-- 			local name = (ng:generate()):capitalize()
+
+-- 			--If the name is very short, we'll add a pattern to it to make it funkier.
+-- 			if #name<=5 or (#name==6 and rng.percent(50)) then
+-- 				local pattern = rng.table(patterns)
+-- 				name = (pattern):format(name, (ng:generate()):capitalize())
+-- 			end
+
+-- 			--Now that we we have a name, generate a button for it!
+-- 			buttons[#buttons+1] = {
+-- 				name=name, 
+-- 				fct=function(n) 
+-- 					pet.name = name
+-- 					pet.changed = true
+-- 					return
+-- 				end}
+-- 		end
+-- 		buttons[#buttons+1] = {
+-- 			name="Try again", 
+-- 			fct=function(n)
+-- 				doGeneratedNamesDialog(self, pet)
+-- 				return
+-- 			end}
+-- 		return buttons
+-- 	end
+
+-- 	return Dialog:multiButtonPopup(
+-- 		("Choose a name for your %s!"):format(pet.original_name),
+-- 		[[You dive deep into your memory, searching for a name which evokes courage, power and sheer domination. Which will it be? Remember, you can change or edit this choice afterward.]],
+-- 		generateButtons()
+-- 	)
+-- end
 
 function doHowToTrainYourMountDialog(self, pet)
 	Dialog:yesnoLongPopup("Your beast gains in prowess...",

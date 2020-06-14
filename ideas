@@ -1,24 +1,15 @@
-
-• Make the game work.
-• Test the whole of our "Dreadful Onset" talent category
-• Then go for Mounted Archery. It's fun and easy!
-
----------------------------------------------------------------------------
 Coding resolutions:
 
 ○ Make use of 'assert'
 ○ Use modules and helper files, but know how Lua handles this
 ○ Learn about how debug, xpcall, etc. work and how to use them
-○ Study the runic tomes of grayswandir and see if you can come up with a more unified strategy for extending ToME.
 
 ------------------------------------------------------------------------------
 
 IDEAS ZONE: Maybe Challenge the Wilds beasts could run away when damaged / panicked?
 
-Things not to forget (Thu.):
+Things not to forget:
 
-• What do we call mounted weaponry? Mounted Weapons or Cavalry Weapons or Riding Weapons
-• ...and think about if we ought to do the same for ranged weaponry?
 • The Skykraken - tentacle tail, water spray, smash through terrain, steam
 	(...maybe it can switch through a few different attacks based on a number of elemental drake classics)
 • Animal Affinity as a prodigy?
@@ -39,7 +30,6 @@ Things not to forget (Thu.):
 • Ogre mounts : The hoar spider, mammoth & direwolf
 • Halflings in treants can't shoot, treant moves slow but has root, fun had by all
 • Icons : Giblets for Gory Spectacle
-• Rename "Mounted Archery" to something else
 • Think about Challenge the Wilds
 • Spring Attack: A simple attack, ranged or melee, which switches to ranged, jumps back a square or two, and sets the Spring Attack bonus as currently implemented. THEN, you need some kind of indicator or feedback for the player so that they realize Spring Attack hits are indeed more powerful - but what can it be? A movement slow? Lost turns for the enemy on hit? Gained turns for the player? I dunno!
 • Mounted Archery should be an effect, and anyway
@@ -64,14 +54,53 @@ What is needed for a "polish pass" on all known talents?
 
 --------------------------------------------------------
 
-• How can you tighten up & re-organize all this code?
-• Look at greyswandir's ancient magic runes again
-• Comment and clean the code in mounted-mobility - rundown_block_path -- I don't understand this!
-• Likewise, is_corner_blocked in mounted-mobility - what is this about?
-• Think about "temporary talents" and "temporary particles"
-
-	--TODO: Could add an unusual element where knockback is a function of number of hits
-	--Or that only creatures knocked back are hit.
-	--Sounds good to me and differentiates it well from Repulsion
-
 Shader: Shield shatter!
+
+--------------Notes-----------------
+
+MASTER OF BRUTALITY-multi-tiered passive approach
+
+TL 1. Outrider also gains % damage from weapon mastery to bows
+TL 2. 7% extra crit chance, up to 1 mental effect
+TL 3. Your mount shares the bonus
+TL 4. Up to 2 effects, +5%
+TL 5. Up to 3, +5%, halved with arrows
+
+
+uis[#uis+1] = {right=0, top=0, ui=ActorFrame.new{actor=self.npc.chat_display_entity or self.npc, w=64, h=64}}
+
+--------------------------------------------------------
+caring for your AI
+
+imbue all talents with
+
+requires_target
+ai_level
+a proper AI wants table
+onAIGetTarget and on_pre_use_ai when needed
+(call.lua has a good healing script)
+drain_stamina for things like Mounted Archery
+
+local within_range = target_dist and target_dist <= ((self:getTalentRange(t) or 0) + (self:getTalentRadius(t) or 0))
+	^
+	| 
+   check that this is honest for all of your talents
+
+
+
+
+----------------------------
+Problems in the AI code;
+
+aiSeeTargetPos:
+canSee() can update a bit too harshly counter to stealth
+a max_spread of 10 when the player teleports across the map is far too weak
+"spreads" at line 275 is never previously referenced so it will always max at 1
+
+_M.aiSubstDamtypes = {
+		...
+		if self:attr("warden_swap") then
+			mh, oh = self.main_env.doWardenPreUse(self, "dual", true)
+		end
+
+
