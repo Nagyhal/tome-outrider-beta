@@ -8,7 +8,7 @@ function initState(state)
 end
 
 newDamageType{
-	name = "nature blind", type = "NATURE_BLIND", text_color = "#GREEN#",
+	name = "nature blind", type = "OUTRIDER_NATURE_BLIND", text_color = "#GREEN#",
 	projector = function(src, x, y, damtype, dam, state)
 		local useImplicitCrit = engine.DamageType.useImplicitCrit
 		-- local initState = engine.DamageType.initState
@@ -30,7 +30,7 @@ newDamageType{
 }
 
 newDamageType{
-	name = "test of mettle", type = "TEST_OF_METTLE",
+	name = "test of mettle", type = "OUTRIDER_TEST_OF_METTLE",
 	projector = function(src, x, y, damtype, dam, state)
 		local useImplicitCrit = engine.DamageType.useImplicitCrit
 		-- local initState = engine.DamageType.initState

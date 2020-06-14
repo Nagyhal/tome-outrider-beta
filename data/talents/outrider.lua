@@ -26,7 +26,7 @@ util.load_lua_dir("/data-outrider/talents/helpers/", dofile)
 newTalentType{ allow_random=true, type="mounted/mounted-base", name = "mounted - base", description = "Basic mount abilities"}
 newTalentType{ allow_random=true, type="mounted/disobedience", name = "disobedience", description = "Commanding wild beasts requires a strong will and a steady hand; without these, you look just as much like prey as any enemy."}
 newTalentType{ allow_random=true, type="mounted/bestial-dominion", name = "bestial dominion", description = "Exercise your dominion over the wild beasts of Maj'Eyal."}
-newTalentType{ allow_random=true, type="mounted/mounted-mobility", name = "mounted mobility", generic = true, description = "Wresting mastery over your fleet-pawed steed, you leave slower foes bleeding in the dust."}
+newTalentType{ allow_random=true, type="mounted/mounted-mobility", name = "mounted mobility", generic = true, description = "Leave puny foot-soldiers bleeding in the dust."}
 newTalentType{ allow_random=true, type="mounted/teamwork", name = "teamwork", description = "Wresting mastery over your fleet pawed steed, you dance the last dance with those not quick enough to match you."}
 newTalentType{ allow_random=true, type="mounted/skirmish-tactics", name = "skirmish tactics", description = "Beside your beast, not even the winds can outpace you; atop it, not even the sky can outreach your aim."}
 newTalentType{ allow_random=true, type="mounted/barbarous-combat", name = "barbarous combat", description = "Mounted or afoot, your brutal blademastery shall ravage legions."}

@@ -42,7 +42,7 @@ function jumpTargetTo(self, x, y)
 
 	--Go to a nearby space if this one is taken.
 	if actor or feat and feat:check(block_move) then 
-		x, y = util.findFreeGrid(x, y, 1, true, {[engine.Map.ACTOR]=true, [engine.Map.TERRAIN]=true})
+		x, y = util.findFreeGrid(x, y, 1, true, {[engine.Map.ACTOR]=true})
 		if not x then return nil end
 	end 
 

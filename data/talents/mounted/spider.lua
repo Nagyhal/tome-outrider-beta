@@ -179,7 +179,7 @@ newTalent{
 		local tg = self:getTalentTarget(t)
 		local x, y = self:getTarget(tg)
 		if not x or not y then return nil end
-		self:projectile(tg, x, y, DamageType.NATURE_BLIND, {dam=self:mindCrit(t.getDam(self, t)), dur=t.getEffDur(self, t), {type="slime"}})
+		self:projectile(tg, x, y, DamageType.OUTRIDER_NATURE_BLIND, {dam=self:mindCrit(t.getDam(self, t)), dur=t.getEffDur(self, t), {type="slime"}})
 		game:playSoundNear(self, "talents/slime")
 		return true
 	end,

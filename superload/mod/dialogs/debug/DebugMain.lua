@@ -19,8 +19,8 @@
 
 local _M = loadPrevious(...)
 
-local Talents = require ("engine.interface.ActorTalents")
-
+local Talents = require "engine.interface.ActorTalents"
+local ActorAI = require "engine.interface.ActorAI"
 
 --Generate a new mount
 ----------------------
@@ -91,6 +91,13 @@ local function tryReloadTalents(tt)
 	end
 end
 
+local function reloadPetAI()
+	ActorAI.ai_def.outrider_pet = nil
+	ActorAI.ai_def.target_mount = nil
+	ActorAI:loadDefinition("/data-outrider/ai/")
+
+end
+
 local function reloadTalents()
 	--Which talents are lurking outside of their proper categories?
 	local base_talents = {
@@ -127,6 +134,16 @@ end)
 
 _M:bindHook("DebugMain:generate", function(self, data)
 	data.menu[#data.menu+1] = {name="Outrider: Reload all outrider talents (warning: unsafe!)", action="outrider-reload-player-talents"}
+end)
+
+_M:bindHook("DebugMain:use", function(self, data)
+	if data.act == "outrider-reload-pet-AI" then
+		reloadPetAI()
+	end
+end)
+
+_M:bindHook("DebugMain:generate", function(self, data)
+	data.menu[#data.menu+1] = {name="Outrider: Reload pet AI", action="outrider-reload-pet-AI"}
 end)
 
 return _M

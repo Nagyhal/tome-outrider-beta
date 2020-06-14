@@ -50,3 +50,12 @@ function util.findFreeGridsWithin(grids, sx, sy, block, what)
 --	print("findFreeGrid using", gs[1][1], gs[1][2])
 	return gs[1][1], gs[1][2], gs
 end
+
+util.hotkeySwap = function(self, original_tid, new_tid)
+	if self.hotkey and self.isHotkeyBound then
+		local pos = self:isHotkeyBound("talent", self[original_tid])
+		if pos then
+			self.hotkey[pos] = {"talent", self[new_tid]}
+		end
+	end
+end

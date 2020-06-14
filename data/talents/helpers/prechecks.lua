@@ -28,6 +28,14 @@ function preCheckIsMounted(self, t, silent, fake)
 	end
 end
 
+function preCheckIsNotMounted(self, t, silent, fake)
+	if not self:isMounted() then return true
+	else
+		if not silent then game.logPlayer(self, "You can't be riding your mount if you want to do that!") end
+		return false
+	end
+end
+
 function preCheckHasMount(self, t, silent, fake)
 	if self:hasMount() then return true
 	else

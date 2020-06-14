@@ -41,13 +41,22 @@ function _M:isMounted()
 	if mount and self:hasEffect(self.EFF_OUTRIDER_MOUNT) then return true else return false end
 end
 
+function _M:isRidden()
+	if self:hasEffect(self.EFF_OUTRIDER_RIDDEN) then return true else return false end
+end
+
+function _M:getRider()
+	local p = self:hasEffect(self.EFF_OUTRIDER_RIDDEN)
+	if p then return p.rider else return nil end
+end
+
 function _M:getMount()
 	if self:isMounted() then return self.mount else return nil end
 end
 
 function _M:getOutriderPet()
 	local pet = self.outrider_pet
-	if pet and not pet.dead and game.level:hasEntity(pet) then return pet end
+	if pet and not pet.dead and (self:isMounted() or game.level:hasEntity(pet)) then return pet end
 end
 
 function _M:canMount(mount)
@@ -120,7 +129,10 @@ end
 --Should be just a _M:dismount
 function _M:dismount(x, y, silent)
 	local mount = self:getMount()
-	if not self:isMounted() or not mount then if not silent then game.logPlayer(self, "You're not mounted!") return false end end
+	if not self:isMounted() or not mount then
+		if not silent then game.logPlayer(self, "You're not mounted!") end
+		return false
+	end
 	if not mount.dead and (not x or not y) or (x==mount.x and y==mount.y) then
 		x, y = util.findFreeGrid(self.x, self.y, 10, true, {[engine.Map.ACTOR]=true})
 	end
@@ -193,10 +205,13 @@ function _M:learnPool(t)
 end
 
 function _M:moveDragged(x, y, force)
+	self.dragged_entities = self.dragged_entities or {}
+	if #self.dragged_entities == 0 then return true end
+
 	if self.x and self.y then
 		local dx, dy = x-self.x, y-self.y
 		local sequence = {}
-		for e, _ in pairs(self.dragged_entities or {}) do
+		for e, _ in pairs(self.dragged_entities) do
 			local blocking = game.level.map:checkAllEntitiesLayersNoStop(e.x+dx, e.y+dy, "block_move", e)
 			for t, v in pairs(blocking) do
 				local ee =t[2]
@@ -234,11 +249,8 @@ function _M:move(x, y, force)
 		mount:useEnergy(energy_diff*factor)
 		--Quick hack while I work on multi-occupant tiles.
 		mount:doFOV()
-		--Let the mount get targets and use instant-activate abilities, as if it had had a turn.
+		--Let the mount get targets while riding.
 		mount:runAI("target_mount")
-		while mount:enoughEnergy() do
-			mount:doAI()
-		end
 	end
 	return ret
 end
@@ -369,6 +381,13 @@ function _M:loyaltyCheck(pet, silent)
 		return true
 	end
 end
+
+--Useful debugging function, saved for later.
+-- local base_callTalent = _M.callTalent
+-- function _M:callTalent(tid, name, ...)
+-- 	game.log (format("DEBUG: tid=%s, name=%s", tostring(tid), tostring(name)) )
+-- 	return base_callTalent(self, tid, name, ...)
+-- end
 
 _M.sustainCallbackCheck.callbackOnMount = "talents_on_mount"
 _M.sustainCallbackCheck.callbackOnDismount = "talents_on_dismount"

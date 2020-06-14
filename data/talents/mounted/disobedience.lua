@@ -44,7 +44,7 @@ newTalent{
 		--Watch how I've done this, next we check the high threshold
 		if pct >= t.getLoyaltyLowThreshold(self, t) and rng.percent(t.getLoyaltyHighChance(self, t)) then
 			local eff_id = rng.table{
-				"EFF_OUTRIDER_RILED_UP",
+				"EFF_OUTRIDER_FLITFUL",
 				-- "EFF_OUTRIDER_FLITFUL",
 				-- "EFF_OUTRIDER_OBSTINATE"
 				}
@@ -52,7 +52,7 @@ newTalent{
 		--And then the low.
 		elseif rng.percent(t.getLoyaltyLowChance(self, t)) then
 			local eff_id = rng.table{
-				"EFF_OUTRIDER_RILED_UP",
+				"EFF_OUTRIDER_FLITFUL",
 				-- "EFF_OUTRIDER_FRENZIED",
 				-- "EFF_OUTRIDER_TERROR-STRICKEN",
 				-- "EFF_OUTRIDER_DEFIANT"
@@ -69,10 +69,10 @@ newTalent{
 		return 25
 	end,
 	getLoyaltyHighChance = function(self, t)
-		return 10
+		return 25
 	end,
 	getLoyaltyLowChance = function(self, t)
-		return 15
+		return 35
 	end,
 	info = function(self, t)
 		local loyalty_high_threshold = t.getLoyaltyHighThreshold(self, t)

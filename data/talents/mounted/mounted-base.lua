@@ -38,11 +38,10 @@ newTalent{
 			return self:callTalent(self.T_OUTRIDER_MOUNTED_ACROBATICS, "range")
 		else return 1 end
 	end,
-	on_pre_use = function(self, t)
-		if self:isMounted() or not self:hasMount() then
-			return false
-		else return true
-		end
+	on_pre_use = function(self, t, silent, fake)
+		return preCheckHasMount(self, t, silent, fake) and 
+			preCheckIsNotMounted(self, t, silent, fake) and
+			preCheckHasMountInRange(self, t, silent, fake, 1)
 	end,
 	action = function(self, t)
 		if not self:hasMount() then game.logPlayer(self, "You have no mount!") return nil end
@@ -54,8 +53,8 @@ newTalent{
 		local m = self:getOutriderPet()
 		if m and core.fov.distance(m.x, m.y, self.x, self.y) <= self:getTalentRange(t) then tg = m
 		else
-			target = {type="hit", range=self:getTalentRange(t), talent=t, first_target="friend", default_target=(#m_list==1 and m_list[1])or nil}
-			_, _, tg = self:getTarget(target)
+			-- target = {type="hit", range=self:getTalentRange(t), talent=t, first_target="friend", default_target=(#m_list==1 and m_list[1])or nil}
+			-- _, _, tg = self:getTarget(target)
 		end
 		-- end
 		if not tg then

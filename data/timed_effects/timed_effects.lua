@@ -26,9 +26,19 @@ newEffect{
 	decrease = 0, no_remove=true,
 	no_stop_enter_worldmap = true, no_stop_resting = true,
 	parameters = {mount},
-	on_timeout = function(self, eff)
+	checkMount = function(self, eff)
 		if not eff.mount or eff.mount.dead or not eff.mount:hasEffect(eff.mount.EFF_OUTRIDER_RIDDEN) then
 			self:removeEffect(self.EFF_OUTRIDER_MOUNT, false, true)
+		end
+	end,
+	on_timeout = function(self, eff, ed) ed.checkMount(self, eff) end,
+	callbackOnActBase = function(self, eff)
+		local ed = self:getEffectFromId(eff.effect_id)
+		ed.checkMount(self, eff)
+
+		eff.mount:runAI("pet_behaviour")
+		while eff.mount:enoughEnergy() do
+			eff.mount:doAI()
 		end
 	end,
 	activate = function(self, eff, ed)

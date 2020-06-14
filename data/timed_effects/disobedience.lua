@@ -27,17 +27,24 @@ newEffect{
 	-- lists = "outrider_disobedience",
 	subtype = { fear=true, disobedience=true },
 	status = "detrimental",
-	parameters = {chance=20},
+	parameters = {chance=50},
+	callbackOnActBase = function(self, eff)
+		if eff.target then
+			if eff.target.dead or not game.level:hasEntity(eff.target) then
+				eff.target = nil
+				self:runAI("target_mount")
+				eff.target = table.get(self.ai_target, "actor")
+			end
+		end
+	end,
 	on_gain = function(self, err) return "#F53CBE##Target# becomes riled up!", "+Riled Up" end,
 	on_lose = function(self, err) return "#Target# is no longer riled up", "-Riled Up" end,
-	callbackOnActBase = function(self, eff)
-
-	end,
+	--Logic is handled in the AI
 	activate = function(self, eff)
-		eff.particlesId = self:addParticles(Particles.new("fear_violet", 1))
+		self:addShaderAura("riled_up", "awesomeaura", {time_factor=4000, alpha=0.65,  flame_scale=1.1}, "particles_images/bloodwings.png")
 	end,
 	deactivate = function(self, eff)
-		self:removeParticles(eff.particlesId)
+		self:removeShaderAura("riled_up")
 	end,
 }
 
@@ -49,56 +56,15 @@ newEffect{
 	lists = "outrider_disobedience",
 	subtype = { fear=true },
 	status = "detrimental",
-	parameters = {chance=20},
+	parameters = {chance=33},
 	on_gain = function(self, err) return "#F53CBE##Target# becomes flitful!", "+Flitful" end,
 	on_lose = function(self, err) return "#Target# is no longer flitful", "-Flitful" end,
 	activate = function(self, eff)
-		eff.particlesId = self:addParticles(Particles.new("fear_violet", 1))
+		self:effectTemporaryValue(eff, "terrified", eff.chance)
+		self:addShaderAura("flitful", "awesomeaura", {time_factor=4000, alpha=0.6,  flame_scale=0.9}, "particles_images/coldwings.png")
 	end,
 	deactivate = function(self, eff)
-		self:removeParticles(eff.particlesId)
-	end,
-	do_act = function(self, eff)
-		if not self:enoughEnergy() then return nil end
-		if eff.src.dead then return true end
-
-		if rng.percent(eff.chance) then
-			local distance = core.fov.distance(self.x, self.y, eff.src.x, eff.src.y)
-			if distance <= eff.range then
-				-- in range
-				if not self:attr("never_move") then
-					local sourceX, sourceY = eff.src.x, eff.src.y
-
-					local bestX, bestY
-					local bestDistance = 0
-					local start = rng.range(0, 8)
-					for i = start, start + 8 do
-						local x = self.x + (i % 3) - 1
-						local y = self.y + math.floor((i % 9) / 3) - 1
-
-						if x ~= self.x or y ~= self.y then
-							local distance = core.fov.distance(x, y, sourceX, sourceY)
-							if distance > bestDistance
-									and game.level.map:isBound(x, y)
-									and not game.level.map:checkAllEntities(x, y, "block_move", self)
-									and not game.level.map(x, y, Map.ACTOR) then
-								bestDistance = distance
-								bestX = x
-								bestY = y
-							end
-						end
-					end
-
-					if bestX then
-						self:move(bestX, bestY, false)
-						game.logPlayer(self, "#F53CBE#You panic and flee from %s.", eff.src.name)
-					else
-						self:logCombat(eff.src, "#F53CBE##Source# panics but fails to flee from #Target#.")
-						self:useEnergy(game.energy_to_act * self:combatMovementSpeed(bestX, bestY))
-					end
-				end
-			end
-		end
+		self:removeShaderAura("flitful")
 	end,
 }
 

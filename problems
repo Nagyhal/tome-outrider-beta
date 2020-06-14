@@ -1,0 +1,11 @@
+implementation problems
+
+Flitful -- how to flee for more than 1 turn?
+Disobedience in general -- how to temporarily alter ai wants?
+Mounted Archery -- how to handle archery shooting speed vs movement speed? (possibly the same way as you do mounts)
+
+talent design problems
+
+Master of Brutality -- how can I make it more of an attractive option to 1st level adventurers?
+	... what is it for? melee whackers? It's to add APR to help make melee 1-handers feel better ... and disincentivize 2handers, mainly
+	the fact you have no mental debuffs in the first tier is a big problem also, which you've tried to mitigate with the hunting horn

@@ -21,7 +21,7 @@ Our Sublime Shaolin Training (5 days):
   ☐ Try and understand aiTalentTactics in mod.class.interface.ActorAI, the last (very big) function
 
 
-Testing & balance of talent categories, part 1 :
+Testing & balance of talent categories, part 1 : 
   ✔ Really try and piece apart this Disengage code. You can make at least a couple of generic functions from this. @done (20-05-30 11:23)
   ✔ Mounted Mobility is looking beautiful @done (20-05-30 01:04)
   ✔ Write the new Brazen Charge @done (20-05-30 12:01)
@@ -47,13 +47,21 @@ Part the second (till the end of the week):
   ✔ Dismount @done (20-06-06 11:52)
   ✘ add eid to canBe (Necessary only on checks; prefer cleaner code) @cancelled (20-06-06 11:57)
   ✘ Refactor anything else you can find. (Doing this later, need a break!) @cancelled (20-06-06 11:59)
-  ☐ Do you want to name your pet dialog?  
+  ✔ Hunting Horn icon @done (20-06-14 02:25)
+  ✔ Do you want to name your pet dialog? (maybe I'll do this later, seems like overkill... nah, let's do it NOW!) @done (20-06-14 02:25)
+  ✔ Pet has gained talents dialog @done (20-06-14 02:25)  
+
+  ☐ Change Flitful to Skittish  
+  ☐ Change Flitful to Skittish  
+  ☐ Polish the new dialogs  
+  ☐ Challenge the Wilds graphics and dialog and re-write  
+  ☐ If need be, look into shaders as well as particle effects  
   ☐ Daze added to Run Them Down!
   ☐ Impalement should use proper project-line-continuing logic & could be longer
   ☐ Beastmark : Instead of "holding it back", make it move!
   ☐ Why can't you pin Shivgoroths? Ahhh! Remove the fly and levitation. But in what order?
   ☐ Sort out the helper functions and make a preCheckCanMove which includes the mount
-  ☐ Add Loyalty restore to infusions...?
+  ☐ Add Loyalty restore to infusions...? ...or to pet kills?
   ☐ Make Fatigue work alright
   ☐ Update shared_talent to work with a table
 
@@ -87,3 +95,6 @@ Talent code polish-up (2 days):
 Playtest ^e^ (3 days):
   ☐ Have fun. Get it out there!
   ☐ Icons re-touch as you do this.
+
+Big problems:
+   Upvalues in the needed functions. How to load without them?

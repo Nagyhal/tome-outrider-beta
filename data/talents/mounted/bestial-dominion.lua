@@ -162,6 +162,8 @@ function befriendMount(self, m)
 	m.owner = self
 	m.summoner= self
 	m.summoner_gain_exp = true
+	m.original_name = m.name
+	m.name = m.name.." (mount of "..self.name..")"
 	-- Summons never flee
 	m.ai_tactic.escape = 0
 	m.ai_state = m.ai_state or {}
@@ -188,6 +190,8 @@ function befriendMount(self, m)
 	if self:isQuestStatus("outrider-start", engine.Quest.PENDING) then
 		self:setQuestStatus("outrider-start", engine.Quest.COMPLETED)
 	end
+
+	util.hotkeySwap(self, "T_OUTRIDER_CHALLENGE_THE_WILDS", "T_OUTRIDER_MOUNT")
 end
 
 --TODO: Rewrite this function completely. Snapshotting is bad, very bad!
@@ -242,6 +246,105 @@ function debugGenerateNewMount(self)
 	end
 end
 
+---------------------------------------------------------------
+--Dialogs
+---------------------------------------------------------------
+function doChangeNameDialog(self, pet)
+	local Dialog = require "engine.ui.Dialog"
+	return Dialog:multiButtonPopup(
+		"A worthy name for such a beast",
+		([[Proud and battle-sturdy Outrider! I see that you are making swift progress. It is good that you have wasted no time in setting out and bringing those who work against you (and all that is good and noble in Eyal) to their knees. But don't be too hasty! Your bestial mount, a %s only known as %s, is still without a suitable name. When they mark the chronicles of your slaughter in blood and tears, is that the way you would want such a fine beast, a steed such as this one, to go down in the history of Eyal? As %s? What about a real name, a name to be heard upon the trembling lips of your enemies as they beg for mercy before your onset...?]]
+		):format(pet.original_name, pet.name, pet.name),
+		{
+			{
+				name="Open the mount dialog", 
+				fct=function(n)
+					local LevelupDialog = require "mod.dialogs.LevelupDialog"
+					local ds = LevelupDialog.new(mount, nil, nil)
+					game:registerDialog(ds)
+				end
+			},
+			{
+				name="Try from a list of generated names", 
+				fct=function(n)
+					doGeneratedNamesDialog(self, pet)
+				end
+			},
+			{
+				name=("%s say no want new name. %s have strong name. name good."):format(
+					self.name:capitalize(), pet.name:capitalize(), pet.original_name:capitalize()),
+				-- fct=function(self, pet)
+				-- return
+			}
+		})
+end
+
+local rules = {
+	phonemesVocals = "y, o, ie, en, er",
+	phonemesConsonants = "r, ff, g, ck",
+	syllablesStart = "Wolf, Beast, Battle, Blood, Bone, Flesh, Fang, Red, Umbra, Grey, Mist, Crimson, Sorrow, Bitter, Dark, Winter, Death, Murder, Dawn, Dread, Night, Twilight, Fear, Bear, Astro, Mega, Boss, Great, Giga, Bite, Bark, Moon, Wild, Forest, Steppe, Swamp, Horde, War, Sky, Heart, Tyrrano, Fleet, Dire, Super, Monster, Ultra, Luna, Gut, Fur, Face, Human, Orc, Spleen, Warg, Aggro, Spell, Cat, Dog, Silver",
+	syllablesMiddle = "en, yn",
+	syllablesEnd = "fang, tooth, scar, claw, nail, tongue, tail, eye, slicer, slasher, gnasher, biter, breaker, crusher, killer, tearer, devourer, face, rex, rise, dawn, paw, howler, harbinger, core, heart, soul, mate, wulf, seeker, hunter, rex, king, raptor, ender, max, runner, ferno, comet, eviscerator, er, coat, mane, dog, pup, bert, odile, odon, oceros, rush, brain, rider",
+	rules = "$87s$4m$e",
+}
+
+--- Create a dialog where the player can choose from generated mount names.
+-- @todo Make a new dialog type so we can have the mount icon displayed
+function doGeneratedNamesDialog(self, pet)
+	local Dialog = require "engine.ui.Dialog"
+	local NameGenerator = require("engine.NameGenerator")
+	local ng = NameGenerator.new(rules)
+
+	-- local str = [[]]
+	--We'll use patterns to make short names more interesting.
+	local patterns = {"The %s", "%s of the %s", "Big %s", "%s %s", "Mister %s", "%s Wolf", "The Great %s", "%s of %s"}
+
+	local function generateButtons()
+		local buttons = {}
+		for i = 1, 5 do
+			--Simply get and capitalize the basic generated name.
+			local name = (ng:generate()):capitalize()
+
+			--If the name is very short, we'll add a pattern to it to make it funkier.
+			if #name<=5 or (#name==6 and rng.percent(50)) then
+				local pattern = rng.table(patterns)
+				name = (pattern):format(name, (ng:generate()):capitalize())
+			end
+
+			--Now that we we have a name, generate a button for it!
+			buttons[#buttons+1] = {
+				name=name, 
+				fct=function(n) 
+					pet.name = name
+					pet.changed = true
+					return
+				end}
+		end
+		buttons[#buttons+1] = {
+			name="Try again", 
+			fct=function(n)
+				doGeneratedNamesDialog(self, pet)
+				return
+			end}
+		return buttons
+	end
+
+	return Dialog:multiButtonPopup(
+		("Choose a name for your %s!"):format(pet.original_name),
+		[[You dive deep into your memory, searching for a name which evokes courage, power and sheer domination. Which will it be? Remember, you can change or edit this choice afterward.]],
+		generateButtons()
+	)
+end
+
+function doHowToTrainYourMountDialog(self, pet)
+	Dialog:yesnoLongPopup("Your beast gains in prowess...",
+		([["As you grow wiser in the ways of combat, so does your %s. You can train your Outrider mount by using the talent "Interact with your Mount". Perhaps it is wisest to do that now, while your enemies do not have the upper hand...]]):
+		format(pet.original_name),
+		300, fct,
+		"Go to the mount levelup screen", "I'll do that later, thanks")
+end
+---------------------------------------------------------------
+
 newTalent{
 	name = "Challenge the Wilds", short_name = "OUTRIDER_CHALLENGE_THE_WILDS", image = "talents/challenge_the_wilds.png",
 	type = {("mounted/bestial-dominion"), 1},
@@ -294,6 +397,10 @@ newTalent{
 				summon:unlearnTalent(summon["T_"..name])
 			end
 		end
+
+		util.hotkeySwap(self, "T_OUTRIDER_DISMOUNT", "T_OUTRIDER_CHALLENGE_THE_WILDS")
+		util.hotkeySwap(self, "T_OUTRIDER_MOUNT", "T_OUTRIDER_CHALLENGE_THE_WILDS")
+
 		--Unset pet
 		self.outrider_pet = nil
 	end,
@@ -311,14 +418,29 @@ newTalent{
 		end
 	end,
 	callbackOnLevelup = function(self, t, level)
-		local pet = self.outrider_pet
+		local pet = self:getOutriderPet()
 		if pet then pet:forceLevelup(level) end
+
+		if not self.done_outrider_onlevelup then
+			if pet and pet.unused_talents or pet.unused_talents_types then
+				doHowToTrainYourMountDialog(self, pet)
+			end
+		end
+	end,
+	callbackOnChangeLevel = function(self, t)
+		local pet = self:getOutriderPet()
+		if pet and not pet.done_change_name then
+			doChangeNameDialog(self, pet)
+		end
 	end,
 	callbackOnStatChange = function(self, t, stat, v)
 		local pet = self.outrider_pet
 		if pet and (stat==self.STAT_WIL or stat==self.STAT_CUN) then
 			pet:updateTalentPassives(t.shared_talent)
 		end
+	end,
+	test = function(self, t)
+		doChangeNameDialog(self, self:getOutriderPet())
 	end,
 	action = function(self, t)
 		if self:hasEffect(self.EFF_OUTRIDER_WILD_CHALLENGE) then
