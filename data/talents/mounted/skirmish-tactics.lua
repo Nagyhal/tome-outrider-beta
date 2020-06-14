@@ -17,58 +17,189 @@
 -- Nicolas Casalini "DarkGod"
 -- darkgod@te4.org
 
+local archerPreUse = Talents.main_env.archerPreUse
+local use_stamina = Talents.main_env.use_stamina
+local archery_range = Talents.main_env.archery_range
+
+
 newTalent{
-	name = "Beastmaster's Mark", short_name = "OUTRIDER_BEASTMASTERS_MARK", image = "talents/beastmasters_mark.png",
+	name = "Beast Archery", 
+	short_name = "OUTRIDER_MOUNTED_ARCHERY_MASTERY", image="talents/beast_archery.png",
 	type = {"mounted/skirmish-tactics", 1},
 	points = 5,
-	cooldown = 10,
-	stamina = 15,
 	require = techs_dex_req1,
-	range = archery_range,
+	mode = "passive",
+	on_learn = function(self, t)
+		if not self:knowTalent(self.T_OUTRIDER_MOUNTED_ARCHERY) then self:learnTalent(self.T_OUTRIDER_MOUNTED_ARCHERY, true) end
+	end,
+	on_unlearn = function(self, t)
+		if self:getTalentLevel(t) == 0 and self:knowTalent(self.T_OUTRIDER_MOUNTED_ARCHERY) then self:unlearnTalentFull(self.T_OUTRIDER_MOUNTED_ARCHERY) end
+	end,
+	passives = function(self, t, p)
+		self:talentTemporaryValue(p, 'ammo_mastery_reload', t.getReload(self, t))
+	end,
+	getChance = function(self,t) 
+		local chance = 15
+		return chance
+	end,
+	info = function(self, t)
+		local inc = t.getInc(self, t)
+		local reload = t.getReload(self,t)
+
+		local attack_chance = t.getAttackChance(self,t)
+		local attack_dam_pct = t.getAttackDam(self, t)*100
+
+		local stamina = t.getStamina(self,t)
+
+		--You are a master of brutal ranged harrying techniques, both mounted and on foot, increasing your weapon damage by %d%% and physical power by 30 when using bows.
+
+		return ([[Whether you were a child of the wild steppes, or you came of age beneath the starry skies of the great Northern wastes, you were born to rain fury with your bow from atop your bestial steed. 
+
+			Increases physical power by 30 when using bows or slings, and also increase your ranged damage while riding by %d%%.
+
+			In addition, learn the Beast Archery mounted combat manoeuvre (current stamina per shot: %.1f). Also, when dismounted, shots will have a %d%% chance to let your beast make an extra attack against your target.]]):
+
+			-- You learn the Beast Archery combat manoeuvre : When riding, you can sustain to loose arrows upon your target as you move. Each turn, if you move or rest with a bow equipped, you stand tall and let soar an arrow at your hapless target, just as if you had used the Shoot talent. This costs %.1f stamina per shot and will deactivate if you move out of range, dismount or use another weapon to attack.]]):
+		format(inc*100, stamina, attack_chance)
+	end,
+	getInc = function(self, t) return self:combatTalentScale(t, .085, .21) end,
+	getReload = function(self, t)
+		return math.floor(self:combatTalentScale(t, 0, 2.7, "log"))
+	end,
+	getAttackChance = function(self, t) return self:combatTalentLimit(t,50, 18, 31) end,
+	getAttackDam = function(self, t) return self:combatTalentScale(t, 0.62, 0.88) end,
+	getStamina = function(self, t) return self:combatTalentLimit(t, 3, 10.2, 5) end,
+}
+
+newTalent{
+	name = "Beast Archery",
+	short_name = "OUTRIDER_MOUNTED_ARCHERY", image="talents/mounted_archery.png",
+	type = {"mounted/mounted-base", 1},
+	points = 1,
+	mode = "sustained",
+	deactivate_on = {no_combat=true, rest=true},
+	tactical = { BUFF = 1 },
+	cooldown = 5,
+	no_energy = true,
+	remove_on_zero = true,
 	requires_target = true,
-	tactical = { ATTACK = { weapon = 2 } },
-	on_pre_use = function(self, t, silent, fake) return preCheckArcheryInAnySlot(self, t, silent, fake) end,
-	on_learn = function(self ,t)
-		-- if not self:knowTalent(self.T_OUTRIDER_MOUNTED_ARCHERY_MASTERY) then
-		-- 	self:learnTalent(self.T_OUTRIDER_MOUNTED_ARCHERY_MASTERY, true) 
-		-- end
-		if not self.__show_special_talents[self.T_OUTRIDER_MOUNTED_ARCHERY_MASTERY] then
-			table.set(self, "__show_special_talents", "T_OUTRIDER_MOUNTED_ARCHERY_MASTERY", true)
+	target = function(self, t)
+		local tg = self:getTalentTarget(self:getTalentFromId(self.T_SHOOT))
+		tg.friendlyfire=false
+		tg.selffire=false
+		tg.friendlyblock=false
+	end,
+	on_pre_use = function(self, t, silent, fake) 
+		return preCheckIsMounted(self, t, silent, fake) and preCheckArcheryInAnySlot(self, t, silent, fake)
+	end,
+	----Helper functions---------------------------------------
+	doShot = function(self, t)
+		local tgt = self:isTalentActive(t.id)["target"]
+
+		local did_shot
+		if self:hasArcheryWeapon() then
+			did_shot = self:forceUseTalent(self.T_SHOOT, {
+				ignore_energy=true, ignore_cd=true, force_target=tgt, ignore_ressources=true, silent=true
+			})
+		end
+		if did_shot and not use_stamina(self, t.getStamina(self, t)) then
+			local spend = math.min(t.getStamina(self, t), self:getStamina())
+			self:incStamina(-spend) --Never free!
+			t.forceDisactivate(self, t)
+			return
+		end
+
+		local p = self:isTalentActive(t.id); p.dont_shoot = nil
+	end,
+	checkTarget = function(self, t)
+		local target = table.get(self:isTalentActive(t.id), "target")
+		if not target or target.dead or not game.level:hasEntity(target) then
+			t.forceDisactivate(self, t)
+		elseif not self:canProject(self:getTalentTarget(t), target.x, target.y) then
+			t.forceDisactivate(self, t)
+		else return true end
+	end,
+	checkCanShoot = function(self, t)
+		if not self:hasArcheryWeapon() then 
+			t.forceDisactivate(self, t)
+			return nil
+		end
+		if not table.get(self:isTalentActive(t.id), "dont_shoot") then return true end
+	end,
+	dontShootThisTurn = function(self, t)
+		local p = self:isTalentActive(t.id); p["dont_shoot"] = true
+	end,
+	forceDisactivate = function(self, t)
+		--This is a function, because it might need to be expanded
+		--upon at some point.
+		self:forceUseTalent(t.id, {ignore_energy=true})
+	end,
+	----Callbacks----------------------------------------------
+	-----------------------------------------------------------
+	--We shoot once per turn on ActBase.
+	--If we attack, though - don't shoot.
+	--If we use any talent, except for an instant talent, then
+	--  we don't shoot.
+	--If we dismount, then we can't use Mounted Archery any more.
+	--Likewise, if we remove our archery weapon, we can't use
+	--  Mounted Archery any more.
+	callbackOnActBase = function(self, t)
+		if t.checkTarget(self, t) and t.checkCanShoot(self, t) then
+			t.doShot(self, t)
 		end
 	end,
-	archery_onhit = function(self, t, target, x, y)
-		local mount = self:hasMount()
-		if target:canBe("cut") then target:setEffect(target.EFF_CUT, t.getDur(self, t), {power=t.getBleed(self, t)}) end
-		if not mount then return true end
-		mount:setEffect(mount.EFF_OUTRIDER_BEASTMASTER_MARK,  t.getDur(self, t), {target=target})
+	callbackOnCombatAttack = function(self, t, weapon, ammo)
+		t.dontShootThisTurn(self, t)
 	end,
-	action = function(self, t)
-		local targets = getArcheryTargetsWithSwap(self)
-		if not targets then return nil end
-		self:archeryShoot(targets, t, nil, {mult=t.getDam(self, t)})
+	callbackOnPostTalent = function(self, t, ab, ret, silent)
+		if not ab.no_energy then t.dontShootThisTurn(self, t) end
+	end,
+	callbackOnQuickSwitchWeapons = function(self, t)
+		if not self:hasArcheryWeapon() then
+			t.forceDisactivate(self, t)
+		end
+	end,
+	callbackOnDismount = function(self, t) t.forceDisactivate(self, t) end,
+	-----------------------------------------------------------
+	activate = function(self, t)
+		local done_swap = swapToArchery(self)
+		if not self:hasArcheryWeapon() then
+			game.logPlayer(self, "You can't swap to your ranged weapon to use this talent!")
+			return nil
+		end
+
+		local tg = {type = "bolt", range = archery_range(self),	talent = t}
+		local x, y, target = self:getTarget(tg)
+		if not target then
+			if done_swap then self:quickSwitchWeapons(true, nil, true) end
+			return nil
+		end
+
+		local mount = self:getMount()
+		game.logSeen(self, "%s looses arrows at %s from atop %s!", self.name:capitalize(), target.name, mount.name)
+		return {target=target, ct=5}
+	end,
+	deactivate = function(self, t, p) 
 		return true
 	end,
 	info = function(self, t)
-		local dam = t.getDam(self, t)*100
-		local bleed = t.getBleed(self, t)
-		local dur = t.getDur(self, t)
-		local speed = t.getSpeed(self, t)*100
-		local loyalty = t.getLoyalty(self, t)
-		-- local range = t.getRushRange(self, t)
-		return ([[You let off a jagged missile that fills your steed with a savage thirst for blood, enraging it. You shoot your enemy for %d%% damage, bleeding it for %d damage and marking it with the Beastmaster's Mark for %d turns. While this is in effect, your steed concentrates solely upon this foe, moving and attacking %d%% faster, but if you hold it back it will lose %.1f Loyalty per turn that you do this.
+		return ([[]]):
+		format(t.getStamina(self, t))
+	end,
+	getStamina = function(self, t)
+		return self:callTalent(self.T_OUTRIDER_MOUNTED_ARCHERY_MASTERY, "getStamina")
+	end,
+	info = function(self, t)
+		local stamina = t.getStamina(self,t)
+		-- local damage = t.getDamage(self, t)
+		-- local dur = t.getDur(self,t)
+		-- local cooldown = t.getCooldown(self,t)
 
-			Investing in the Skirmish Tactics tree also teaches you the Mounted Combat Mastery skill.]]):
-		format(dam, bleed, dur, speed, loyalty, range)
+		--You are a master of brutal ranged harrying techniques, both mounted and on foot, increasing your weapon damage by %d%% and physical power by 30 when using bows.
+		return ([[When riding, you can sustain to loose arrows at your target as you move. Each turn, if you move or rest with a bow equipped, you stand tall and let soar an arrow at your hapless target, just as if you had used the Shoot talent. This costs %.1f stamina per shot and will deactivate if you move out of range, dismount or use another weapon to attack.]]):
+		format(stamina)
 	end,
-	getDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
-	getBleed = function(self, t) return self:combatTalentPhysicalDamage(t, 10, 16)
-	end,
-	getDur = function(self, t) return self:combatTalentScale(t, 5, 9) end,
-	getLoyalty = function(self, t) return self:combatTalentLimit(t, 1, 5, 3) end,
-	getSpeed = function(self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
-	-- getRushRange = function(self, t) return math.min(10, self:combatTalentScale(t, 3, 8)) end,
 }
-
 
 --4: Cacophonous Downpour
 --How should it work? Fire arrows against everyone, then over 2 turns repeat

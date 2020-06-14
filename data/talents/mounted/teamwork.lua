@@ -18,8 +18,60 @@
 -- darkgod@te4.org
 
 newTalent{
-	name = "Let 'Em Have It!", short_name = "OUTRIDER_LET_EM_LOOSE", image = "talents/let_em_loose.png",
+	name = "Beastmaster's Mark", short_name = "OUTRIDER_BEASTMASTERS_MARK", image = "talents/beastmasters_mark.png",
 	type = {"mounted/teamwork", 1},
+	points = 5,
+	cooldown = 10,
+	stamina = 15,
+	require = techs_dex_req1,
+	range = archery_range,
+	requires_target = true,
+	tactical = { ATTACK = { weapon = 2 } },
+	on_pre_use = function(self, t, silent, fake) return preCheckArcheryInAnySlot(self, t, silent, fake) end,
+	on_learn = function(self ,t)
+		-- if not self:knowTalent(self.T_OUTRIDER_MOUNTED_ARCHERY_MASTERY) then
+		-- 	self:learnTalent(self.T_OUTRIDER_MOUNTED_ARCHERY_MASTERY, true) 
+		-- end
+		if not self.__show_special_talents[self.T_OUTRIDER_MOUNTED_ARCHERY_MASTERY] then
+			table.set(self, "__show_special_talents", "T_OUTRIDER_MOUNTED_ARCHERY_MASTERY", true)
+		end
+	end,
+	archery_onhit = function(self, t, target, x, y)
+		local mount = self:hasMount()
+		if target:canBe("cut") then target:setEffect(target.EFF_CUT, t.getDur(self, t), {power=t.getBleed(self, t)}) end
+		if not mount then return true end
+		mount:setEffect(mount.EFF_OUTRIDER_BEASTMASTER_MARK,  t.getDur(self, t), {target=target})
+	end,
+	action = function(self, t)
+		local targets = getArcheryTargetsWithSwap(self)
+		if not targets then return nil end
+		self:archeryShoot(targets, t, nil, {mult=t.getDam(self, t)})
+		return true
+	end,
+	info = function(self, t)
+		local dam = t.getDam(self, t)*100
+		local bleed = t.getBleed(self, t)
+		local dur = t.getDur(self, t)
+		local speed = t.getSpeed(self, t)*100
+		local loyalty = t.getLoyalty(self, t)
+		-- local range = t.getRushRange(self, t)
+		return ([[You let off a jagged missile that fills your steed with a savage thirst for blood, enraging it. You shoot your enemy for %d%% damage, bleeding it for %d damage and marking it with the Beastmaster's Mark for %d turns. While this is in effect, your steed concentrates solely upon this foe, moving and attacking %d%% faster, but if you hold it back it will lose %.1f Loyalty per turn that you do this.
+
+			Investing in the Skirmish Tactics tree also teaches you the Mounted Combat Mastery skill.]]):
+		format(dam, bleed, dur, speed, loyalty, range)
+	end,
+	getDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
+	getBleed = function(self, t) return self:combatTalentPhysicalDamage(t, 10, 16)
+	end,
+	getDur = function(self, t) return self:combatTalentScale(t, 5, 9) end,
+	getLoyalty = function(self, t) return self:combatTalentLimit(t, 1, 5, 3) end,
+	getSpeed = function(self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
+	-- getRushRange = function(self, t) return math.min(10, self:combatTalentScale(t, 3, 8)) end,
+}
+
+newTalent{
+	name = "Let 'Em Have It!", short_name = "OUTRIDER_LET_EM_LOOSE", image = "talents/let_em_loose.png",
+	type = {"mounted/teamwork", 2},
 	require = mnt_wilcun_req1,
 	points = 5,
 	-- cooldown = function(self, t) return math.max(12, self:combatTalentScale(t, 25, 14)) end,
@@ -85,7 +137,7 @@ newTalent{
 
 newTalent{
 	name = "Predatory Flanking", short_name = "OUTRIDER_FLANKING", image = "talents/flanking.png",
-	type = {"mounted/teamwork", 2},
+	type = {"mounted/teamwork", 3},
 	points = 5,
 	require = mnt_wilcun_req2,
 	mode = "passive",
@@ -122,88 +174,6 @@ newTalent{
 	getDef = function(self, t) return self:combatTalentScale(t, 5, 12) end,
 	getCritChance = function(self, t) return self:combatTalentScale(t, 5, 15) end,
 	getCritPower = function(self, t) return self:combatTalentScale(t, 15, 35) end,
-}
-
-newTalent{
-	name = "Rearing Assault", short_name = "READING_ASSAULT", image = "talents/rearing_assault.png",
-	type = {"mounted/teamwork", 3},
-	hide="always", --DEBUG: Hiding untested talents 
-	points = 5,
-	random_ego = "defensive",
-	cooldown = 6,
-	stamina = 6,
-	loyalty= 3,
-	require = mnt_wilcun_req3,
-	requires_target = true,
-	tactical = { ATTACK = 2 },
-	on_pre_use = function(self, t, silent, fake)
-		if self:isMounted() then
-			if self:attr("never_move") then return false end
-		else
-			local mount = self:hasMount()
-			if mount and mount:attr("never_move") then return false end
-		end
-		return preCheckHasMountPresent(self, t, silent, fake)
-	end,
-	target = function(self, t)
-		local pet = self.outrider_pet
-		local ret = {type="hit", range=self:getTalentRange(t), friendlyfire=false, selffire=false}
-		if not self:isMounted() then
-			ret = table.merge(ret, {start_x=pet.x, start_y=pet.y, default_target=pet, immediate_keys=false})
-		end
-		return ret
-	end,
-	action = function(self, t)
-		local mount = self:hasMount()
-		local mover = self:isMounted() and self or mount
-		local tg = self:getTalentTarget(t)
-		local x, y, target
-		if mover==self then
-			x, y, target = self:getTarget(tg)
-		else
-			game.target.target.x = mount.x
-			game.target.target.y = mount.y
-			x, y, target = autoPetTarget(self, mount)
-			if not target then x, y, target = game:targetGetForPlayer(tg) end
-		end
-		if not x or not y or not target then return nil end
-		if core.fov.distance(mount.x, mount.y, x, y) > 1 then return nil end
-
-		local tx, ty, sx, sy = target.x, target.y, mount.x, mount.y
-		local hitted = mount:attackTarget(target, nil, 0, true)
-		if hitted and not mount.dead and tx == target.x and ty == target.y then
-			if not mover:canMove(tx,ty,true) or not target:canMove(sx,sy,true) then
-				mount:logCombat(target, "Terrain prevents #Source# from switching places with #Target#.")
-				return true
-			end
-			mover:move(tx, ty, true)
-			if not target.dead then
-				target:move(sx, sy, true)
-			end
-			if core.fov.distance(self.x, self.y, target.x, target.y)==1 then
-				local buff = t.getCrit(self, t)
-				self.combat_physcrit = self.combat_physcrit+buff
-				if self:hasArcheryWeapon() then
-					tg = self:archeryAcquireTargets(tg, {x=target.x, y=target.y})
-					self:archeryShoot(tg, t, nil, {})
-				else
-					self:attackTarget(target, nil, 1, true)
-				end
-				self.combat_physcrit = self.combat_physcrit-buff
-			end
-		end
-		mover:resetMoveAnim()
-		mover:setMoveAnim(sx, sy, 8, 5, 8, 3)
-		return true
-	end,
-	info = function(self, t)
-		local dam = t.getDam(self, t)*100
-		local crit = t.getCrit(self, t)
-		return ([[Your mount rears up and attacks your target for %d%% damage, while moving into its space; your mount and your foe will exchange places. If you are mounted, or adjacent to the target when the movement completes, then you follow up with a crushing strike or a focused shot with a %d%% increased critical modifier. You may also call upon your mount to use this while dismounted; this does not cost stamina.]]):
-			format(dam, crit)
-	end,
-	getDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.8) end,
-	getCrit = function(self, t) return self:combatTalentScale(t, 6, 25) end,
 }
 
 newTalent{
