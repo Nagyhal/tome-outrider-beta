@@ -66,7 +66,7 @@ newTalent{
 			block_path=block_path
 		}
 	end,
-	range = function(self, t) return math.floor(self:getTalentLevel(t) + 2) end,
+	range = function(self, t) return self:combatTalentScale(t, 4, 7) end,
 	tactical = { ATTACK = { weapon = 2 }, CLOSEIN = 3 },
 	on_pre_use = function(self, t, silent, fake)
 		return preCheckIsMounted(self, t, silent, fake) and

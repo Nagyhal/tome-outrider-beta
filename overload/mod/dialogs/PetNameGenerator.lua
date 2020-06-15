@@ -37,7 +37,7 @@ end
 -- could cause bugs further down the line. Ideally, there'd be a hook somewhere
 -- within multiButtonPopup where I could insert a picture plus re-align the last
 -- box to be on a different row.
-function _M:petNameGeneratorDialog(player, pet)
+function _M:getPetNames(player, pet)
 	--First, we'll set up all the things that are used by multiButtonPopup.
 	escape = escape or 1
 	default = default or 1

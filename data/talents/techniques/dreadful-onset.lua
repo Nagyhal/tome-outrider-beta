@@ -129,7 +129,7 @@ newTalent{
 		local crit_power2 = t.getCritPower2(self, t)
 		local apr = t.getApr(self, t)
 		local apr2 = t.getApr2(self, t)
-		local bonus_damage_pct = t.getBonusDamagePct(self, t)
+		local crit_chance = t.getCritChance(self, t)
 		return ([[While the profession of an Outrider calls for lighter weapons than some, the merciless precision with which you wield them makes them no less intimidating in your hands. As an Outrider, you have mounted proficiency with one-handed weapons, tridents, bows and slings, and lances - if you can find a lance! Wielding one of these weapons, you gain bonuses:
 
 			+%d mindpower
@@ -140,15 +140,19 @@ newTalent{
 			+%d%% critical power
 			+%d APR
 
-			Also, the terror of your foes only heightens your lethality unto them - but you must close the gap from range to take advantage of this. Gain %.1f%% damage in melee for each detrimental mental effect on your foes.]]):
-		format(mindpower, crit_power, apr, crit_power2, apr2, bonus_damage_pct)
+			Also, the terror of your foes only heightens your lethality unto them - but you must close the gap from range to take advantage of this: Gain %.1f%% extra chance to crit in melee if your target has a detrimental mental effect.]]):
+		format(mindpower, crit_power, apr, crit_power2, apr2, crit_chance)
 	end,
-	getApr = function(self, t) return self:combatTalentScale(t, 5, 12) end,
-	getApr2 = function(self, t) return self:callTalent(t.id, "getApr")*1.65 end,
-	getCritPower = function(self, t) return self:combatTalentScale(t, 15, 30) end,
+	getApr = function(self, t) return self:combatTalentScale(t, 3, 10) end,
+	getApr2 = function(self, t) return self:callTalent(t.id, "getApr")*1.5 end,
+	getCritPower = function(self, t) return self:combatTalentScale(t, 10, 30) end,
 	getCritPower2 = function(self, t) return self:callTalent(t.id, "getCritPower")*1.65 end,
-	getMindpower = function(self, t) return self:combatTalentScale(t, 6, 15) end,
-	getBonusDamagePct = function(self, t) return self:combatTalentScale(t, 5, 7) end,
+	getMindpower = function(self, t) return self:combatTalentScale(t, 4, 17) end,
+	getCritChance = function(self, t)
+		local mod = self:getTalentTypeMastery(t.type[1])
+		local tl = self:getTalentLevel(t) - mod --Start from TL 2
+		return tl>0 and self:combatTalentScale(tl, 4.3, 10.8) or 0
+	end,
 }
 
 newTalent{

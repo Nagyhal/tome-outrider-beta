@@ -1,7 +1,7 @@
 newTalent{
 	name = "Feast of Blood", short_name = "OUTRIDER_FEAST_OF_BLOOD", image = "talents/feast_of_blood.png",
 	type = {"mounted/beast-heart", 1},
-	hide="always", --DEBUG: Hiding untested talents 
+	-- hide="always", --DEBUG: Hiding untested talents 
 	require = mnt_wilcun_req_high1,
 	points = 5,
 	cooldown = function(self, t) return self:combatTalentLimit(t, 15, 35, 25) end,
@@ -34,7 +34,7 @@ newTalent{
 		local heal = t.getHeal(self, t)
 		local stamina = t.getStamina(self, t)
 		local bleed_per = t.getBleed(self, t)/6
-		return ([[Partaking of your bestial mount's unfaltering devotion through times of greatest need, you quench your hunger by loosing a little of its blood. Must be dismounted and adjacent to the beast. Regain %d health and %d stamina, while inflicting 6 turns of bleeding for %d damage upon your beast.]]):
+		return ([[Partaking of your bestial mount's unfaltering devotion through times of greatest need, you quench your hunger by loosing a little of its blood. Must be dismounted and adjacent to the beast. Regain %d health and %d stamina, while inflicting 6 turns of unremoveable bleeding for %d damage upon your beast.]]):
 			format(heal, stamina, bleed_per)
 	end,
 	getStamina = function(self, t) return self:combatTalentScale(t, 10, 60) end,
@@ -247,6 +247,7 @@ newTalent{
 newTalent{
 	name = "Bond Beyond Blood", short_name = "OUTRIDER_BOND_BEYOND_BLOOD", image = "talents/bond_beyond_blood.png",
 	type = {"mounted/beast-heart", 4},
+	hide="always", --DEBUG: Hiding untested talents 
 	points = 5,
 	require = mnt_wilcun_req_high4,
 	cooldown = 30,

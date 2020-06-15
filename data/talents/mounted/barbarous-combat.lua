@@ -4,9 +4,8 @@ newTalent{
 	require = mnt_strcun_req1,
 	points = 5,
 	random_ego = "attack",
-	stamina = function(self, t)
-		return math.max(0.5, 7.5 - self:getTalentLevelRaw(t)*1.5)
-	end,
+	stamina = 25,
+	loyalty = 10,
 	cooldown = 8,
 	--TODO (AI) : Make it use this effectively to protect the mount
 	tactical = function(self, t)
@@ -15,7 +14,7 @@ newTalent{
 		end
 	end,
 	requires_target = true,
-	range = function(self, t) return math.min(14, math.floor(self:combatTalentScale(t, 4, 8))) end,
+	range = function(self, t) return math.min(14, math.floor(self:combatTalentScale(t, 4, 7.5))) end,
 	target = function(self, t) return {type="bolt", range=self:getTalentRange(t), requires_knowledge=false, stop__block=true} end,
 	on_pre_use = function(self, t, silent, fake)
 		return preCheckCanMove(self, t, silent, fake) and preCheckMeleeInAnySlot(self, t, silent, fake)
@@ -89,17 +88,17 @@ newTalent{
 		local range_on_foot = t.getRangeOnFoot(self, t)
 		local provoke_dur = t.getProvokeDur(self, t)
 		local str = extra_targets>1 and "victims" or "victim"
-		return ([[Make a brazen rush at your foes, mounted or on foot. #SALMON#If you are mounted#LAST#, both you and mount deal %d%% damage to your immediate target. The massive impact of your mounted charge inflicts a %d turn stun and, as you train, can easily break the enemies' ranks. After talent level 3, your charge will smash %d other nearby %s (next to either you or the target) for half damage. 
+		return ([[Make a brazen rush at your enemy, mounted or on foot, for %d%% damage. The fierceness of your charge inflicts a 3 turn mental daze and forces the enemy to focus on you, ignoring your allies. Nothing compares to the sheer force of a mounted infantry charge; if you are mounted, you charge with an extra 2 range and the daze will become a stun.
 
-			#SALMON#On foot#LAST#, your range is only %d. Daze your primary target for %d turns and hit secondary targets for half weapon damage. The sheer recklessness of your swing forces your targets to attack you, ignoring your allies, for %d turns.]]):
+			As you train, you can easily break the enemies' ranks - after talent level 3, your charge will smash %d other nearby %s (next to either you or the target) for half damage.]]):
 		format(
 			dam,
-			stun_dur,
+			-- stun_dur,
 			extra_targets,
-			str,
-			range_on_foot,
-			daze_dur,
-			provoke_dur
+			str
+			-- range_on_foot,
+			-- daze_dur,
+			-- provoke_dur
 		)
 	end,
 	getDam = function(self, t) return self:combatTalentScale(t, 1.11, 1.63, .35) end,
@@ -110,7 +109,7 @@ newTalent{
 	getExtraTargets = function(self, t)
 		local mod = self:getTalentTypeMastery(t.type[1])
 		local tl = math.max(self:getTalentLevel(t), 3*mod) - 2*mod --Start from TL 3
-		return math.floor(self:combatTalentScale(tl, 1.5, 3))
+		return math.floor(self:combatTalentScale(tl, 1.5, 3.5))
 	end, 
 }
 
@@ -177,7 +176,7 @@ newTalent{
 		local dam = t.getDam(self, t) * 100
 		local knockback = t.getKnockbackRange(self, t)
 		local radius = t.getKnockbackRadiusMounted(self, t)
-		return ([[You release a maniacal display of brutality upon your foes, lashing out with a reckless attack that hits all adjacent enemies for %d%% while scattering those who are puny of will, knocking them back %d squares. If you are mounted, you may have your beast rise up in a terrifying fashion, knocking back instead all foes within a radius of %d.]]):
+		return ([[You release a maniacal display of brutality upon your foes, lashing out with a reckless attack that hits all adjacent enemies for %d%% damage while scattering those who are puny of will, knocking them back %d squares. If you are mounted, you may have your beast rise up in a terrifying fashion, knocking back instead all foes within a radius of %d.]]):
 		format(dam, knockback, radius)
 	end,
 	getDam = function(self, t) return self:combatTalentWeaponDamage(t, 1.5, 2.1) end,

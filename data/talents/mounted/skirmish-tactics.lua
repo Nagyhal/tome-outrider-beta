@@ -57,7 +57,7 @@ newTalent{
 
 			Increases physical power by 30 when using bows or slings, and also increase your ranged damage while riding by %d%%.
 
-			In addition, learn the Beast Archery mounted combat manoeuvre (current stamina per shot: %.1f). Also, when dismounted, shots will have a %d%% chance to let your beast make an extra attack against your target.]]):
+			In addition, learn the Beast Archery mounted combat manoeuvre (current stamina per shot: %.1f). Also, when dismounted, shots will have a %d%% chance to let your beast make an extra attack against your target (80%% damage).]]):
 
 			-- You learn the Beast Archery combat manoeuvre : When riding, you can sustain to loose arrows upon your target as you move. Each turn, if you move or rest with a bow equipped, you stand tall and let soar an arrow at your hapless target, just as if you had used the Shoot talent. This costs %.1f stamina per shot and will deactivate if you move out of range, dismount or use another weapon to attack.]]):
 		format(inc*100, stamina, attack_chance)
@@ -66,9 +66,16 @@ newTalent{
 	getReload = function(self, t)
 		return math.floor(self:combatTalentScale(t, 0, 2.7, "log"))
 	end,
-	getAttackChance = function(self, t) return self:combatTalentLimit(t,50, 18, 31) end,
+	getAttackChance = function(self, t)
+		local tl = self:getTalentLevel(t)
+		if tl <= 6.5 then
+			return self:combatTalentScale(t, 8.5, 21, .45)
+		else
+			return self:combatLimit(tl, 35, 25, 6.5, 28, 10)
+		end
+	end,
 	getAttackDam = function(self, t) return self:combatTalentScale(t, 0.62, 0.88) end,
-	getStamina = function(self, t) return self:combatTalentLimit(t, 3, 10.2, 5) end,
+	getStamina = function(self, t) return self:combatTalentLimit(t, 2.25, 10.9, 4.1) end,
 }
 
 newTalent{

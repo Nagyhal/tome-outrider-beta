@@ -289,60 +289,13 @@ local rules = {
 }
 
 --- Create a dialog where the player can choose from generated mount names.
--- @todo Make a new dialog type so we can have the mount icon displayed
 function doGeneratedNamesDialog(self, pet)
 	local PetNameGenerator = require "mod.dialogs.PetNameGenerator"
-	local ds = PetNameGenerator:petNameGeneratorDialog(self, pet)
-	-- game:registerDialog(ds)
+	local ds = PetNameGenerator:getPetNames(self, pet)
 end
 
--- function doGeneratedNamesDialog(self, pet)
--- 	local Dialog = require "engine.ui.Dialog"
--- 	local NameGenerator = require("engine.NameGenerator")
--- 	local ng = NameGenerator.new(rules)
-
--- 	-- local str = [[]]
--- 	--We'll use patterns to make short names more interesting.
--- 	local patterns = {"The %s", "%s of the %s", "Big %s", "%s %s", "Mister %s", "%s Wolf", "The Great %s", "%s of %s"}
-
--- 	local function generateButtons()
--- 		local buttons = {}
--- 		for i = 1, 5 do
--- 			--Simply get and capitalize the basic generated name.
--- 			local name = (ng:generate()):capitalize()
-
--- 			--If the name is very short, we'll add a pattern to it to make it funkier.
--- 			if #name<=5 or (#name==6 and rng.percent(50)) then
--- 				local pattern = rng.table(patterns)
--- 				name = (pattern):format(name, (ng:generate()):capitalize())
--- 			end
-
--- 			--Now that we we have a name, generate a button for it!
--- 			buttons[#buttons+1] = {
--- 				name=name, 
--- 				fct=function(n) 
--- 					pet.name = name
--- 					pet.changed = true
--- 					return
--- 				end}
--- 		end
--- 		buttons[#buttons+1] = {
--- 			name="Try again", 
--- 			fct=function(n)
--- 				doGeneratedNamesDialog(self, pet)
--- 				return
--- 			end}
--- 		return buttons
--- 	end
-
--- 	return Dialog:multiButtonPopup(
--- 		("Choose a name for your %s!"):format(pet.original_name),
--- 		[[You dive deep into your memory, searching for a name which evokes courage, power and sheer domination. Which will it be? Remember, you can change or edit this choice afterward.]],
--- 		generateButtons()
--- 	)
--- end
-
 function doHowToTrainYourMountDialog(self, pet)
+	local Dialog = require "engine.ui.Dialog"
 	Dialog:yesnoLongPopup("Your beast gains in prowess...",
 		([["As you grow wiser in the ways of combat, so does your %s. You can train your Outrider mount by using the talent "Interact with your Mount". Perhaps it is wisest to do that now, while your enemies do not have the upper hand...]]):
 		format(pet.original_name),
@@ -354,14 +307,12 @@ end
 newTalent{
 	name = "Challenge the Wilds", short_name = "OUTRIDER_CHALLENGE_THE_WILDS", image = "talents/challenge_the_wilds.png",
 	type = {("mounted/bestial-dominion"), 1},
-	autolearn_talent = "T_OUTRIDER_INTERACT_MOUNT",
 	require =  mnt_strwil_req1,
 	points = 5,
 	cooldown = 50,
-	stamina = 50,
 	no_npc_use = true,
-	range = 10,
 	tactical = { BUFF = 5 },
+	autolearn_talent = "T_OUTRIDER_INTERACT_MOUNT",
 	shared_talent = "T_OUTRIDER_BESTIAL_DOMINION",
 	no_unlearn_last = true,
 	on_learn = function (self, t)
@@ -430,6 +381,7 @@ newTalent{
 		if not self.done_outrider_onlevelup then
 			if pet and pet.unused_talents or pet.unused_talents_types then
 				doHowToTrainYourMountDialog(self, pet)
+				self.done_outrider_onlevelup = true
 			end
 		end
 	end,
@@ -514,19 +466,37 @@ newTalent{
 		local num = t.getNum(self, t)
 		local will_to_health = t.getWillToHealth(self, t)
 		local will_to_loy = t.getWillToLoyaltyLoss(self, t)
-		return ([[Your hurl your fury at the wilderness, letting out a luring, primal call and intensifying every one of your senses so that you might close upon a savage ally, a steed to carry you to victory and spoil. Finding a suitable wild mount takes time and effort; you gain the "Challenge the Wilds" status with a counter of %d, and every time you slay an enemy, that counter depletes by 1. When it reaches 0, you may activate Challenge the Wilds to call forth a beast worthy of your command. The beast that is called will depend on your surroundings: either a wolf, agile and dependable; a spider, ruthless yet versatile; or a rare and mighty drake. You must subdue the beast by blade or bow; it will not come to your side immediately, but after you have asserted your dominance. Care must be taken not to slay it unwittingly, and beware- it will not arrive alone. The quality of beast will increase with talent level.
+
+		local loy_regen = t.getLoyRegen(self, t)
+		local generics = t.getGenerics(self, t)
+		local class = t.getClassPoints(self, t)
+		return ([[Your hurl your fury at the wilderness, letting out a luring, primal call and intensifying every one of your senses so that you might close upon a savage ally, a steed to carry you to victory and spoil. Finding a suitable wild mount takes time and effort; you gain the "Challenge the Wilds" status with a counter of %d (increasing as you level), and every time you slay an enemy, that counter depletes by 1. When it reaches 0, you may activate Challenge the Wilds to call forth a beast worthy of your command. The beast that is called will depend on your surroundings: either a wolf, agile and dependable; a spider, ruthless yet versatile; or a rare and mighty drake. You must subdue the beast by blade or bow; it will not come to your side immediately, but after you have asserted your dominance. Care must be taken not to slay it unwittingly, and beware- it will not arrive alone. The quality of beast will increase with talent level.
 
 			Your mount's combat prowess is affected by your own abilities of command:
 			Willpower will increase its health total (current bonus: %d%%) and reduce the rate at which damage causes it to lose loyalty (current reduction: %d%%)
 			Cunning will increase its damage, adding to the mount's Strength for purposes of damage calculation.
 
-			Levelling Bestial Dominion will also increase the physical power of your mount by %d.]])
-		:format(num, will_to_health, will_to_loy, dam)
+			Levelling Bestial Dominion will also increase the physical power of your mount by %d, increase base Loyalty regeneration by %.1f, and any beast you capture will gain extra talent points: %d generic, %d class.]])
+		:format(num, will_to_health, will_to_loy, dam, loy_regen, generics, class)
 	end,
-	getDam = function(self, t) return self:getTalentLevel(t) * 10 end,
-	getNum = function(self, t) return math.ceil(self:getTalentLevelRaw(t)*5) + 10 end,
+	getDam = function(self, t) return self:combatTalentScale(t, 8.25, 24.5, 0.75) end,
+	-- getNum = function(self, t) return math.ceil(self:getTalentLevelRaw(t)*5) + 10 end,
+	getNum = function(self, t) 
+		-- local l = self.level, 
+		local mod = 1.5 - .25 * util.bound(self:getTalentLevelRaw(t)-1, 0, 4)
+		return self:combatTalentLimit(t, 5, 22, 11) end,
+	getNumMod = function(self, t) end,
+	getNumBase = function(self, t) end,
 	getWillToHealth = function(self, t) return self:combatStatScale("wil", 0, 80) end,
 	getWillToLoyaltyLoss = function(self, t) return self:combatStatLimit("wil", 80, 0, 50) end,
+	getLoyRegen = function(self, t) return self:combatTalentScale(t, 0.2, 1.2, 0.7) end,
+	getLoyRegen = function(self, t)
+		local mod = self:getTalentTypeMastery(t.type[1])
+		local tl = self:getTalentLevel(t) - mod --Start from TL 2
+		return tl>0 and self:combatTalentScale(tl, 0.12, 1, 0.7) or 0
+	end,
+	getGenerics = function(self, t) return math.floor(self:getTalentLevelRaw(t)/2) end,
+	getClassPoints = function(self, t) return math.max(0, math.floor((self:getTalentLevelRaw(t)/2 - 0.5))) end,
 }
 
 --Teach mount its elementary attribute-based bonuses

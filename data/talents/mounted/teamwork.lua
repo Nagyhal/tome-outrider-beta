@@ -23,7 +23,7 @@ newTalent{
 	points = 5,
 	cooldown = 10,
 	stamina = 15,
-	require = techs_dex_req1,
+	require = mnt_strcun_req1,
 	range = archery_range,
 	requires_target = true,
 	tactical = { ATTACK = { weapon = 2 } },
@@ -50,29 +50,27 @@ newTalent{
 	end,
 	info = function(self, t)
 		local dam = t.getDam(self, t)*100
-		local bleed = t.getBleed(self, t)
+		local bleed_pct = t.getBleedPct(self, t)
 		local dur = t.getDur(self, t)
 		local speed = t.getSpeed(self, t)*100
 		local loyalty = t.getLoyalty(self, t)
 		-- local range = t.getRushRange(self, t)
-		return ([[You let off a jagged missile that fills your steed with a savage thirst for blood, enraging it. You shoot your enemy for %d%% damage, bleeding it for %d damage and marking it with the Beastmaster's Mark for %d turns. While this is in effect, your steed concentrates solely upon this foe, moving and attacking %d%% faster, but if you hold it back it will lose %.1f Loyalty per turn that you do this.
-
-			Investing in the Skirmish Tactics tree also teaches you the Mounted Combat Mastery skill.]]):
-		format(dam, bleed, dur, speed, loyalty, range)
+		return ([[Let off a jagged missile - or, up-close, carve a wicked cut - that fills your steed with a savage thirst for blood, enraging it. Strike your enemy for %d%% damage; this bleeds it for %d%% damage over %d turns while marking it with the Beastmaster's Mark. While this is in effect, your steed concentrates solely upon this foe; while close to its mark (range 3), it moves and attacks %d%% faster. Your steed will also be able to track its location.]]):
+		format(dam, bleed_pct, dur, speed)
 	end,
-	getDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
-	getBleed = function(self, t) return self:combatTalentPhysicalDamage(t, 10, 16)
-	end,
-	getDur = function(self, t) return self:combatTalentScale(t, 5, 9) end,
+	getDam = function(self, t) return self:combatTalentScale(t, 1.19, 1.71) end,
+	-- getBleedPct = function(self, t) return self:combatTalentScale(t, 80, 121)
+	getBleedPct = function(self, t) return 85 end,
+	getDur = function(self, t) return self:combatTalentScale(t, 3.8, 6) end,
 	getLoyalty = function(self, t) return self:combatTalentLimit(t, 1, 5, 3) end,
-	getSpeed = function(self, t) return self:combatTalentScale(t, 1.2, 1.7) end,
+	getSpeed = function(self, t) return self:combatTalentScale(t, .19, .71) end,
 	-- getRushRange = function(self, t) return math.min(10, self:combatTalentScale(t, 3, 8)) end,
 }
 
 newTalent{
 	name = "Let 'Em Have It!", short_name = "OUTRIDER_LET_EM_LOOSE", image = "talents/let_em_loose.png",
 	type = {"mounted/teamwork", 2},
-	require = mnt_wilcun_req1,
+	require = mnt_strcun_req2,
 	points = 5,
 	-- cooldown = function(self, t) return math.max(12, self:combatTalentScale(t, 25, 14)) end,
 	cooldown = 15,
@@ -139,7 +137,7 @@ newTalent{
 	name = "Predatory Flanking", short_name = "OUTRIDER_FLANKING", image = "talents/flanking.png",
 	type = {"mounted/teamwork", 3},
 	points = 5,
-	require = mnt_wilcun_req2,
+	require = mnt_strcun_req3,
 	mode = "passive",
 	doCheck = function(self, t)
 		local tgts = {}
@@ -177,10 +175,10 @@ newTalent{
 }
 
 newTalent{
-	name = "Strike at the Heart", short_name = "T_OUTRIDER_SMASH_DEFENSES", image = "talents/feral_affinity.png",
+	name = "Brutal Takedown", short_name = "T_OUTRIDER_SMASH_DEFENSES", image = "talents/feral_affinity.png",
 	type = {"mounted/teamwork", 4},
 	hide="always", --DEBUG: Hiding untested talents 
-	require = mnt_wilcun_req4,
+	require = mnt_strcun_req4,
 	points = 5,
 	cooldown = 10,
 	stamina = 20,
