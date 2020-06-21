@@ -17,6 +17,9 @@
 -- Nicolas Casalini "DarkGod"
 -- darkgod@te4.org
 
+local Talents = require("engine.interface.ActorTalents")
+setfenv(1, Talents.main_env)
+
 function hasFreeOffhand(self)
 	local mainhand = table.get(self:getInven("MAINHAND"), 1)
 	if mainhand and mainhand.twohanded or mainhand.slot_forbid=="OFFHAND" then return nil end
@@ -112,17 +115,57 @@ function hasOutriderWeaponQS(self)
 	else return false end
 end
 
-function getArcheryTargetsWithSwap(self)
+-- @param tg Completely optional target table, uses default if not given
+function getArcheryTargetsWithSwap(self, tg, params, force)
 	local _, done_swap = swapToArchery(self)
 	if not self:hasArcheryWeapon() then
 		game.logPlayer(self, "You can't swap to your ranged weapon to use this talent!")
 		return nil
 	end
 
-	local targets = self:archeryAcquireTargets(nil, {one_shot=true})
+	local targets = self:archeryAcquireTargets(nil, params or {one_shot=true}, force)
+
 	if not targets then
 		if done_swap then self:quickSwitchWeapons(true, nil, true) end
 		return nil
 	end
 	return targets
+end
+
+--- Get actors adjacent to another actor
+-- My main logic for using this is that I forget, every time, that
+-- util.adjacentCoords can return coords outside of the map- haha!
+-- @param self  The actor or coordinate {x=..., y=...} we want to be adjacent to
+-- @params      Table arguments for readability's sake
+-- @param src   Whose allies/friends?
+-- @param only_friends  True if we only want friends
+-- @param only_enemies  True if we only want enemies (and who does?!)
+-- @return 		A list of actors (iterate with ipairs)
+function getAdjacentActors(self, params)
+	params = params or {}
+	local only_friends, only_enemies = params.only_friends, params.only_enemies
+	local src = params.src or self
+
+	local actors = {}
+	for _, coord in pairs(util.adjacentCoords(self.x, self.y)) do
+		local x, y = coord[1], coord[2]
+		if game.level.map:isBound(x, y) then
+			local a = game.level.map(x, y, engine.Map.ACTOR)
+			if a then
+				if only_friends then
+					if src:reactionToward(a) > 0 then actors[#actors+1] = a end
+				elseif only_enemies then
+					if src:reactionToward(a) < 0 then actors[#actors+1] = a end
+				else
+					actors[#actors+1] = a
+				end
+			end
+		end
+	end
+	return actors
+end
+
+--- Shorthand function to see if danger lurks nearby
+function isNextToEnemy(self)
+	return #getAdjacentActors(self, {only_enemies=true}) > 0
 end

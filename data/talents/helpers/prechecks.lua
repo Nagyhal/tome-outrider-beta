@@ -20,6 +20,9 @@
 -- Helpful functions to avoid code re-use for on_pre_use
 -- Must load the weapon helper functions before loading this file!
 
+local Talents = require("engine.interface.ActorTalents")
+setfenv(1, Talents.main_env)
+
 function preCheckIsMounted(self, t, silent, fake)
 	if self:isMounted() then return true
 	else

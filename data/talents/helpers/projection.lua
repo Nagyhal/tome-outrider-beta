@@ -17,6 +17,9 @@
 -- Nicolas Casalini "DarkGod"
 -- darkgod@te4.org
 
+local Talents = require("engine.interface.ActorTalents")
+setfenv(1, Talents.main_env)
+
 local function check_dest() end
 
 function projectLineBehind(self, tx, ty, dist)

@@ -1,3 +1,6 @@
+local Talents = require("engine.interface.ActorTalents")
+setfenv(1, Talents.main_env)
+
 function learnTraits(self)
 	if not self.bestial_traits then return nil end
 	self.__show_special_talents = self.__show_special_talents or {}
@@ -48,7 +51,7 @@ end
 function autoPetTarget(self, pet)
 	local foes = {}
 	for _, c in pairs(util.adjacentCoords(pet.x, pet.y)) do
-			local target = game.level.map(c[1], c[2], Map.ACTOR)
+		local target = game.level.map(c[1], c[2], engine.Map.ACTOR)
 			if target and self:reactionToward(target) < 0 then foes[#foes+1] = target end
 		end
 		if #foes == 1 then

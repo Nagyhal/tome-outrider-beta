@@ -18,6 +18,7 @@
 -- darkgod@te4.org
 
 local Talents = require("engine.interface.ActorTalents")
+setfenv(1, Talents.main_env)
 ---------------------------------------------------------------
 --Nagy's magic table of talent requirements
 ---------------------------------------------------------------

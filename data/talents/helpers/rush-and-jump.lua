@@ -29,6 +29,9 @@
 --2) Prettier code in the talent files ;)
 ---------------------------------------------------------------
 
+local Talents = require("engine.interface.ActorTalents")
+setfenv(1, Talents.main_env)
+
 ---Jump an actor to a grid, ignoring anything along the way.
 -- @self The actor to move
 -- @x target location x
