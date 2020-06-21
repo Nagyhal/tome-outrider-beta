@@ -35,7 +35,7 @@ function reduceDamageShieldByPct(src, target, eff_id, pct)
 		EFF_OVERCLOCK = "static_shield_absorb",
 	}
 
-	local eff=target:getEffectFromId(eff_id); if not eff then return end
+	local eff=target:getEffectFromId(eff_id); if not eff or not eff.dur then return end
 	local shield_param = shields[eff_id]
 
 	if not shield_param then
@@ -71,14 +71,6 @@ newTalent{
 	on_pre_use = function(self, t, silent, fake)
 		return preCheckOutriderWeaponBothSlots(self, t, silent, fake)
 	end,
-	callbackOMeleeAttackBonuses = function(self, t, hd)
-		local dam = t.getBonusDamagePct(self, t)/100
-		local num = #hd.target:effectsFilter({
-			type="mental",
-			status={detrimental=true}
-		}) or 0
-		hd.mult = hd.mult + dam*num
-	end,
 	clearTempVals = function(self, t, p)
 		for i = #(p.__tmpvals or {}), 1, -1  do
 			self:removeTemporaryValue(p.__tmpvals[i][1], p.__tmpvals[i][2])
@@ -99,6 +91,9 @@ newTalent{
 				self:talentTemporaryValue(tab, "combat_apr", t.getApr(self, t))
 			end
 		end
+		self:talentTemporaryValue(tab, "outrider_master_of_brutality", t.getCritChance(self, t))
+		self:talentTemporaryValue(tab, "warden_swap", 1)
+		self:talentTemporaryValue(tab, "outrider_swap", 1)
 		return tab
 	end,
 	callbackOnWear  = function(self, t, o, bypass_set) t.checkOnWeaponSwap(self, t, o) end,
@@ -140,7 +135,9 @@ newTalent{
 			+%d%% critical power
 			+%d APR
 
-			Also, the terror of your foes only heightens your lethality unto them - but you must close the gap from range to take advantage of this: Gain %.1f%% extra chance to crit in melee if your target has a detrimental mental effect.]]):
+			Also, the terror of your foes only heightens your lethality unto them - but you must close the gap from range to take advantage of this: Gain %.1f%% extra chance to crit in melee if your target has a detrimental mental effect.
+
+			Activating Master of Brutality also lets you swap weapons instantly. Shooting or bump-attacking enemies will automatically switch you to the correct weapon set.]]):
 		format(mindpower, crit_power, apr, crit_power2, apr2, crit_chance)
 	end,
 	getApr = function(self, t) return self:combatTalentScale(t, 3, 10) end,
@@ -163,10 +160,10 @@ newTalent{
 	cooldown = 16,
 	stamina = 15,
 	random_ego = "attack",
-	range = function(self, t) return t.getKnockbackRange(self, t)-1 end,
-		--TODO (AI): Return a tactical table dependent on current situation
+	range = function(self, t) return self:combatTalentScale(t, 3, 4) end,
+	-- @todo (AI): Return a tactical table dependent on current situation
 	tactical = { ATTACK = { weapon = 1 }, DISABLE = { pin = 2 } },
-		--TODO (AI): We need to draw past the target and check behind them
+	-- @todo (AI): We need to draw past the target and check behind them
 	-- onAIGetTarget = function(self, t)
 	-- end,
 	-- on_pre_use_ai = function(self, t, silent, fake) return t.onAIGetTarget(self, t) and true or false end,
@@ -174,33 +171,50 @@ newTalent{
 	on_pre_use = function(self, t, silent, fake)
 		return preCheckArcheryInAnySlot(self, t, silent, fake)
 	end,
-		--TODO (AI): We need to draw past the target and check behind them
-	getArcheryTargetType = function(self, t)
+	--@todo (AI): We need to draw past the target and check behind them
+	target = function(self, t)
 		local weapon, ammo = self:hasArcheryWeapon()
 		return {
 			range=self:getTalentRange(t),
 			weapon=weapon, ammo=ammo, 
-			selffire=false, friendlyfire=false, friendlyblock=false
+			selffire=false, friendlyfire=false, friendlyblock=false,
 		}
 	end,
 	archery_onhit = function(self, t, target, x, y)
 		local dir = util.getDir(target.x, target.y, self.x, self.y)
-		local dist = core.fov.distance(self.x, self.y, target.x, target.y)
-		local knockback = t.getKnockbackRange(self, t) - dist
-		target:knockback(self.x, self.y, knockback)
+		target:knockback(self.x, self.y, t.getKnockbackRange(self, t))
 
-		--We need to detect if the target hits an obstacle, and the obstacle must be within knockback range
+		-- We need to detect if the target hits an obstacle, and the obstacle must be within knockback range
 		local dx, dy = util.dirToCoord(dir, target.x, target.y)
 		local wall_x, wall_y = target.x + dx, target.y +dy
 
 		local ter = game.level.map(wall_x, wall_y, engine.Map.TERRAIN)
 		if ter and ter.does_block_move then
-			if target:canBe("pin") then
-				target:setEffect(target.EFF_OUTRIDER_PINNED_TO_THE_WALL, t.getDur(self, t), 
-					{tile={x=wall_x, y=wall_y}, ox=target.x, oy=target.y, apply_power=self:combatAttack()})
-			else
-				game.logSeen(target, "%s resists!", target.name:capitalize())
-			end
+			-- We need to check canBe:("pin"), but levitation
+			-- and flight make pins impossible, which doesn't
+			-- make much sense for a wall pin.
+			-- So we'll do this:
+			local old_fly, old_levitation = target.fly, target.levitation
+			target.fly, target.levitation = 0, 0
+			-- Easy! But what if something goes wrong while
+			-- we set the pin? We'll error out of the function
+			-- and the target will be permanently wing-clipped.
+
+			-- We'll make a protected call to try and
+			-- set the effect.
+			local status, err = pcall(function()
+				if target:canBe("pin") then
+					target:setEffect(target.EFF_OUTRIDER_PINNED_TO_THE_WALL, t.getDur(self, t), 
+						{tile={x=wall_x, y=wall_y}, ox=target.x, oy=target.y, apply_power=self:combatAttack()})
+				else
+					game.logSeen(target, "%s resists!", target.name:capitalize())
+				end
+			end)
+			-- If something went wrong, no biggie.
+			-- Set the target back the way it was:
+			target.fly, target.levitation = old_fly, old_levitation
+			-- And the error, without causing any damage.
+			if err then error(err) end
 		end
 
 		if self:getTalentLevel(t) >= 3 and rng.percent(t.getShatterChance(self, t)) then
@@ -209,21 +223,86 @@ newTalent{
 
 			if rng.percent(50) then --Half of the time, does only a half-shatter:
 				target:removeEffect(eff_id)
-				game.logSeen(self, "#CRIMSON#%s impales %s's shield!", self.name:capitalize(), target.name)
+				game.logSeen(self, "#CRIMSON##{bold}# impales %s's shield!#{normal}#", self.name:capitalize(), target.name)
 			else
 				reduceDamageShieldByPct(self, target, eff_id, 50) --log handled in this function
 			end
 		end
 	end,
 	action = function(self, t)
-		if not self:hasArcheryWeapon("bow") then
-			if self:hasArcheryWeaponQS("bow") then
-				self:quickSwitchWeapons(true, nil, true)
-			end
-		end
-		if not self:hasArcheryWeapon("bow") then return end
-		local targets = self:archeryAcquireTargets(t.getArcheryTargetType(self, t), {one_shot=true})
+		-- NOTE: This is an archival commit
+		-- I don't need this code, nor is it beautiful, and it is only about 50%
+		-- functional.
+		-- But it was a lot of work getting the targeting to this point, and I might
+		-- have second thoughts, so I'm going to need to save it somewhere.
+		local tg = self:getTalentTarget(t)
+		-- This "no_energy" makes the /targeting/ take zero time, not the shot
+		local targets = getArcheryTargetsWithSwap(self, tg, {
+			no_energy=true, one_shot=true
+		})
 		if not targets then return end
+
+		-- Get default knockback target to send to our targeting system
+		-- Note: In this commit, NOT WORKING
+		local target = game.level.map(targets[1].x, targets[1].y, engine.Map.ACTOR)
+
+		local dx, dy = util.getDir(self.x, self.y, target.x, target.y)
+		local dist = t.getKnockbackRange(self, t)
+
+		local end_x = util.bound(target.x + dx*dist, 0, game.level.map.w)
+		local end_y = util.bound(target.y + dy*dist, 0, game.level.map.h)
+
+		local l = core.fov.line(target.x, target.y, end_x, end_y)
+		local tx, ty, lx, ly, is_corner_blocked
+
+		repeat
+			tx, ty = lx, ly
+			lx, ly, is_corner_blocked = l:step()
+		until is_corner_blocked or not lx or not ly or game.level.map:checkAllEntities(lx, ly, "block_move", self)
+
+		-- Player targeting
+		if self.player then
+			game.target.target.entity = target
+			game.target.target.x = possible_x
+			game.target.target.y = possible_y
+
+			local block_check = function(_, bx, by)
+				return game.level.map:checkEntity(bx, by, engine.Map.TERRAIN, "block_move", target)
+			end
+
+			local function check_dest(px, py)
+				-- Are we aiming in a small cone behind the target?
+				local knockback_angle = math.atan2(target.x-px, target.y-py)
+				local o_angle = math.atan2(self.x-target.x, self.y-target.y)
+				local formula = math.abs(knockback_angle - o_angle) % (math.pi*2)
+				if (math.abs(knockback_angle - o_angle) % (math.pi*2)) > math.pi*.2 then return end
+
+				local check = false
+
+				--See how far we can move the target in that direction
+				linestep = target:lineFOV(target.x, target.y, nil, nil, px, py)
+				local lx, ly, is_corner_blocked
+				repeat
+					lx, ly, is_corner_blocked = linestep:step()
+					if target.x == lx and target.y == ly then check = true break end
+				until is_corner_blocked or not lx or not ly or game.level.map:checkEntity(lx, ly, Map.TERRAIN, "block_move", target)
+				return check
+			end
+
+			local tg2 = {type="beam", source_actor=target, act_exclude={[target.uid]=true}, range=dist, talent=t, no_start_scan=true, no_move_tooltip=true}
+			tg2.display_line_step = function(self, d) 
+				local knockback_range = core.fov.distance(self.target_type.start_x, self.target_type.start_y, d.lx, d.ly)
+				if knockback_range >= 1 and knockback_range <= dist and check_dest(d.lx ,d.ly) then
+					--and not d.block then
+					d.s = self.sb
+				else
+					d.s = self.sr
+				end
+				d.display_highlight(d.s, d.lx, d.ly)
+			end
+			dx, dy = self:getTarget(tg2)
+		end
+
 		self:archeryShoot(targets, t, nil, {mult=t.getDam(self, t)})
 		return true
 	end,
@@ -234,14 +313,14 @@ newTalent{
 		local dur = t.getDur(self, t)
 		local shatter_chance = t.getShatterChance(self, t)
 		local half_shatter_chance = t.getHalfShatterChance(self, t)
-		return ([[Take a point-blank shot for %d%% damage at a maximum range of %d, pushing your enemy back up to a maximum distance of %d and pinning it (for %d turns) against any suitable obstacle, natural or man-made. You may perform this manoeuvre with a melee weapon; but doing so will force you to switch to your secondary weapon set.
+		return ([[Take a point-blank shot for %d%% damage at a maximum range of %d, pushing your enemy back up to %d squares and pinning it (for %d turns) against any suitable obstacle, natural or man-made. You may perform this manoeuvre with a melee weapon; but doing so will force you to switch to your secondary weapon set.
 
 			This damage even goes straight through damage shields. At talent level 3, you attack with such timing that you overload the energies of the shield, shattering it. This has a %d%% chance of happening (%d%% half effect).]]):
 		format(dam_pct, range, knockback_range, dur, shatter_chance, half_shatter_chance)
 	end,
-	getKnockbackRange = function (self, t) return math.round(self:combatTalentScale(t, 2.7, 4.2)) end,
-	getDur = function (self, t) return math.round(self:combatTalentScale(t, 3, 6))  end,
-	getDam = function (self, t) return self:combatTalentWeaponDamage(t, 1.0, 1.6) end,
+	getKnockbackRange = function(self, t) return math.round(self:combatTalentScale(t, 2.7, 4.2)) end,
+	getDur = function(self, t) return math.round(self:combatTalentScale(t, 3, 4))  end,
+	getDam = function(self, t) return self:combatTalentScale(t, 1.0, 1.6) end,
 	getShatterChance = function(self, t)
 		local mod = self:getTalentTypeMastery(t.type[1])
 		local tl = math.max(self:getTalentLevel(t), 3*mod) - 2*mod --Start from TL 3
