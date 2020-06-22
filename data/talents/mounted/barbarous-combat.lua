@@ -130,7 +130,7 @@ newTalent{
 	points = 5,
 	random_ego = "attack",
 	cooldown = 15,
-	stamina = 18,
+	stamina = 12,
 	tactical = { ATTACKAREA = { weapon = 2 }, SURROUNDED = 3 },
 	range = 0,
 	radius = 1,
