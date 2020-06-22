@@ -1,6 +1,7 @@
 local _M = loadPrevious(...)
 
 local Map = require "engine.Map"
+local talents_env = require "engine.interface.ActorTalents".main_env
 
 local base_bumpInto = _M.bumpInto
 local base_combatMovementSpeed = _M.combatMovementSpeed
@@ -55,10 +56,38 @@ end
 local base_physicalCrit = _M.physicalCrit
 function _M:physicalCrit(dam, weapon, target, atk, def, add_chance, crit_power_add)
 	crit_power_add = crit_power_add or 0
+	add_chance = add_chance or 0
+
+	--Flanking
 	local eff = target:hasEffect(target.EFF_OUTRIDER_FLANKING)
 	if eff then
 		crit_power_add = crit_power_add + eff.crit_dam
 	end
+
+	--Master of Brutality
+	if self:attr"outrider_master_of_brutality" then
+		if target:effectsFilter({type="mental", status="detrimental"}) then
+			add_chance = add_chance + self.outrider_master_of_brutality
+		end
+	end
+
+	--Spring attack
+	local eff = self:hasEffect(self.EFF_OUTRIDER_SPRING_ATTACK)
+	if eff then
+		-- Do a melee finishing manoeuvre
+		if talents_env.hasMeleeWeapon(self) then
+			add_chance = add_chance + eff.current_crit*2
+			game.logPlayer(self,
+				"#FIREBRICK#%s executes a melee Spring Attack!#NORMAL#",
+				self.name:capitalize()
+			)
+			self:removeEffect(self.EFF_OUTRIDER_SPRING_ATTACK)
+		-- Or otherwise, do a regular buffed ranged attack
+		else
+			add_chance = add_chance + eff.current_crit
+		end
+	end
+
 	return base_physicalCrit(self, dam, weapon, target, atk, def, add_chance, crit_power_add)
 end
 

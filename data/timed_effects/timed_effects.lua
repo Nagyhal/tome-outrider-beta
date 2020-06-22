@@ -255,108 +255,96 @@ newEffect{
 	on_timeout = function(self, eff) end,
 }
 
-newEffect{
-	name = "OUTRIDER_STRIKE_AT_THE_HEART", image = "talents/strike_at_the_heart.png",
-	desc = "Strike at the Heart",
-	long_desc = function(self, eff)
-		local ct = eff.ct
-		return ("The target's charge emboldens it, granting %d%% movement speed, %d accuracy, %d%% critical chance and %d defense until the next attack."):format(eff.move, eff.atk, eff.crit, eff.def) end,
-	type = "physical",
-	subtype = { charge=true, tactic=true, speed=true },
-	status = "beneficial",
-	parameters = { ct=1, move=5, atk=3, crit=3, def=3, sunder=0},
-	charges = function(self, eff) return eff.ct end,
-	--TODO: As you can use this with archers, the terminology "charge" isn't really appropriate
-	on_gain = function(self, eff) return "#Target# prepares a deadly charge!", "+Strike at the Heart" end,
-	on_lose = function(self, eff) return "#Target# ends the charge.", "-Strike at the Heart" end,
-	activate = function(self, eff, p)
-		eff.targets = eff.targets or {}
-		p.doStoreBonuses(self, eff)
-		self:effectTemporaryValue(eff, "movement_speed", eff.move/100)
-		self:effectTemporaryValue(eff, "combat_def", eff.def)
-		self:effectTemporaryValue(eff, "combat_atk", eff.atk)
-		self:effectTemporaryValue(eff, "combat_physcrit", eff.crit)
-	end,
-	removeTempValues = function(self, eff)
-		for i = #eff.__tmpvals, 1, -1 do
-			self:removeTemporaryValue(eff.__tmpvals[i][1], eff.__tmpvals[i][2])
-			eff.__tmpvals[i] = nil
+
+--- Simply returns the distance to the nearest enemy
+local function getDistToNearestEnemy(self)
+	-- We're going to update the user's FOV cache
+	-- If we move instantly, the new FOV is usually calculated /after/
+	-- the movement, which we don't want.
+	self:computeFOV()
+
+	local i = 1 
+	for i, act in ipairs(self.fov.actors_dist) do
+		if act and not act.dead and self.fov.actors[act] then
+			-- Break out the loop when we have our nearest enemy
+			if self:reactionToward(act) < 0 then
+				return math.sqrt(self.fov.actors[act].sqdist)
+			end
 		end
-	end,
-	initiateTempValues = function(self, eff)
-		self:effectTemporaryValue(eff, "movement_speed", eff.move/100)
-		self:effectTemporaryValue(eff, "combat_def", eff.def)
-		self:effectTemporaryValue(eff, "combat_atk", eff.atk)
-		self:effectTemporaryValue(eff, "combat_physcrit", eff.crit)
-	end,
-	doStoreBonuses = function(self, eff)
-		local p = self:hasEffect(self.EFF_OUTRIDER_SPRING_ATTACK)
-		if p then
-			stored_move = math.min(eff.move, p.move)
-			stored_def = math.min(eff.def, p.def)
-			-- print(("DEBUG: Storing %d def and %d move for Strike at the Heart"):format(stored_def, stored_move))
-			eff.move = eff.move-stored_move
-			eff.def = eff.def-stored_def
-			eff.store={def=stored_def, move=stored_move}
-		end
-		ed = self:getEffectFromId(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART)
-	end,
-	doUnstoreBonuses = function(self, eff, on_deactivate)
-		ed = self:getEffectFromId(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART)
-		if not on_deactivate then ed.removeTempValues(self, eff) end
-		if eff.store then
-			eff.move = eff.move + eff.store.move
-			eff.def = eff.def + eff.store.def
-			eff.store=nil
-		end
-		if not on_deactivate then ed.initiateTempValues(self, eff) end
-		ed = self:getEffectFromId(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART)
-	end,
-	on_merge = function(self, old_eff, new_eff, ed)
-		new_eff.targets=old_eff.targets
-		local ed = self:getEffectFromId(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART)
-		for i = #old_eff.__tmpvals, 1, -1 do
-			self:removeTemporaryValue(old_eff.__tmpvals[i][1], old_eff.__tmpvals[i][2])
-			old_eff.__tmpvals[i] = nil
-		end
-		ed.activate(self, new_eff, ed)
-		return new_eff
-	end,
-	callbackOnArcheryAttack = function(self, eff, target, hitted, crit, weapon, ammo, damtype, mult, dam)
-		if target then self:callTalent(self.T_OUTRIDER_STRIKE_AT_THE_HEART, "handleStrike", target, hitted) end
-	end,
-	deactivate = function(self, eff, ed)
-		local ct = eff.ct
-		ed.doUnstoreBonuses(self, eff, true)
-		if self:knowTalent(self.T_OUTRIDER_SPRING_ATTACK) and #table.keys(eff.targets)>0 then
-			local t = self:getTalentFromId(self.T_OUTRIDER_SPRING_ATTACK)
-			self:setEffect(self.EFF_OUTRIDER_SPRING_ATTACK, t.getDur(self,t), {
-				move = eff.move,
-				def = eff.def,
-				min_pct = t.getMinPct(self, t),
-				max_pct = t.getMaxPct(self, t)
-				})
-		end
-		--TODO: Decide how to pass a target
-		--(so you can't use spring attack to destroy EVERYTHING with massive damage mutipliees)
-	end,
-}
+	end
+end
 
 newEffect{
 	name = "OUTRIDER_SPRING_ATTACK", image = "talents/spring_attack.png",
 	desc = "Spring Attack",
-	long_desc = function(self, eff) return ("The rider gains a bonus to ranged damage against any marked targets for the duration. This bonus is dependent on distance: starting from %d%% at 2 tiles, increasing to %d%% at 5 tiles."):format(eff.min_pct, eff.max_pct) end,
+	long_desc = function(self, eff) return ([[The user gains a point of spring attack for each move, so long as an enemy has not moved adjacent by the beginning of the next turn. Attacks will reduce the counter by one.
+
+		This current bonuses are: %d%% crit chance, %d stamina on shot; after %d points, shots become dual-target.]]):
+		format(eff.current_crit or 77, eff.current_stamina or 77, eff.threshold)
+	end,
 	type = "physical",
-	subtype = { tactic=true },
+	subtype = {
+		tactic = true
+	},
+	parameters = {	
+		ct = 0, ct_to_add = 0,
+		min_pct = 5, max_pct = 10, min_stamina = 0.25, max_stamina = 1,
+		current_crit = 5, current_stamina = 0.25,
+		threshold = 10
+	},
+	charges = function(self, eff) return eff.ct end,
 	status = "beneficial",
-	parameters = { move=10, def=6, min_pct=5, max_pct=15},
+	getCurrentCrit = function(self, eff)
+		local mod = util.bound(eff.ct, 0, 10) / 10
+		return util.lerp(eff.min_pct, eff.max_pct, mod)
+	end,
+	getCurrentStamina = function(self, eff)
+		local mod = util.bound(getDistToNearestEnemy(self) or 6, 1, 6) -1 / 5
+		if mod > 0 then
+			return util.lerp(eff.min_stamina, eff.max_stamina, mod)
+		else return 0 end
+	end,
 	on_gain = function(self, eff) return "#Target# enters into a spring attack!", "+Spring Attack" end,
 	on_lose = function(self, eff) return "#Target#'s spring attack has ended.", "-Spring Attack" end,
-	--callbackonDealDamage is not useful so we handle the damage increment in load.lua's DamageProjector:base hook
-	activate = function(self, eff)
-		assert (eff.target, "No target sent to effect OUTRIDER_SPRING_ATTACK.")
+	callbackOnMove = function(self, eff, moved, force, ox, oy, x, y)
+		-- Wait until next turn to check if we earned our points
+		local move_dist = core.fov.distance(ox, oy, x, y)
+		eff.ct_to_add = eff.ct_to_add + move_dist
+		-- EXCEPT when we're about to act again (no energy used) straight away
+		-- The game doesn't do callbackOnAct in that situation, so we we'll...
+		-- else
+		if not self.energy.used then
+			self:callEffect(eff.effect_id, "callbackOnAct")
+		end
+		self:callEffect(eff.effect_id, "updateValues")
 	end,
-	deactivate = function(self, eff)
+	callbackOnActBase = function(self, eff)
+		self:callEffect(eff.effect_id, "updateValues")
+		local stamina = eff.current_stamina
+		if stamina > 0 then 
+			self:incStamina(stamina)
+			game.logPlayer(self, "#GREEN#%s gains %.1f stamina from Spring Attack!#NORMAL#", self.name:capitalize(), eff.current_stamina)
+		end
+	end,
+	callbackOnAct = function(self, eff)
+		local dist = getDistToNearestEnemy(self) or 10
+		if dist > 1 then
+			eff.ct = eff.ct + eff.ct_to_add
+		end
+		eff.ct_to_add = 0
+	end,
+	useSavedPoints = function(self, eff)
+	end,
+	--callbackonCrit is not useful so we handle that in 
+	updateValues = function(self, eff)
+		local ed = self:getEffectFromId(eff.effect_id)
+		eff.current_crit = ed.getCurrentCrit(self, eff) or 99
+		eff.current_stamina = ed.getCurrentStamina(self, eff) or 99
+	end,
+	activate = function(self, eff, ed)
+		ed.updateValues(self, eff)
+	end,
+	deactivate = function(self, eff, ed)
 	end,
 }
 
@@ -1228,8 +1216,7 @@ newEffect{
 	desc = "Feigned Retreat",
 	long_desc = function(self, eff)
 		local his_her = string.his_her(self)
-		return ("The fighter has executed a feigned retreat against %s and deals %d%% damage in %s first %d attacks after re-initiating combat. If the target is not slain by the user, it will instead take %d more enemy kills to recharge Feigned Retreat." ):
-
+		return ("The fighter has executed a feigned retreat against %s and deals %d%% damage in %s first %d attacks after re-initiating combat. If the target is not slain by the user, it will instead take %d more enemy kills to recharge Feigned Retreat."):
 		format(eff.target_name, eff.dam*100, his_her, eff.attacks_no, eff.ct)
 	end,
 	parameters = {target, target_name="the victim", dam=1.1, attacks_no=1, ct=30},
@@ -1240,12 +1227,12 @@ newEffect{
 	decrease = 0, no_remove=true,
 	no_stop_enter_worldmap = true, no_stop_resting = true,
 	callbackOnKill = function(self, eff, victim, death_note)
+		--@todo: Make this more verbose in the game log?
 		if victim == eff.target then
-			--TOOD: Make this more verbose?
-			self:removeEffect(eff[eff_id], false, true)
+			self:removeEffect(eff.effect_id, false, true)
 		else
 			eff.ct = eff.ct-1
-			if eff.ct <= 0 then self:removeEffect(eff[eff_id], false, true) end
+			if eff.ct <= 0 then self:removeEffect(eff.effect_id, false, true) end
 		end
 	end,
 	-----------------------------------------------------------

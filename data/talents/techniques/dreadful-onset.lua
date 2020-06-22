@@ -152,10 +152,156 @@ newTalent{
 	end,
 }
 
+
+
 newTalent{
-	name = "Impalement", short_name = "OUTRIDER_IMPALEMENT", image="talents/impalement.png",
+	name = "Feigned Retreat", short_name = "OUTRIDER_FEIGNED_RETREAT", image="talents/feigned_retreat.png",
 	type = {"technique/dreadful-onset", 2},
 	require = mnt_dexcun_req2,
+	points = 5,
+	range = 7,
+	cooldown = 30,
+	stamina = 25,
+	--AI : Increase viability as an escape option as the enemy loses health
+	tactical = function(self, t)
+		local a = self.ai_target.actor
+		if a and self:getReactionToward(a) > 0 then
+			local coeff = util.bound(1-a.life/a.max_life, 0, 1)
+			return { ESCAPE = util.lerp(1, 4, coeff) }
+		else
+			return { ESCAPE = 2 }
+		end
+	end,
+	requires_target = true,
+	target = function(self, t) return {type="hit", range=self:getTalentRange(t)} end,
+	getTarget2ForPlayer = function(self, target, t, move_dist)
+		-- local tg2 = {type="beam", source_actor=self, selffire=false, range=move_dist, talent=t, no_start_scan=true, no_move_tooltip=true}
+		-- tg2.display_line_step = function(game_target, d) 
+		-- 	local t_range = core.fov.distance(
+		-- 		game_target.target_type.start_x,
+		-- 		game_target.target_type.start_y,
+		-- 		d.lx,
+		-- 		d.ly)
+		-- 	if t_range >= 1 and t_range <= tg2.range and not d.block and checkUserIsBehindTarget(self, target, d.lx, d.ly) then
+		-- 		d.s = game_target.sb
+		-- 	else
+		-- 		d.s = game_target.sr
+		-- 	end
+		-- 	d.display_highlight(d.s, d.lx, d.ly)
+		-- end
+		-- return tg2
+	end,
+	getTarget2ForAI = function(self, t, move_dist, tgt_dist)
+		local cone_angle = 180/math.pi*math.atan(1/(tgt_dist + 1)) + 5 --5° extra angle
+		return {type="cone", cone_angle=cone_angle, source_actor=self, selffire=false, range=0, radius=move_dist, talent=t}
+	end,
+	on_pre_use = function(self, t, silent, fake) return preCheckCanMove(self, t, silent, fake) end,
+	callbackOnActBase = function(self, t)
+		if self:hasEffect(self.EFF_OUTRIDER_FEIGNED_RETREAT) then
+			if self.talents_cd[t.id] then
+				self.talents_cd[t.id] = 30
+			else
+				print("OUTRIDER DEBUG: T_OUTRIDER_FEIGNED_RETREAT cooled down without "..
+					"removing EFF_OUTRIDER_FEIGNED_RETREAT")
+			end
+		end
+	end,
+	action = function(self, t)
+		-----------------------------------------------------------------------
+		-- Shamelessly stolen from Disengage - which seems thoughtfully coded!
+		-- I've tried to take it and make it understandable for myself.
+		-----------------------------------------------------------------------
+		-- Get initial target and distance
+		-----------------------------------------------------------------------
+		local tg = self:getTalentTarget(t)
+		local tx, ty, target = self:getTarget(tg)
+		if not (target and self:canSee(target) and self:canProject(tg, tx, ty)) then return end
+		
+		local tgt_dist, move_dist = core.fov.distance(self.x, self.y, tx, ty), t.getDist(self,t)
+		-----------------------------------------------------------------------
+		--Get our secondary target
+		-----------------------------------------------------------------------
+		local dx, dy
+		if self.player then
+			-- Get furthest possible target square in a straight line backward
+			local possible_x, possible_y = projectLineBehind(self, target, t, move_dist)
+			if possible_x then
+				game.target.target.entity = nil
+				game.target.target.x = possible_x
+				game.target.target.y = possible_y
+			end
+
+			local tg2 = getTargetForProjectLineBehind(self, target, t, move_dist)
+			dx, dy = self:getTarget(tg2)
+		else 
+			local tg2 = t.getTarget2ForAI(self, t, move_dist, tgt_dist)
+			local grids = getFreeGridsFromTarget(self, tg2)
+			grids:sort(function(gs1, gs2)
+				local gs1_dist = core.fov.distance(self.x, self.y, gs1[1], gs1[2])
+				local gs2_dist = core.fov.distance(self.x, self.y, gs2[1], gs2[2])
+				return gs1_dist > gs2_dist
+			end)
+
+			dx, dy = grids[1][1], grids[1][2]
+		end
+		-----------------------------------------------------------------------
+		-- Check the target square
+		-----------------------------------------------------------------------
+		if not (dx and dy) or not game.level.map:isBound(dx, dy) or core.fov.distance(dx, dy, self.x, self.y) > move_dist then return end
+		if not checkUserIsBehindTarget(self, target, dx, dy) then
+			game.logPlayer(self, "You must retreat directly away from your target in a straight line.")
+			return
+		end
+		-----------------------------------------------------------------------
+		-- Move to the target location
+		-----------------------------------------------------------------------
+		if not rushTargetTo(self, dx, dy, {}) then
+			game.logPlayer(self, "You can't use Feigned Retreat in that direction.")
+			return false
+		end
+
+		-----------------------------------------------------------------------
+		-- Set the temp effects
+		-----------------------------------------------------------------------
+		target:setEffect(target.EFF_OUTRIDER_FEIGNED_RETREAT_TARGET, 1, {src=self})
+		if not target:hasEffect(target.EFF_OUTRIDER_FEIGNED_RETREAT_TARGET) then
+			return true
+		end
+		self:setEffect(
+			self.EFF_EVASION,
+			t.getEvasionDur(self, t),
+			{chance=t.getCurrentEvasion(self, t)})
+		self:setEffect(self.EFF_OUTRIDER_FEIGNED_RETREAT, 2, {target=target, damage=t.getDamPct(self, t)/100})
+
+		return true
+	end,
+	info = function(self, t)
+		local evasion_dur = t.getEvasionDur(self, t)
+		local dist = t.getDist(self, t)
+		local dam_pct = t.getDamPct(self, t)
+		local attacks_no = t.getAttacksNo(self, t)
+		return ([[One of the most famous tools in the Outrider repertory of mobile combat strategy and psychological warfare.
+
+			Turn suddenly and flee the battle, as you rush up to %d squares away from your target. The more you seem at a genuine disadvantage, the more your enemies are taken in; for %d turns, gain 20%% evasion which increases to 50%% if you are on death's door.
+
+			But it is only a ruse! For when you turn to face the enemy anew, you do so at the moment it is most vulnerable; gain %d%% damage to your next %d attacks. But you MUST turn back, to regain your honour, or you can't use this strategem again. Feigned Retreat stays on cooldown until you either defeat the original target, or move on and kill 30 more combatants.]]):
+		format(dist, evasion_dur, dam_pct, attacks_no)
+	end,
+	getEvasionDur = function(self, t) return self:combatTalentScale(t, 3, 7) end,
+	getDist = function(self, t) return self:combatTalentScale(t, 4,  7) end,
+	getDamPct = function(self, t) return self:combatTalentScale(t, 110, 140) end,
+	getAttacksNo = function(self, t) return math.floor(self:combatTalentScale(t, 1, 2.8)) end,
+	getCurrentEvasion = function(self, t)
+		local life_portion_left = util.bound(self.life, 0, self.max_life) / self.max_life
+		--LERP, a fantastic and underused utility function. Do you LERP?
+		return util.lerp(20, 50, life_portion_left)
+	end,
+}
+
+newTalent{
+	name = "Impalement", short_name = "OUTRIDER_IMPALEMENT", image="talents/impalement.png",
+	type = {"technique/dreadful-onset", 3},
+	require = mnt_dexcun_req3,
 	points = 5,
 	cooldown = 16,
 	stamina = 15,
@@ -275,120 +421,6 @@ newTalent{
 		return self:combatTalentLimit(tl, 100, 34, 87.1)
 	end,
 	getHalfShatterChance = function(self, t) return t.getShatterChance(self, t)/2 end,
-}
-
-newTalent{
-	name = "Feigned Retreat", short_name = "OUTRIDER_FEIGNED_RETREAT", image="talents/feigned_retreat.png",
-	type = {"technique/dreadful-onset", 3},
-	hide="always", --DEBUG : Hiding untested talents 
-	require = mnt_dexcun_req3,
-	points = 5,
-	range = 7,
-	cooldown = 30,
-	stamina = 25,
-	--AI : Increase viability as an escape option as the enemy loses health
-	tactical = function(self, t)
-		local a = self.ai_target.actor
-		if a and self:getReactionToward(a) > 0 then
-			local coeff = util.bound(1-a.life/a.max_life, 0, 1)
-			return { ESCAPE = util.lerp(1, 4, coeff) }
-		else
-			return { ESCAPE = 2 }
-		end
-	end,
-	requires_target = true,
-	target = function(self, t) return {type="hit", range=self:getTalentRange(t)} end,
-	getTarget2ForPlayer = function(self, t, move_dist)
-		local tg2 = {type="beam", source_actor=self, selffire=false, range=move_dist, talent=t, no_start_scan=true, no_move_tooltip=true}
-		tg2.display_line_step = function(self, d) -- highlight permissible grids for the player
-			local t_range = core.fov.distance(self.target_type.start_x, self.target_type.start_y, d.lx, d.ly)
-			if t_range >= 1 and t_range <= tg2.range and not d.block and check_dest(d.lx, d.ly) then
-				d.s = self.sb
-			else
-				d.s = self.sr
-			end
-			d.display_highlight(d.s, d.lx, d.ly)
-		end
-		return tg2
-	end,
-	getTarget2ForAI = function(self, t, move_dist, tgt_dist)
-		local cone_angle = 180/math.pi*math.atan(1/(tgt_dist + 1)) + 5 --5° extra angle
-		return {type="cone", cone_angle=cone_angle, source_actor=self, selffire=false, range=0, radius=move_dist, talent=t}
-	end,
-	on_pre_use = function(self, t, silent, fake) return preCheckCanMove(self, t, silent, fake) end,
-	callbackOnActBase = function(self, t)
-		if self:hasEffect(self.EFF_OUTRIDER_FEIGNED_RETREAT) then
-			if self.talents_cd[t.id] then
-				self.talents_cd[t.id] = 30
-			else
-				print("OUTRIDER DEBUG: T_OUTRIDER_FEIGNED_RETREAT cooled down without "..
-					"removing EFF_OUTRIDER_FEIGNED_RETREAT")
-			end
-		end
-	end,
-	--Shamelessly stolen from Disengage - which seems very thoughtfully coded!
-	--I've tried to take it and make it understandable for myself.
-	action = function(self, t)
-		local tg = self:getTalentTarget(t)
-		local tx, ty, target = self:getTarget(tg)
-		if not (target and self:canSee(target) and self:canProject(tg, tx, ty)) then return end
-		
-		local tgt_dist, move_dist = core.fov.distance(self.x, self.y, tx, ty), t.getDist(self,t)
-
-		--Get our secondary target
-		local dx, dy
-		if self.player then
-			local possible_x, possible_y = projectLineBehind(self, target.x, target.y, move_dist)
-			dx, dy = self:getTarget(t.getTarget2ForPlayer(self, t, move_dist))
-		else 
-			local tg2 = t.getTarget2ForAI(self, t, move_dist, tgt_dist)
-			local grids = getFreeGridsFromTarget(self, tg)
-			grids:sort(function(gs1, gs2) end) --sort by distance here
-
-			dx, dy = grids[1][1], grids[1][2]
-		end
-
-		if not (dx and dy) or not game.level.map:isBound(dx, dy) or core.fov.distance(dx, dy, self.x, self.y) > move_dist then return end
-		if not check_dest(dx, dy) then
-			game.logPlayer(self, "You must retreat directly away from your target in a straight line.")
-			return
-		end
-
-		if not rushTargetTo(self, dx, dy, {}) then
-			game.logPlayer(self, "You can't use Feigned Retreat in that direction.")
-			return false
-		end
-
-		if not target:setEeffect(target.EFF_OUTRIDER_FEIGNED_RETREAT_TARGET, 1, {src=self}) then return true end
-		self:setEeffect(
-			self.EFF_EVASION,
-			t.getEvasionDur(self, t),
-			{chance=t.getCurrentEvasion(self, t)})
-		self:setEffect(self.EFF_OUTRIDER_FEIGNED_RETREAT, 2, {target=target, damage=t.getDamPct(self, t)/100})
-
-		return true
-	end,
-	info = function(self, t)
-		local evasion_dur = t.getEvasionDur(self, t)
-		local distance = t.getDistance(self, t)
-		local dam_pct = t.getDamPct(self, t)
-		local attacks_no = t.getAttacksNo(self, t)
-		return ([[One of the most famous tools in the Outrider repertory of mobile combat strategy and psychological warfare.
-
-			Turn suddenly and flee the battle, as you rush up to %d squares away from your target. The more you seem at a genuine disadvantage, the more your enemies are taken in; for %d turns, gain 20%% evasion which increases to 50%% if you are on death's door.
-
-			But it is only a ruse! For when you turn to face the enemy anew, you do so at the moment it is most vulnerable; gain %d%% damage to your next %d attacks. But you MUST turn back, to regain your honour, or you can't use this strategem again. Feigned Retreat stays on cooldown until you either defeat the original target, or move on and kill 30 more combatants.]]):
-		format(distance, evasion_dur, dam_pct, attacks_no)
-	end,
-	getEvasionDur = function(self, t) return self:combatTalentScale(t, 3, 7) end,
-	getDistance = function(self, t) return self:combatTalentScale(t, 4,  7) end,
-	getDamPct = function(self, t) return self:combatTalentScale(t, 110, 140) end,
-	getAttacksNo = function(self, t) return math.floor(self:combatTalentScale(t, 1, 2.8)) end,
-	getCurrentEvasion = function(self, t)
-		local life_portion_left = util.bound(self.life, 0, self.max_life) / self.max_life
-		--LERP, a fantastic and underused utility function. Do you LERP?
-		return util.lerp(20, 50, life_portion_left)
-	end,
 }
 
 newTalent{

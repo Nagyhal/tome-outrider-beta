@@ -63,16 +63,7 @@ class:bindHook("DamageProjector:base", function(self, data)
 	if not a or a~=self then return ret end
 
 	local target = game.level.map(data.x, data.y, engine.Map.ACTOR)
-	local eff = self.hasEffect and self:hasEffect(self.EFF_OUTRIDER_SPRING_ATTACK)
-	if eff and target and eff.target==target then
-		local dist = core.fov.distance(self.x, self.y, target.x, target.y)
-		if dist >= 2 then
-			dist = util.bound(dist, 2, 5)
-			local pct = 100 + util.lerp(eff.min_pct, eff.max_pct, (dist-2)/3)
-			data.dam = data.dam * pct/100
-			ret = true
-		end
-	end
+
 	local a = game.level.map(data.x, data.y, engine.Map.ACTOR)
 	if self:knowTalent(self.T_OUTRIDER_TRAIT_OPPORTUNISTIC) then
 		if a.life <= a.max_life*.25 then
@@ -292,5 +283,14 @@ class:bindHook("Combat:getDammod:subs", function(self, data)
 	if owner and owner:knowTalent(owner.T_OUTRIDER_CHALLENGE_THE_WILDS) then
 		local dammod = data.dammod
 		dammod['cun'] = (dammod['cun'] or 0) + 0.6
+	end
+end)
+
+class:bindHook("Combat:archeryTargetKind", function(self, data)
+	local eff = self:hasEffect(self.EFF_OUTRIDER_SPRING_ATTACK)
+	if eff and eff.ct >= eff.threshold then
+		local params, tg = data.params, data.tg
+		params.limit_shots = (params.limit_shots or 0) + 1
+		tg.type, tg.radius = "ball", 1
 	end
 end)
