@@ -13,16 +13,34 @@ class:bindHook("ToME:load", function(self, data)
 
 	ActorTalents:loadDefinition("/data-outrider/talents/outrider.lua")
 	Birther:loadDefinition("/data-outrider/birth/mounted.lua")
-	ActorResource:defineResource("Loyalty", "loyalty", ActorTalents.T_LOYALTY_POOL, "loyalty_regen", "Loyalty represents the devotion of your pet.", nil, nil, {
-		color = "#f88072#",
-		wait_on_rest = true,
-	})
+	ActorResource:defineResource(
+		"Loyalty", "loyalty", ActorTalents.T_LOYALTY_POOL, "loyalty_regen",
+		"Loyalty represents the devotion of your pet.", 
+		nil, nil, {
+			color = "#f88072#",
+			wait_on_rest = true,
+			cost_factor = function(self, t, check) 
+				return not self:isMounted() and 1 or (100 + self:combatFatigue()*2) / 100
+			end,
+			--@todo Describe how disobedience will work in the final iteration
+			-- status_text = function(act)
+			-- end,
+		})
 	--ActorInventory:defineInventory("MOUNT", "Mount", false, "Your mount.")
 	ActorTemporaryEffects:loadDefinition("/data-outrider/timed_effects/timed_effects.lua")
 	-- ActorTemporaryEffects:loadDefinition("/data-outrider/timed_effects/disobedience.lua")
 	ActorInventory:defineInventory("MOUNT", "Ridden", true, "Trained characters may ride atop a mount", nil)
 	DamageType:loadDefinition("data-outrider/damage_types.lua")
 	ActorAI:loadDefinition("/data-outrider/ai/")
+
+	--Here's a very pretty and beautiful hack to make weapon swapping work on bump attack.
+	local t = ActorTalents.talents_def.T_ATTACK
+	local main_env = ActorTalents.main_env
+	old_action = t.action
+	t.action = function(self, t)
+		main_env.swapToMelee(self)
+		return old_action(self, t)
+	end
 end)
 
 class:bindHook("Entity:loadList", function(self, data)
@@ -143,28 +161,13 @@ class:bindHook("DamageProjector:final", function(self, data)
 end)
 class:bindHook("Actor:postUseTalent", function(self, data)
 	local ab = data.t
-	local trigger = data.trigger
-	if ab.mode == "sustained" then
-		if not self:isTalentActive(ab.id) then
-			if ab.sustain_loyalty then
-				trigger = true; self:incMaxLoyalty(-util.getval(ab.sustain_loyalty, self, ab))
-			end
-		elseif ab.sustain_loyalty then
-			self:incMaxLoyalty(util.getval(ab.sustain_loyalty, self, ab))
-		end
-	elseif not self:attr("force_talent_ignore_ressources") and not ab.fake_ressource then
-		if ab.loyalty and not self:attr("zero_resource_cost") then
-			local fatigue_factor = self:isMounted() and self:combatFatigue()*2 or 0
-			trigger = true; self:incLoyalty(-util.getval(ab.loyalty, self, ab) * (100 + fatigue_factor) / 100)
-		end
-	end
 	--Regen Loyalty on inscription usage if applicable
 	local owner = self.owner
 	if owner and owner.loyalty and string.find(ab.type[1],  "inscriptions") then
 		local name = string.sub(ab.id, 3)
 		local inscription_data = self.__inscription_data_fake or self.inscriptions_data[name]
 		if inscription_data.heal then
-			--TODO: Decide whether this goes in
+			--@todo: Decide whether this goes in
 			-- owner:incLoyalty(5)
 		end
 	end

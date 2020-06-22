@@ -14,15 +14,36 @@ end
 
 base_restCheck = _M.restCheck
 function _M:restCheck()
+	local can_rest, message = base_restCheck(self)
+
 	if not (self.resting.rest_turns) then
-		local mount = self:hasMount()
+		local mount = self:isMounted() and self:hasMount()
 		if mount then
-			if mount.air_regen < 0 then return false, "mount losing breath!" end
-			if mount.life_regen <= 0 then return false, "mount losing health!" end
+			-- Resting improves regen for our off-screen mount, too!
+			-- Had to copy all this from the base routine.
+			-- @todo Figure out how to use callbackOnRest to put things
+			-- in the middle of resting routine
+			local perc = 0
+			if self.resting.cnt >= 15 then
+				perc = math.min(self.resting.cnt, 16)
+			end
+			local old_shield = mount.arcane_shield
+			mount.arcane_shield = nil
+			mount:heal(mount.life_regen * perc)
+			mount.arcane_shield = old_shield
+			mount:incStamina(mount.stamina_regen * perc)
+			mount:incMana(mount.mana_regen * perc)
+			mount:incPsi(mount.psi_regen * perc)
+
+			if not self.resting.rest_turns then
+				if mount.air_regen < 0 then return false, "mount losing breath!" end
+				if mount.life_regen <= 0 then return false, "mount losing health!" end
+			end
+
+			if mount.life < mount.max_life and mount.life_regen > 0 and not mount:attr("no_life_regen") then return true end
 		end
-		if self:getLoyalty() < self:getMaxLoyalty() and self.loyalty_regen > 0 then return true end
 	end
-	return base_restCheck(self)
+	return can_rest, message
 end
 
 return _M
