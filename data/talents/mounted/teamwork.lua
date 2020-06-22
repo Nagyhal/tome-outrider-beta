@@ -27,26 +27,62 @@ newTalent{
 	range = archery_range,
 	requires_target = true,
 	tactical = { ATTACK = { weapon = 2 } },
-	on_pre_use = function(self, t, silent, fake) return preCheckArcheryInAnySlot(self, t, silent, fake) end,
-	on_learn = function(self ,t)
-		-- if not self:knowTalent(self.T_OUTRIDER_MOUNTED_ARCHERY_MASTERY) then
-		-- 	self:learnTalent(self.T_OUTRIDER_MOUNTED_ARCHERY_MASTERY, true) 
-		-- end
-		if not self.__show_special_talents[self.T_OUTRIDER_MOUNTED_ARCHERY_MASTERY] then
-			table.set(self, "__show_special_talents", "T_OUTRIDER_MOUNTED_ARCHERY_MASTERY", true)
+	-- on_pre_use = function(self, t, silent, fake) return preCheckArcheryInAnySlot(self, t, silent, fake) end,
+	target = function(self, t)
+		local need_switch = not isNextToEnemy(self) and mustSwapForArcheryWeapon(self)
+
+		if self:hasArcheryWeapon() or need_switch then 
+			local weapon, ammo = self:hasArcheryWeapon()
+			return {
+				type="bolt",
+				range=self:getTalentRange(t),
+				display=self:archeryDefaultProjectileVisual(weapon, ammo),
+				talent = t
+			}
+		else 
+			--We're going to ask always for a simple_dir_request, because the player might
+			--often want to shoot a distant enemy while adjacent to another one.
+			return {type="hit", range=self:getTalentRange(t), talent=t, simple_dir_request=true}
 		end
 	end,
-	archery_onhit = function(self, t, target, x, y)
-		local mount = self:hasMount()
-		if target:canBe("cut") then target:setEffect(target.EFF_CUT, t.getDur(self, t), {power=t.getBleed(self, t)}) end
-		if not mount then return true end
-		mount:setEffect(mount.EFF_OUTRIDER_BEASTMASTER_MARK,  t.getDur(self, t), {target=target})
+	setMark = function(self, t, target, dam)
+		if target:canBe("cut") then
+			target:setEffect(target.EFF_CUT, t.getDur(self, t), {
+				src = self,
+				power = (dam * t.getBleedPct(self, t)/100) / t.getDur(self, t),
+				apply_power = self:combatPhysicalpower()
+			})
+		end
+
+		if target:hasEffect(target.EFF_CUT) then
+			local pet = self:getOutriderPet(); if not pet then return end
+
+			pet:setEffect(pet.EFF_OUTRIDER_BEASTMASTER_MARK, t.getDur(self, t), {target=target})
+		end
+	end,
+	callbackOnArcheryAttack = function(self, t, target, hitted, crit, weapon, ammo, damtype, mult, dam)
+		if target and hitted then
+			t.setMark(self, t, target, dam)
+		end
 	end,
 	action = function(self, t)
-		local targets = getArcheryTargetsWithSwap(self)
-		if not targets then return nil end
-		self:archeryShoot(targets, t, nil, {mult=t.getDam(self, t)})
-		return true
+		local tg = self:getTalentTarget(t)
+
+		if tg.type=="bolt" then
+			local targets = getArcheryTargetsWithSwap(self)
+			if not targets then return nil end
+			self:archeryShoot(targets, t, nil, {mult=t.getDam(self, t)})
+			return true
+
+		else
+			local x, y, target = self:getTarget(tg)
+			if not target or not self:canProject(tg, x, y) then return nil end
+			
+			local hit, dam = self:attackTarget(target, nil, t.getDam(self, t), true)
+
+			if hit then t.setMark(self, t, target, dam) end
+			return true
+		end
 	end,
 	info = function(self, t)
 		local dam = t.getDam(self, t)*100
@@ -59,12 +95,10 @@ newTalent{
 		format(dam, bleed_pct, dur, speed)
 	end,
 	getDam = function(self, t) return self:combatTalentScale(t, 1.19, 1.71) end,
-	-- getBleedPct = function(self, t) return self:combatTalentScale(t, 80, 121)
 	getBleedPct = function(self, t) return 85 end,
 	getDur = function(self, t) return self:combatTalentScale(t, 3.8, 6) end,
 	getLoyalty = function(self, t) return self:combatTalentLimit(t, 1, 5, 3) end,
-	getSpeed = function(self, t) return self:combatTalentScale(t, .19, .71) end,
-	-- getRushRange = function(self, t) return math.min(10, self:combatTalentScale(t, 3, 8)) end,
+	getSpeed = function(self, t) return self:combatTalentScale(t, .05, .45) end,
 }
 
 newTalent{

@@ -46,6 +46,7 @@ end
 --function in case the pet is mounted. Some behaviours are also set by the
 --disobedience effects themselves.
 newAI("pet_behaviour", function(self)
+	local ox, oy = self.x, self.y
 	local target = getLiveAITarget(self)
 	local mover = self:getRider() or self
 
@@ -84,7 +85,12 @@ newAI("pet_behaviour", function(self)
 		rompAroundTheOwner(self, self.owner)
 	end
 
-	return self:runAI("target_mount")
+	local ret = {self:runAI("target_mount")}
+
+	local eff = self:hasEffect(self.EFF_OUTRIDER_BEASTMASTER_MARK)
+	if eff then	self:runAI("barks", eff) end
+
+	return unpack(ret)
 end)
 
 --- The base AI for mounts
@@ -93,5 +99,23 @@ newAI("outrider_pet", function(self)
 	self:runAI("pet_behaviour")
 	if not self.energy.used then
 		return self:runAI("party_member")
+	end
+end)
+
+newAI("barks", function(self, eff)
+	if eff and eff.dissatisfaction >= 3 and not eff.did_bark then
+		local texts = {
+			"Grrrr!",
+			"grrr...",
+			"Growl!",
+			"Rrrr...",
+			"Wruff, wruff!"
+		}
+		game.logPlayer(self.owner,
+			"#RED##{bold}#%s bays to be let at %s!#{normal}##LAST#",
+			self.name:capitalize(), eff.target.name)
+		self:doEmote(rng.table(texts), 30)
+		eff.did_bark = true
+		eff.dissatisfaction = 1
 	end
 end)

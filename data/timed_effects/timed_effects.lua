@@ -810,12 +810,12 @@ newEffect{
 
 newEffect{
 	name = "OUTRIDER_BEASTMASTER_MARK",  image="talents/beastmasters_mark.png",
-	desc = "Beastmaster's Mark",
+	desc = "Beastrider's Mark",
 	long_desc = function(self, eff) return ("The beast is filled with a thirst for blood, gaining a %d%% bonus to movement and attack speed, but losing %d%% loyalty each turn it does not move toward or attack %s"):format(eff.target.name) end,
 	type = "mental",
 	subtype = { tactic=true },
 	status = "beneficial",
-	parameters = { target, speed=1.2, loyalty=5 },
+	parameters = { target, speed=1.2, loyalty=5, dissatisfaction=0 },
 	activate = function(self, eff)
 		checkEffectHasParameter(self, eff, "target")
 		self:setTarget(eff.target)
@@ -824,23 +824,31 @@ newEffect{
 		self:effectTemporaryValue(eff, "combat_physspeed", eff.speed)
 	end,
 	callbackOnAct = function(self, eff)
-		if not eff.target or eff.target.dead or game.level:hasEntity(eff.target) then
+		if not eff.target or eff.target.dead or not game.level:hasEntity(eff.target) then
 			self:removeEffect(self.EFF_OUTRIDER_BEASTMASTER_MARK, true)
 		end
 		self:setTarget(eff.target)
-		self.turn_procs.beastmaster_mark_loyalty_loss = true
-		game:onTickEnd(function()
-			if self.turn_procs.beastmaster_mark_loyalty_loss and self.owner then
-				self.owner:incLoyalty(-eff.loyalty)
-				self:logCombat(self.owner, "#Source#'s loyalty to #target# decreases as it is held back from its target!")
-			end
-		end)
+
+		eff.old_x, eff.old_y = self.x, self.y
+		local target, ox, oy = eff.target, eff.old_x, eff.old_y
+
+		--Are we not getting any closer to the enemy? If so, start to get miffed!
+		local cur_dist = core.fov.distance(self.x, self.y, target.x, target.y)
+		local o_dist = core.fov.distance(ox, oy, target.x, target.y)
+
+		if cur_dist>1 and (cur_dist >= o_dist or (self.x==ox and self.y==oy)) then
+			--This will prompt the AI to bark!
+			eff.dissatisfaction = eff.dissatisfaction + 1
+		else
+			eff.dissatisfaction = 0
+		end
 	end,
 	callbackOnMeleeAttack = function(self, eff, target, hitted, crit, weapon, damtype, mult, dam)
 		if target == eff.target then self.turn_procs.beastmaster_mark_loyalty_loss = false end
 	end,
 	callbackOnMove = function(self, eff, moved, force, ox, oy, x, y)
 		if moved then
+			local target = eff.target
 			local old_dist = core.fov.distance(ox, oy, target.x, target.y)
 			local dist = core.fov.distance(self.x, self.y, target.x, target.y)
 			if dist < old_dist then 
