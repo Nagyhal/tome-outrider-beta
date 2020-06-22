@@ -4,7 +4,7 @@ newTalent{
 	require = mnt_strcun_req1,
 	points = 5,
 	random_ego = "attack",
-	stamina = 25,
+	stamina = 18,
 	loyalty = 10,
 	cooldown = 8,
 	--TODO (AI) : Make it use this effectively to protect the mount
@@ -20,30 +20,40 @@ newTalent{
 		return preCheckCanMove(self, t, silent, fake) and preCheckMeleeInAnySlot(self, t, silent, fake)
 	end,
 	action = function(self, t)
-		local tg = self:getTalentTarget(t)
-		if not self:isMounted(t) then tg.range = t.getRangeOnFoot(self, t) end
-		local x, y, target = self:getTargetLimited(tg)
-		if not target then game.logPlayer(self, "You can only charge to a creature.") return nil end
+		-- local has_melee, did_swap = swapToMelee(self)
+		-- if not has_melee then return end
 
-		if not rushTargetTo(self, x, y, {go_through_friends=true}) then return end
+		local tg = self:getTalentTarget(t)
+		if self:isMounted(t) then tg.range = t.getMountedRange(self, t) end
+
+		--Do we reach a target?
+		local x, y, target = self:getTargetLimited(tg)
+
+		if not target then
+			game.logPlayer(self, "You can only charge to a creature.")
+			-- if did_swap then self:quickSwitchWeapons(true) end
+			return nil
+		end
+
+		if not rushTargetTo(self, x, y, {go_through_friends=true}) then
+			-- if did_swap then self:quickSwitchWeapons(true) end
+			return nil
+		end
 
 		if not target or core.fov.distance(self.x, self.y, target.x, target.y) > 1 then return true end
 
-		local grids = util.adjacentCoords(target.x, target.y)
-		local targets = {}
-		for _, coord in pairs(grids) do
-			local x, y = coord[1], coord[2]
-			if game.level.map:isBound(x, y) then
-				local a = game.level.map(x, y, engine.Map.ACTOR)
-				if a and self:reactionToward(a) > 0 then targets[#targets+1] = a end
-		end end
-		targets = rng.tableSample(targets, 2)
+		--After that ample series of checks, it seems we have a target!
+		local extra_targets = table.append(
+			getAdjacentActors(self, {only_enemies=true}),
+			getAdjacentActors(target, {only_enemies=true, src=self})
+		)
+		extra_targets = rng.tableSample(extra_targets, t.getExtraTargets(self, t))
 
 		local function doSecondaryAttack(eff_id, eff_type)
 			if self:getTalentLevel(t)<3 then return end
-			for _, target in ipairs(targets) do
+			for _, target in ipairs(extra_targets) do
 				if self:attackTarget(target, nil, t.getDam(self, t)/2, true) and target:canBe(eff_type, eff_id) then
-					target:setEffect(target[effid], t.getStunDur(self, t), {
+					target:setEffect(target[eff_id], t.getStunDur(self, t), {
 						apply_power=self:combatPhysicalpower()
 					})
 				end
@@ -70,13 +80,15 @@ newTalent{
 				})
 			end
 			doSecondaryAttack("EFF_DAZED", "stun")
-			for _, a in ipairs(table.append(targets, {target})) do
-				--We want to provoke regardless of whether we hit anything
-				a:setEffect(a.EFF_OUTRIDER_TAUNT, t.getProvokeDur(self, t), {
-					src=self,
-					apply_power=self:combatMindpower()
-				})
-			end
+		end
+
+		--Finally, we apply our taunt.
+		for _, a in ipairs(table.append(extra_targets, {target})) do
+			--We want to provoke regardless of whether we hit anything
+			a:setEffect(a.EFF_OUTRIDER_TAUNT, t.getProvokeDur(self, t), {
+				src=self,
+				apply_power=self:combatMindpower()
+			})
 		end
 		return true
 	end,
@@ -85,7 +97,6 @@ newTalent{
 		local stun_dur = t.getStunDur(self, t)
 		local daze_dur = t.getDazeDur(self, t)
 		local extra_targets = t.getExtraTargets(self, t)
-		local range_on_foot = t.getRangeOnFoot(self, t)
 		local provoke_dur = t.getProvokeDur(self, t)
 		local str = extra_targets>1 and "victims" or "victim"
 		return ([[Make a brazen rush at your enemy, mounted or on foot, for %d%% damage. The fierceness of your charge inflicts a 3 turn mental daze and forces the enemy to focus on you, ignoring your allies. Nothing compares to the sheer force of a mounted infantry charge; if you are mounted, you charge with an extra 2 range and the daze will become a stun.
@@ -96,13 +107,12 @@ newTalent{
 			-- stun_dur,
 			extra_targets,
 			str
-			-- range_on_foot,
 			-- daze_dur,
 			-- provoke_dur
 		)
 	end,
 	getDam = function(self, t) return self:combatTalentScale(t, 1.11, 1.63, .35) end,
-	getRangeOnFoot = function(self, t) return math.round(self:getTalentRange(t)/2) end,
+	getMountedRange = function(self, t) return self:getTalentRange(t)+2 end,
 	getStunDur = function(self, t) return self:combatTalentScale(t, 2.7, 4) end,
 	getDazeDur = function(self, t) return 2 end,
 	getProvokeDur = function(self, t) return self:combatTalentScale(t, 2.7, 4) end,
