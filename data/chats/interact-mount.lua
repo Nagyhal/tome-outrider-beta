@@ -71,6 +71,7 @@ local change_name = function(mount, player)
 		if name then
 			mount.name = name
 			mount.changed = true
+			mount.done_change_name = true
 		end
 	end)
 	game:registerDialog(d)

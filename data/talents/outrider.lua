@@ -32,6 +32,7 @@ newTalentType{ allow_random=true, type="mounted/skirmish-tactics", name = "skirm
 newTalentType{ allow_random=true, type="mounted/barbarous-combat", name = "barbarous combat", description = "Mounted or afoot, your brutal blademastery shall ravage legions."}
 newTalentType{ allow_random=true, type="mounted/shock-tactics", name = "shock tactics", description = "Shattering your foes' ranks with devastating charge attacks, your shock tactics represent the pinnacle of mounted martial domination and the ultimate unison of steel and steed."}
 newTalentType{ allow_random=true, type="mounted/beast-heart", name = "beast heart", description = "Become no longer beast-rider, but beast-kind."}
+newTalentType{ allow_random=true, type="mounted/warbanner", name = "warbanner", description = "Raise your warbanner for all to see, high above the ashes of your conquests."}
 
 local sort_traits = function(dialog, node)
 	local act = dialog.actor

@@ -22,10 +22,9 @@ local Particles = require "engine.Particles"
 newEffect{
 	name = "OUTRIDER_RILED_UP", image = "talents/panic.png",
 	desc = "Riled Up",
-	long_desc = function(self, eff) return ("The beast has become riled up and has a %d%% chance to flee in terror instead of acting."):format(eff.chance) end,
+	long_desc = function(self, eff) return ("The beast has become riled up and has a %d%% chance to rage against its target instead of obeying any commands."):format(eff.chance) end,
 	type = "mental",
-	-- lists = "outrider_disobedience",
-	subtype = { fear=true, disobedience=true },
+	subtype = { tactic=true, disobedience=true },
 	status = "detrimental",
 	parameters = {chance=50},
 	callbackOnActBase = function(self, eff)
@@ -53,8 +52,7 @@ newEffect{
 	desc = "Skittish",
 	long_desc = function(self, eff) return ("The beast has become skittish and has a %d%% chance to flee in terror instead of acting."):format(eff.chance) end,
 	type = "mental",
-	lists = "outrider_disobedience",
-	subtype = { fear=true },
+	subtype = { fear=true, disobedience=true },
 	status = "detrimental",
 	parameters = {chance=33},
 	on_gain = function(self, err) return "#F53CBE##Target# becomes skittish!", "+Skittish" end,

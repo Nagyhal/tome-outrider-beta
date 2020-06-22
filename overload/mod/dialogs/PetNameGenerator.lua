@@ -69,6 +69,7 @@ function _M:getPetNames(player, pet)
 			fct=function()
 				game:unregisterDialog(d)
 				pet.name = name
+				pet.done_change_name = true
 				pet.changed = true
 			end}
 		buttons[i] = b
@@ -105,7 +106,7 @@ function _M:getPetNames(player, pet)
 			text="Try again",
 			fct=function(n)
 				game:unregisterDialog(d)
-				self:petNameGeneratorDialog(player, pet)
+				self:getPetNames(player, pet)
 				return
 			end}
 		})

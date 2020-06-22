@@ -156,7 +156,7 @@ newTalent{
 	end,
 	action = function(self, t)
 		local mount = self:hasMount()
-		mount:setEffect(self.EFF_SPEED, 5, {power=t.getGoadSpeed(self, t)})
+		mount:setEffect(self.EFF_SPEED, 5, {power=t.getGlobalSpeed(self, t)})
 		return true
 	end,
 	info = function(self, t)

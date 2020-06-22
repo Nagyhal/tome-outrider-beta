@@ -32,7 +32,7 @@ newTalent{
 		self.outrider_done_disobedience = nil
 	end,
 	callbackOnTakeDamage = function(self, t)
-		if self.outrider_done_disobedience then return end
+		if self.outrider_done_disobedience or self:effectsFilter({subtype={disobedience=true}}) then return end
 		if not self.owner or self.owner.dead then error("Outrider: T_OUTRIDER_DISOBEDIENCE: Mount has no owner!") return end
 		local pct = self.owner.loyalty / self.owner.max_loyalty * 100
 
