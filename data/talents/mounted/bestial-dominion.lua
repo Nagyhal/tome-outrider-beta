@@ -651,6 +651,15 @@ newTalent{
 				self:addParticles(Particles.new("shader_shield_temp", 1, {toback=false,size_factor=1.5, y=-0.3, img="healgreen", life=25}, {type="healing", time_factor=2000, beamsCount=20, noup=1.0}))
 			end
 			self:attr("allow_on_heal", -1)
+
+			-- Add a combined growl and chomp sound effect
+			game:playSoundNear(self, {
+				"talents/breath",
+				pitch=1.7,
+				vol=.35})
+			game:playSoundNear(self, {
+				"creatures/ants/ant_1",
+				pitch=0.7})
 		else
 			mount:logCombat(target, "#Source# gains no life from Gruesome Depredation!")
 		end
