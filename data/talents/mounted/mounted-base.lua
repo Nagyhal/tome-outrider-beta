@@ -4,6 +4,14 @@ newTalent{
 	info = "Allows you to have a Loyalty pool. Loyalty is tied to another party member and allows you to command it.",
 	mode = "passive",
 	hide = "always",
+	callbackOnRest = function(self, t, type)
+		--Try to speed up the resting here.
+		local perc = 0
+		if self.resting.cnt >= 15 then
+			perc = math.min(self.resting.cnt, 16)
+		end
+		act:incLoyalty(act.stamina_regen * perc)
+	end,
 	no_unlearn_last = true,
 	-- callbackOnRest = function (self, t, type)
 	-- 	if type=="check" then
