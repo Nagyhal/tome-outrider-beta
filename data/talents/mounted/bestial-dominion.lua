@@ -134,6 +134,24 @@ local function makeBestialMount(self, lev)
 	local list = {}
 	for k, e in pairs(chances) do for i = 1, e do list[#list+1] = k end tot = tot + e end
 	local m = require "mod.class.NPC".new(mounts_list.wolf)
+
+	-- Grant an inscription
+	-- Implementing this the long way, because when I have different
+	-- mount types, I might need to do something more complicated.
+
+	local kind = function(o)
+		if o.inscription_kind == "heal" then return true end
+	end
+
+	local o
+	for i = 1, 100 do
+		o = game.zone:makeEntity(game.level, "object", {special=kind, type="scroll"}, nil, true)
+		if o and o.inscription_talent and o.inscription_data then
+			m:setInscription(nil, o.inscription_talent, o.inscription_data, false, false, nil, true, true)
+			break
+		end
+	end
+	
 	return m
 end
 
@@ -156,7 +174,7 @@ function befriendMount(self, m)
 			end,
 		})
 	end
-	--Mount used for Mounted Combat abilities, TODO: Consider making this more modular for multiple mounts owned
+	-- Mount used for Mounted Combat abilities, TODO: Consider making this more modular for multiple mounts owned
 	self.outrider_pet = m
 	m.ai = "outrider_pet"
 	m.owner = self
@@ -171,13 +189,13 @@ function befriendMount(self, m)
 	m.ai_state.ai_move="move_astar"
 	m.ai_state.ally_compassion=10
 	m.ai_state.talent_in=1
-	--Bind rider to mount
+	-- Bind rider to mount
 	self.mounts_owned = self.mounts_owned or {}
 	self.mounts_owned[#self.mounts_owned+1] = m
 	m.show_owner_loyalty_pool = true
 
 
-	--Other mount stuff
+	-- Other mount stuff
 	m:learnTalent(self.T_OUTRIDER_DISOBEDIENCE, true, 1)
 	shareAllTalentsWithPet(self, m)
 	self.unused_traits = 0
@@ -185,8 +203,8 @@ function befriendMount(self, m)
 		self:callTalent(self.T_OUTRIDER_PRIMAL_BOND, "on_learn")
 	end
 	m:resetToFull()
-	--
-	--Quest complete
+
+	-- Quest complete
 	if self:isQuestStatus("outrider-start", engine.Quest.PENDING) then
 		self:setQuestStatus("outrider-start", engine.Quest.COMPLETED)
 	end
@@ -194,7 +212,7 @@ function befriendMount(self, m)
 	util.hotkeySwap(self, "T_OUTRIDER_CHALLENGE_THE_WILDS", "T_OUTRIDER_MOUNT")
 end
 
---TODO: Rewrite this function completely. Snapshotting is bad, very bad!
+-- TODO: Rewrite this function completely. Snapshotting is bad, very bad!
 function mountSetupSummon(self, m, x, y, no_control)
 	m.can_mount = true
 	m.mount_data = {
@@ -252,13 +270,18 @@ end
 function doChangeNameDialog(self, pet)
 	local Dialog = require "engine.ui.Dialog"
 	return Dialog:multiButtonPopup(
-		"A worthy name for such a beast",
-		([[Proud and battle-sturdy Outrider! I see that you are making swift progress. It is good that you have wasted no time in setting out and bringing those who work against you (and all that is good and noble in Eyal) to their knees. But don't be too hasty! Your bestial mount, a %s only known as %s, is still without a suitable name. When they mark the chronicles of your slaughter in blood and tears, is that the way you would want such a fine beast, a steed such as this one, to go down in the history of Eyal? As %s? What about a real name, a name to be heard upon the trembling lips of your enemies as they beg for mercy before your onset...?]]
+		"A worthy name for such a beast!",
+		([[Outrider! It seems that you are making swift progress. It is good that you have wasted no time in setting out and bringing those who work against you, and all that is good and noble in Eyal, to their knees. 
+
+			But don't be too hasty! 
+
+			Your bestial mount, a %s only known as %s, is still without a #{italic}#proper#{normal}# name. When they mark the chronicles of your slaughter in blood and tears, is that the name you want to go down in history? Just %s? Why not give it a real name, a name to tremble sweetly upon the lips of your enemies as they beg for mercy before you?]]
 		):format(pet.original_name, pet.name, pet.name),
 		{
 			{
 				name="Open the mount dialog", 
 				fct=function(n)
+					game:unregisterDialog(self)
 					local LevelupDialog = require "mod.dialogs.LevelupDialog"
 					local ds = LevelupDialog.new(mount, nil, nil)
 					game:registerDialog(ds)
@@ -267,11 +290,12 @@ function doChangeNameDialog(self, pet)
 			{
 				name="Try from a list of generated names", 
 				fct=function(n)
+					game:unregisterDialog(self)
 					doGeneratedNamesDialog(self, pet)
 				end
 			},
 			{
-				name=("%s say no want new name. %s have strong name. name good."):format(
+				name=("Maybe later."):format(
 					self.name:capitalize(), pet.name:capitalize(), pet.original_name:capitalize()),
 				-- fct=function(self, pet)
 				-- return
@@ -296,10 +320,17 @@ end
 
 function doHowToTrainYourMountDialog(self, pet)
 	local Dialog = require "engine.ui.Dialog"
+	local LevelupDialog = require "mod.dialogs.LevelupDialog"
+
+	local function openLevelUpDialog() 
+		local ds = LevelupDialog.new(pet, nil, nil)
+		game:registerDialog(ds)
+	end
+
 	Dialog:yesnoLongPopup("Your beast gains in prowess...",
-		([["As you grow wiser in the ways of combat, so does your %s. You can train your Outrider mount by using the talent "Interact with your Mount". Perhaps it is wisest to do that now, while your enemies do not have the upper hand...]]):
+		([[As you grow wiser in the ways of combat, so does your %s. You can train your Outrider mount by using the talent "Interact with your Mount". Perhaps it is wisest to do that now, while your enemies do not have the upper hand...]]):
 		format(pet.original_name),
-		300, fct,
+		300, openLevelUpDialog,
 		"Go to the mount levelup screen", "I'll do that later, thanks")
 end
 ---------------------------------------------------------------
@@ -400,6 +431,9 @@ newTalent{
 	test = function(self, t)
 		doChangeNameDialog(self, self:getOutriderPet())
 	end,
+	passives = function(self, t, p)
+		self:talentTemporaryValue(p, "loyalty_regen", t.getLoyaltyRegen(self, t))
+	end,
 	action = function(self, t)
 		if self:hasEffect(self.EFF_OUTRIDER_WILD_CHALLENGE) then
 			t.doWarning(self, t)
@@ -467,7 +501,7 @@ newTalent{
 		local will_to_health = t.getWillToHealth(self, t)
 		local will_to_loy = t.getWillToLoyaltyLoss(self, t)
 
-		local loy_regen = t.getLoyRegen(self, t)
+		local loy_regen = t.getLoyaltyRegen(self, t)
 		local generics = t.getGenerics(self, t)
 		local class = t.getClassPoints(self, t)
 		return ([[Your hurl your fury at the wilderness, letting out a luring, primal call and intensifying every one of your senses so that you might close upon a savage ally, a steed to carry you to victory and spoil. Finding a suitable wild mount takes time and effort; you gain the "Challenge the Wilds" status with a counter of %d (increasing as you level), and every time you slay an enemy, that counter depletes by 1. When it reaches 0, you may activate Challenge the Wilds to call forth a beast worthy of your command. The beast that is called will depend on your surroundings: either a wolf, agile and dependable; a spider, ruthless yet versatile; or a rare and mighty drake. You must subdue the beast by blade or bow; it will not come to your side immediately, but after you have asserted your dominance. Care must be taken not to slay it unwittingly, and beware- it will not arrive alone. The quality of beast will increase with talent level.
@@ -489,8 +523,7 @@ newTalent{
 	getNumBase = function(self, t) end,
 	getWillToHealth = function(self, t) return self:combatStatScale("wil", 0, 80) end,
 	getWillToLoyaltyLoss = function(self, t) return self:combatStatLimit("wil", 80, 0, 50) end,
-	getLoyRegen = function(self, t) return self:combatTalentScale(t, 0.2, 1.2, 0.7) end,
-	getLoyRegen = function(self, t)
+	getLoyaltyRegen = function(self, t)
 		local mod = self:getTalentTypeMastery(t.type[1])
 		local tl = self:getTalentLevel(t) - mod --Start from TL 2
 		return tl>0 and self:combatTalentScale(tl, 0.12, 1, 0.7) or 0
@@ -509,17 +542,43 @@ newTalent{
 	base_talent = "T_OUTRIDER_CHALLENGE_THE_WILDS",
 	passives = function(self, t, p) 
 		--TODO: These need to be updated frequently
-		local owner = self.owner
-		if owner then
-			local t2 = owner:getTalentFromId(t.base_talent)
-			local val = self.max_life*t2.getWillToHealth(owner, t)/100
-			self:talentTemporaryValue(p, "max_life", val)
-			self:talentTemporaryValue(p, "loyalty_loss_coeff", t2.getWillToLoyaltyLoss(owner, t))
+		local owner = self.owner; if not owner then return end
+
+		--Handle buffs from owner's Wil.
+		local t2 = owner:getTalentFromId(t.base_talent)
+		local val = self.max_life*t2.getWillToHealth(owner, t)/100
+		self:talentTemporaryValue(p, "max_life", val)
+		self:talentTemporaryValue(p, "loyalty_loss_coeff", t2.getWillToLoyaltyLoss(owner, t))
+
+		--Physical power increase
+		self:talentTemporaryValue(p, "combat_dam", t2.getDam(self, t))
+
+		--Handle bonus talent points
+		local class, generics = t2.getClassPoints(owner, t2), t2.getGenerics(owner, t2)
+
+		self.outrider_granted_class_points = self.outrider_granted_class_points or 0
+		self.outrider_granted_generics = self.outrider_granted_generics or 0
+
+		if self.outrider_granted_class_points < class then
+			local diff = class - self.outrider_granted_class_points
+			self:attr("unused_talents", diff)
+			self:attr("outrider_granted_class_points", diff)
+			game.logSeen(owner, "%s gains %d class talent points!", self.name:capitalize(), diff)
+		end
+
+		if self.outrider_granted_generics < class then
+			local diff = class - self.outrider_granted_generics
+			self:attr("unused_talents", diff)
+			self:attr("outrider_granted_generics", diff)
+			game.logSeen(owner, "%s gains %d generic points!", self.name:capitalize(), diff)
 		end
 	end,
 	info = function(self, t)
-		return ([[Improve the pet's health and loyalty loss when damaged in proportion to the owner's Willpower.]]
-			):format()
+		return ([[The pet is buffed by Challenge the Wilds: 
+			Improve the pet's health and loyalty loss when damaged in proportion to the owner's Willpower.
+			Gain talent points: %d class, %d generic.
+			Physical power increased by %d.]]
+			):format(phys_power)
 	end,
 }
 
