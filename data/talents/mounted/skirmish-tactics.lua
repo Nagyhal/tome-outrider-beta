@@ -35,8 +35,24 @@ newTalent{
 	on_unlearn = function(self, t)
 		if self:getTalentLevel(t) == 0 and self:knowTalent(self.T_OUTRIDER_MOUNTED_ARCHERY) then self:unlearnTalentFull(self.T_OUTRIDER_MOUNTED_ARCHERY) end
 	end,
+	callbackOnArcheryAttack = function(self, t, target, hitted, crit, weapon, ammo, damtype, mult, dam)
+		local pet = self:getOutriderPet()
+		if not pet or not target or not hitted or self:isMounted() then return end
+
+		if core.fov.distance(pet.x, pet.y, target.x, target.y) == 1 then
+			if rng.percent(t.getAttackChance(self, t)) then
+				game.logSeen(
+					self, 
+					"#MOCCASIN##{bold}#%s sets up a free strike for %s!#{normal}##LAST#", 
+					self.name:capitalize(), 
+					pet.name)
+				pet:attackTarget(target, nil, t.getAttackDam(self, t), true)
+			end
+		end
+	end,
 	passives = function(self, t, p)
-		self:talentTemporaryValue(p, 'ammo_mastery_reload', t.getReload(self, t))
+		-- @todo : Figure out where I can neatly put the reload in this new class design
+		-- self:talentTemporaryValue(p, 'ammo_mastery_reload', t.getReload(self, t))
 	end,
 	getChance = function(self,t) 
 		local chance = 15
@@ -80,7 +96,7 @@ newTalent{
 
 newTalent{
 	name = "Beast Archery",
-	short_name = "OUTRIDER_MOUNTED_ARCHERY", image="talents/mounted_archery.png",
+	short_name = "OUTRIDER_MOUNTED_ARCHERY", image="talents/beast_archery.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
 	mode = "sustained",
@@ -106,7 +122,7 @@ newTalent{
 		local did_shot
 		if self:hasArcheryWeapon() then
 			did_shot = self:forceUseTalent(self.T_SHOOT, {
-				ignore_energy=true, ignore_cd=true, force_target=tgt, ignore_ressources=true, silent=true
+				ignore_energy=true, ignore_cd=true, force_target=tgt, ignore_ressources=true, silent=true, speed=0.5
 			})
 		end
 		if did_shot and not use_stamina(self, t.getStamina(self, t)) then
@@ -117,6 +133,9 @@ newTalent{
 		end
 
 		local p = self:isTalentActive(t.id); p.dont_shoot = nil
+	end,
+	callbackOnAct = function(self, t, p)
+		t.checkTarget(self, t, p)
 	end,
 	checkTarget = function(self, t)
 		local target = table.get(self:isTalentActive(t.id), "target")
@@ -208,17 +227,99 @@ newTalent{
 	end,
 }
 
+
+newTalent{
+	name = "Spring Attack", short_name = "OUTRIDER_SPRING_ATTACK", image = "talents/spring_attack.png",
+	type = {"mounted/skirmish-tactics", 2},
+	require = techs_dex_req2,
+	no_energy = true,
+	points = 5,
+	cooldown = 10,
+	range = 1,
+	on_pre_use = function(self, t, silent, fake) return preCheckArcheryInAnySlot(self, t, silent, fake) end,
+	requires_target = true,
+	tactical = { ATTACK = { weapon = 1 }, DISABLE = { pin = 2 } },
+	target = function(self, t)
+		if self:hasArcheryWeapon() then 
+			local weapon, ammo = self:hasArcheryWeapon()
+			return {
+				type="bolt",
+				range=self:getTalentRange(t),
+				display=self:archeryDefaultProjectileVisual(weapon, ammo),
+				talent = t
+			}
+		else return {type="hit", range=self:getTalentRange(t), talent=t}
+		end
+	end,
+	action = function(self, t)
+		local target
+		local tg = self:getTalentTarget(t)
+		--Player attacks.
+		if self:hasArcheryWeapon() then
+			local targets = self:archeryAcquireTargets(tg, {one_shot=true, no_energy = true})
+			if not targets then return nil end
+
+			target=targets[1]
+			self:archeryShoot(targets, t, {type="bolt"}, {mult=t.getDam(self, t)})
+		else
+			local tg = {type="hit", range=self:getTalentRange(t), talent=t}
+			local _, x, y = self:canProject(tg, self:getTarget(tg))
+			target = game.level.map(x, y, game.level.map.ACTOR)
+			if not target then return nil end
+			
+			self:attackTarget(target, nil, t.getDam(self, t), true)
+		end
+
+		self:setEffect(self.EFF_OUTRIDER_SPRING_ATTACK, t.getDur(self, t), {
+			min_pct = t.getMinPct(self, t),
+			max_pct = t.getMaxPct(self, t),
+			threshold = t.getThreshold(self, t),
+			min_stamina = t.getMinStamina(self, t),
+			max_stamina = t.getMaxStamina(self, t),
+			target=target
+		})
+		return true
+	end,
+ 	points = 5,
+	info = function(self, t)
+		local dam_pct = t.getDam(self, t)*100
+		local dur = t.getDur(self, t)
+		local min_pct = t.getMinPct(self, t)
+		local max_pct = t.getMaxPct(self, t)
+		local threshold = t.getThreshold(self, t)
+		local min_stamina = t.getMinStamina(self, t)
+		local max_stamina = t.getMaxStamina(self, t)
+		return ([[Weaving in and out of your enemies' battle lines, you take advantage of the confusion wrought in the fray. Make a quick attack at range 1 for %d%% damage. Then, gain the Spring Attack effect for 5 turns. Each tile you move, so long as you don't start your new turn next to an enemy, increases the power of the effect by 1; each attack reduces it by 1.
+
+			Attacks increase their crit chance from %d%% (1 point of Spring Attack) up to %d%% (at 10 points of Spring Attack). At %d points of Spring Attack or above, all your shots will be dual-target. Also, each turn you will regain Stamina depending on your distance from the nearest enemy: %.1f at 2 squares up to %.1f at 5 squares.
+
+			Rushing in for the kill, you can make a final melee strike which removes your Spring Attack effect and has double your Spring Attack crit bonus.]]):
+		format(dam_pct, min_pct, max_pct, threshold, min_stamina, max_stamina)
+	end,
+	-- getDam = function(self, t) return self:combatTalentScale(t, 0.6, 1.15) end,
+	getDam = function(self, t) return .75 end,
+	getDur = function(self, t) return self:combatTalentScale(t, 4, 7) end,
+	getMinPct = function(self, t) return t.getMaxPct(self, t)/2 end,
+	getMaxPct = function(self, t) return self:combatTalentScale(t, 8, 25.5) end,
+	getThreshold = function(self, t) 
+		local base = 11 - math.floor(self:getTalentLevel(t))
+		return math.max(5, base)
+	end,
+	getMinStamina = function(self, t) return t.getMaxStamina(self, t)/2 end,
+	getMaxStamina = function(self, t) return self:combatTalentScale(t, .5, 2.5) end,
+}
+
 --4: Cacophonous Downpour
 --How should it work? Fire arrows against everyone, then over 2 turns repeat
 newTalent{
 	name = "Cacophonous Downpour", short_name = "OUTRIDER_CACOPHONOUS_DOWNPOUR", image = "talents/cacophonous_downpour.png",
-	type = {"mounted/skirmish-tactics", 2},
+	type = {"mounted/skirmish-tactics", 4},
 	no_energy = "fake",
 	points = 5,
 	random_ego = "attack",
 	cooldown = 8,
 	stamina = 16,
-	require = techs_dex_req2,
+	require = techs_dex_req4,
 	range = archery_range,
 	radius = function(self, t) return math.floor(self:combatTalentScale(t, 2, 3.7)) end,
 	tactical = { ATTACKAREA = { weapon = 2 }, DISABLE = { confusion = 1, silence = 1 }},
@@ -227,14 +328,12 @@ newTalent{
 		local weapon, ammo = self:hasArcheryWeapon()
 		return {type="ball", radius=self:getTalentRadius(t), range=self:getTalentRange(t), display=self:archeryDefaultProjectileVisual(weapon, ammo)}
 	end,
-	on_pre_use = function(self, t, silent, fake) return archerPreUse(self, t, silent, fake) end,
+	on_pre_use = function(self, t, silent, fake) return archerPreUse(self, t, silent, weapon_type) end,
 	action = function(self, t)
+		--We need to grab the target here first
+		--archeryAcquireTargets, very confusingly, doesn't actually return a list of targets
 		local tg = self:getTalentTarget(t)
-		
-		local x, y, target = self:getTarget(tg)
-		if not x or not y then return nil end
-		-- local _ _, x, y = self:canProject(tg, x, y)
-		local targets = self:archeryAcquireTargets(tg)
+		local targets = getArcheryTargetsWithSwap(self, tg)
 		if not targets then return nil end
 
 		local dam = t.getDam(self,t)
@@ -247,10 +346,11 @@ newTalent{
 		local phys_power = self:combatPhysicalpower()
 
 		for _, target in ipairs(targets) do
-			target:setEffect(target.EFF_CONFUSED, dur, {{power=power}, apply_power=phys_power})
+			local a = game.level.map(target.x, target.y, engine.Map.ACTOR)
+			a:setEffect(a.EFF_CONFUSED, dur, {{power=power}, apply_power=phys_power})
 
 			if self:getTalentLevel(t) >= 3 and rng.percent(t.getSilenceChance(self, t)) then
-				target:setEffect(target.EFF_SILENCED, dur, {apply_power=phys_power})
+				a:setEffect(a.EFF_SILENCED, dur, {apply_power=phys_power})
 			end
 		end
 
@@ -318,46 +418,4 @@ newTalent{
 	end,
 	getReduction = function(self, t) return self:combatTalentLimit(t, 80, 35, 60) end,
 	getSpeed = function(self, t) return self:combatTalentScale(t, 400, 650) end,
-}
-
-newTalent{
-	name = "Spring Attack", short_name = "OUTRIDER_SPRING_ATTACK", image = "talents/spring_attack.png",
-	type = {"mounted/skirmish-tactics", 4},
-	hide="always", --DEBUG: Hiding untested talents
-	require = techs_dex_req4,
-	no_energy = true,
-	points = 5,
-	cooldown = 10,
-	stamina = 10,
-	range = archery_range,
-	on_pre_use = function(self, t, silent, fake) return preCheckArcheryInAnySlot(self, t, silent, fake) end,
-	requires_target = true,
-	tactical = { ATTACK = { weapon = 1 }, DISABLE = { pin = 2 } },
-	archery_onhit = function(self, t, target, x, y)
-		self:setEffect(self.EFF_OUTRIDER_SPRING_ATTACK, t.getDur(self, t), {target=target})
-		target:setEffect(target.EFF_OUTRIDER_SPRING_ATTACK_TARGET, t.getDur(self, t), {src=self})
-	end,
-	action = function(self, t)
-		local targets = getArcheryTargetsWithSwap(self)
-		if not targets then return nil end
-
-		self:archeryShoot(targets, t, nil, {mult=t.getDam(self, t)})
-
-		return true
-	end,
- 	points = 5,
-	info = function(self, t)
-		local dam_pct = t.getDam(self, t)*100
-		local dur = t.getDur(self, t)
-		local min_pct = t.getMinPct(self, t)
-		local max_pct = t.getMaxPct(self, t)
-		return ([[Weaving in and out of your enemies' battle lines, you take advantage of the confusion wrought in the fray. Dart in with a quick attack for %d%% damage, targeting your foe with your Spring Attack for %d turns. You gain a bonus to ranged damage against the foe for the duration. This bonus is dependent on the distance you gain after that attack: %d%% at 2 tiles, increasing to %d%% at 5 or more.
-
-			Only distance gained from the moment of your attack will count.]]):
-		format(dam_pct, dur, min_pct, max_pct)
-	end,
-	getDam = function(self, t) return self:combatTalentScale(t, 0.6, 1.1) end,
-	getDur = function(self, t) return self:combatTalentScale(t, 4, 7) end,
-	getMinPct = function(self, t) return self:combatTalentScale(t, 10, 22.5) end,
-	getMaxPct = function(self, t) return self:combatTalentScale(t, 20, 35) end,
 }
