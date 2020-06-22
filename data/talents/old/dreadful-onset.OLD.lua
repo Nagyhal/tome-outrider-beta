@@ -333,3 +333,17 @@ newTalent{
 		:format(def, duration, chance)
 	end,
 }
+
+newEffect{
+	name = "OUTRIDER_WINGS_CLIPPED", image = "talents/wings_clipped.png",
+	desc = "Pinned in Flight",
+	long_desc = function(self, eff) return ("For the duration of %d%%, flight and levitation will not be useable.") end,
+	type = "other",
+	subtype = {},
+	status = "detrimental",
+	parameters = { },
+	activate = function(self, eff)
+		self:effectTemporaryValue(eff, "levitation", 1)
+		self:effectTemporaryValue(eff, "levitation", 1)
+	end,
+}

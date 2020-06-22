@@ -42,6 +42,8 @@ Things not to forget:
 • Spring Attack: A simple attack, ranged or melee, which switches to ranged, jumps back a square or two, and sets the Spring Attack bonus as currently implemented. THEN, you need some kind of indicator or feedback for the player so that they realize Spring Attack hits are indeed more powerful - but what can it be? A movement slow? Lost turns for the enemy on hit? Gained turns for the player? I dunno!
 • Mounted Archery should be an effect, and anyway
 • Needs more Stamina gain, and Loyalty too... a "there, there!" where you pet your pet, provided you're safe and out of reach of enemy attacks? Maybe when you just stand still with your pet?
+• Spring attack secondary effects - will it have a stronger melee component? It could be designed to incentivize you to expend mobility talents even a little more. Perhaps the melee strike will reduce their cooldown.
+• Or, tie this into Feigned Retreat more. This would be good if Dreadful Onset were a generic category and Impalement were the tier 3 talent instead.
 
 --------------------------------------------------------
 

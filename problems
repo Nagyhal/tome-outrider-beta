@@ -9,3 +9,37 @@ talent design problems
 Master of Brutality -- how can I make it more of an attractive option to 1st level adventurers?
 	... what is it for? melee whackers? It's to add APR to help make melee 1-handers feel better ... and disincentivize 2handers, mainly
 	the fact you have no mental debuffs in the first tier is a big problem also, which you've tried to mitigate with the hunting horn
+
+-------------------------------------------------------------------------------
+There's also a big error in the mount code. Got this by dismounting after reload:
+
+First:
+
+Lua Error: /mod/class/Actor.lua:3010: attempt to index local 'e' (a nil value)
+	At [C]:-1 __index
+	At /mod/class/Actor.lua:3010 takeHit
+	At /data/damage_types.lua:539 defaultProjector
+	At /data/damage_types.lua:810 projector
+	At /data/damage_types.lua:1354 projector
+	At /mod/class/Actor.lua:8054 projectDoAct
+	At /engine/interface/ActorProject.lua:621 projectDoStop
+	At /engine/Projectile.lua:232 act
+	At /mod/addons/outrider/superload/engine/GameEnergyBased.lua:71 tickLevel
+	At /engine/GameEnergyBased.lua:64 tick
+	At /engine/GameTurnBased.lua:51 tick
+	At /mod/class/Game.lua:1534 
+
+And on second try:
+
+Lua Error: /mod/class/Actor.lua:2216: attempt to index local 'e' (a nil value)
+	At [C]:-1 __index
+	At /mod/class/Actor.lua:2216 tooltip
+	At /mod/class/NPC.lua:391 tooltip
+	At /mod/class/PartyMember.lua:39 check
+	At /engine/Map.lua:801 checkEntity
+	At /mod/class/Tooltip.lua:36 check
+	At /mod/class/Tooltip.lua:50 getTooltipAtMap
+	At /engine/Tooltip.lua:286 displayAtMap
+	At /engine/interface/GameTargeting.lua:77 targetDisplayTooltip
+	At /mod/class/Game.lua:1927 
+true

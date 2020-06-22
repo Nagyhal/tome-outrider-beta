@@ -55,48 +55,51 @@ Riding forth (two days deadline) :
   ✔ Add some random traits (completely unnecessary work) @done (20-06-14 18:26)
   ✔ Polish the new dialogs @done (20-06-14 20:01)  
   ✔ Change Flitful to Skittish @done (20-06-14 20:04)
-  ☐ Make we dialogs into chats and test their activation
-  ☐ Beast Archery
-  ☐ Try and make the arrows progress a little further from the rider when you use this
-  ☐ Beastrider's Mark
-  ☐ Grant the base wild beast a couple of inscriptions
-  ☐ Beastmark : Instead of "holding it back", make it move!
-  ☐ Simplify Brazen Charge (again!), and inline with the rest of the Barbarous talents
-  ☐ Try the new implementation of Master of Brutality
-  ☐ Challenge the Wilds graphics and dialog and re-write  
-  ☐ If need be, look into shaders as well as particle effects  
-  ☐ Daze added to Run Them Down!
-  ☐ Impalement should use proper project-line-continuing logic & could be longer
-  ☐ Why can't you pin Shivgoroths? Ahhh! Remove the fly and levitation. But in what order?
-  ☐ Impalement : Make it less of a pain in the ass to use
-  ☐ Sort out the helper functions and make a preCheckCanMove which includes the mount
-  ☐ Add Loyalty restore to infusions...? ...or to pet kills?
-  ☐ Make sure that Loyalty is affected by Fatigue
-  ☐ Update shared_talent to work with a table
-  ☐ Challenge the Wilds : Move some of the text from the talent info into various dialog boxes
-  ☐ Challenge the Wilds : Add some Loyalty regain
-  ☐ Write up the Warbanner tree
+  ✔ Beastrider's Mark @done (20-06-15 17:33)
+  ✔ Simplify Brazen Charge (again!), and inline with the rest of the Barbarous talents @done (20-06-15 17:33)
+  ✔ Try the new implementation of Master of Brutality @done (20-06-15 17:33)
+  ✔ Challenge the Wilds graphics and dialog and re-write @done (20-06-15 17:34)  
+  ✘ Challenge the Wilds : Move some of the text from the talent info into various dialog boxes @cancelled (20-06-15 17:34)
+  ✔ Challenge the Wilds : Add some Loyalty regain @done (20-06-15 17:34)
+  ✔ Make the dialogs into chats and test their activation @done (20-06-15 20:46)
+  ✘ Add Loyalty restore to infusions...? ...or to pet kills? @cancelled (20-06-15 21:47)
+  ✔ Make sure that Loyalty is affected by Fatigue @done (20-06-15 21:47)
+  ✘ Try and make the arrows progress a little urther from the rider when you use this @cancelled (20-06-15 21:48)
+  ✔ Beastmark : Instead of "holding it back", make it BARK! @done (20-06-15 22:22)
+  ✘ Daze added to Run Them Down! @cancelled (20-06-15 22:49)
+  ✔ Write up the Warbanner tree @done (20-06-19 22:46)
+  ✘ Impalement should use proper project-line-continuing logic & could be longer @cancelled (20-06-21 10:13)
+  ✔ Impalement : Make it less of a pain in the ass to use @done (20-06-21 10:13)
+  ✔ Why can't you pin Shivgoroths? Ahhh! Remove the fly and levitation. But in what order? @done (20-06-21 10:14)
+  ✔ Grant the base wild beast a couple of inscriptions @done (20-06-21 10:50)
+  ✔ Spring Attack design @done (20-06-21 12:36)
+  ✔ Spring Attack : base outline @done (20-06-22 10:40)
+  ✔ Spring Attack : crit bonus @done (20-06-22 10:34)
+  ✔ Spring Attack : bonuses that refresh @done (20-06-22 10:34)
+  ✔ Put Impalement to TL3 and play with Feigned Retreat in that position @done (20-06-22 13:51)
   ☐ Any ideas for Shock Tactics?
   ☐ Any ideas for Beast Aspect?
-
-How do we want "Riled Up" to behave?
-
-If there is a target, prioritize that one, otherwise, romp about the player
-Spam all attacks off cooldown?
-
-Day off :
-  ☐ Writing 
-  ☐ Reading 
-  ☐ A little Smash gaming!
+  ☐ Git : Upload changes meticulously
+  ☐ Feigned retreat: better desc
+  ☐ Ask DG to get access to the repo back so you can do retrieve this stuff
+  ☐ Beast Archery - a sustain timer
+  ☐ Beast Archery - disabled on attack
+  ☐ Mount block : Prevent re-mounting for a couple of turns after being knocked off
+  ☐ Test & refactor the Living Shield
+  ☐ Test & refactor Scatter the Unworthy
 
 The remainder of the player talents (2 days):
-  ☐ Spring Attack
+  ☐ Finish off the resting routine
+  ☐ If need be, look into shaders as well as particle effects  
+  ☐ Update shared_talent to work with a table
+  ☐ Sort out the helper functions and make a preCheckCanMove which includes the mount
+  ☐ Think about having messages, as well as penalties, for when you have a 2hander
   ☐ Tune Gruesome Depredation up.
   ☐ Subdue the Beast - a big unknown!
   ☐ Make Unbridled Ferocity really cool
   ☐ Make the mount tile bigger when using Unbridled Ferocity
-  ☐ Let 'Em Have It! needs a cleanup, make it the 2nd talent
-  ☐ Your "Rearing Assault" is probably gonna lose its spot though
+  ✘ Let 'Em Have It! needs a cleanup, make it the 2nd talent @cancelled (20-06-21 12:39)
+  ✔ Your "Rearing Assault" is probably gonna lose its spot though @done (20-06-22 14:43)
   ☐ Now, you will need to look at the Wolf talents and figure out what is wrong with them and what redesigns are possible
   ☐ Wolf (first 4 talents)
   ☐ Wolf (next 4 talents)
@@ -112,6 +115,7 @@ The remainder of the player talents (2 days):
 Wolf talents :
  ☐ Have a look at EVERYTHING and figure out what you want to change
  ☐ Refactor, reapproach and reattack anything that's bugging you
+ ☐ Think about a completely new kind of communicatior design pattern (superloads & an id table that is continually refreshed/deleted)
 
 Talent code polish-up (2 days):
   ☐ Check that things like "range" are good for the AI to use
