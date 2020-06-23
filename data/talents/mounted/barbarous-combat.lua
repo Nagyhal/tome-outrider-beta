@@ -194,11 +194,9 @@ newTalent{
 	getKnockbackRadiusMounted = function(self, t) return self:combatTalentScale(t, 2, 3.8) end,
 }
 
-
 newTalent{
 	name = "Scatter the Unworthy", short_name = "OUTRIDER_SCATTER_THE_UNWORTHY", image = "talents/scatter_the_unworthy.png",
 	type = {"mounted/barbarous-combat", 3},
-	hide="always", --DEBUG: Hiding untested talents 
 	require = mnt_strcun_req3,
 	points = 5,
 	stamina = 10,
@@ -226,20 +224,23 @@ newTalent{
 		local x, y = self:getTarget(tg)
 		if not x or not y then return nil end
 		self:project(tg, x, y, DamageType.OUTRIDER_TEST_OF_METTLE, {dur=t.getDur(self,t), red=t.getReduction(self, t)})
-		game.level.map:particleEmitter(self.x, self.y, self:getTalentRadius(t), "directional_shout", {life=8, size=3, tx=x-self.x, ty=y-self.y, distorion_factor=0.1, radius=self:getTalentRadius(t), nb_circles=8, rm=0.8, rM=1, gm=0.4, gM=0.6, bm=0.1, bM=0.2, am=1, aM=1})
+		game.level.map:particleEmitter(self.x, self.y, self:getTalentRadius(t), "directional_shout", {
+			life=8, size=3, tx=x-self.x, ty=y-self.y, radius=self:getTalentRadius(t),
+			distorion_factor=0.1,
+			nb_circles=8,
+			rm=0.8, rM=1, gm=0.4, gM=0.6, bm=0.1, bM=0.2, am=1, aM=1})
 		return true
 	end,
 	info = function(self, t)
 		local r = self:getTalentRadius(t)
+		local r2 = r + 2
 		local dur = t.getDur(self, t)
 		local red = t.getReduction(self, t)
 		local buff = t.getBuff(self, t)
-		return ([[Test the mettle of your foes, sifting out the worthy from the weak. Targets who fail a mind save in a cone of radius %d will be either panicked or provoked for %d turns. Panicked foes suffer a 50%% chance to flee from you each turn, while provoked foes increase their damage by 20%% while reducing all resistances by 25%% and defense and armour by %d
+		return ([[Test the mettle of your foes, sifting out the worthy from the weak. Targets who fail a mind save in a cone of radius %d will be either panicked or provoked for %d turns. Panicked foes suffer a 50%% chance to flee from you each turn, while provoked foes increase their damage by 20%% while reducing all resistances by 25%% and defense and armour by %d. If you are mounted, the attack range increases to %d as you menace the battlefield from on high.
 
-			If you are mounted, add 2 to the range of the attack as you menace the battlefield from on high.
-
-			Levelling Scatter the Unworthy past the first level will hone your powers of tactical dominance, increasing mindpower by %d and mind save by %d.]]):
-		format(r, dur, red, buff, buff)
+			Levelling Scatter the Unworthy past the first level will hone your powers of tactical dominance. Current bonuses: mindpower increased by %d and mind save by %d.]]):
+		format(r, dur, red, r2, buff, buff)
 	end,
 	getDur = function(self, t) return math.floor(self:combatTalentScale(t, 4, 6)) end,
 	getReduction = function(self, t) return math.round(self:combatTalentScale(t, 5, 12)) end,
