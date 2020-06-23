@@ -97,8 +97,8 @@ function _M:attackTarget(target, damtype, mult, noenergy, force_unharmed)
 	if eff then
 		self.living_shield_bypass=true
 		if rng.percent(eff.chance) and self~=eff.trgt then
-			target:logCombat(eff.trgt, "#Target# becomes the target of %s's attack!", self.name)
-			target = eff.trgt
+			target:logCombat(eff.target, "#Target# becomes the target of %s's attack!", self.name)
+			target = eff.target
 		end
 	end
 	local ret = {base_attackTarget(self, target, damtype, mult, noenergy, force_unharmed)}

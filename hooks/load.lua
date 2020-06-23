@@ -41,6 +41,35 @@ class:bindHook("ToME:load", function(self, data)
 		main_env.swapToMelee(self)
 		return old_action(self, t)
 	end
+
+	-- Here comes the hackiest of hacks!
+	-- I want the Giblets talent to have a variable talent icon; if you gib lungs, show a
+	-- pair of lungs, an eye - show a gory eye - and so on. But there's no way to assign
+	-- a function to the image value, it must remain a static string describing the talent
+	-- icon's location
+
+	-- The less hacky way would be to define several talents and assign each of them its
+	-- own icon, foolproof for sure.
+
+	-- I'll probably change this implementation later - for example, it doesn't work nicely
+	-- if the player has the Giblets effect but inspects the talent on an enemy.
+	-- But I'm so happy with my hack that, for the minute, I'll leave it at that.
+	local gibs_de = ActorTalents.talents_def.T_OUTRIDER_GIBLETS.display_entity
+	local new_metatable = table.clone(getmetatable(gibs_de))
+	gibs_de.__oldindex = getmetatable(gibs_de).__index
+	gibs_de.old_image = image
+	gibs_de.image = nil
+
+	new_metatable.__index = function(table, key)
+		if key=="image" then
+			local eff = game.player:hasEffect(game.player.EFF_OUTRIDER_GIBLETS)
+			if eff.image_variant then return eff.image_variant
+			else return table.old_image
+			end
+		else return table.__oldindex[key]
+		end
+	end
+	setmetatable(gibs_de, new_metatable)
 end)
 
 class:bindHook("Entity:loadList", function(self, data)
@@ -295,5 +324,46 @@ class:bindHook("Combat:archeryTargetKind", function(self, data)
 		local params, tg = data.params, data.tg
 		params.limit_shots = (params.limit_shots or 0) + 1
 		tg.type, tg.radius = "ball", 1
+	end
+end)
+
+--- Create a highly specific target type for Gory Spectacle
+-- When targeting a certain actor, referenced by 'feed_to', becomes a simple
+-- one-square hit. Otherwise, remains a ball.
+class:bindHook("Target:realDisplay", function(self, d)
+	if self.target_type.type=="foodball" then
+		local eater = self.target_type.feed_to
+		if eater and eater.x==self.target.x and eater.y==self.target.y then
+		-- 	--If we're throwing to our pet, don't calculate the ball radius
+			self.target_type.old_radius = self.target_type.old_radius or self.target_type.radius
+			self.target_type.radius = 0
+			self.target_type.ball = 0
+			return nil
+		end
+
+		if self.target_type.old_radius then
+			self.target_type.radius = self.target_type.old_radius
+			self.target_type.old_radius = nil
+		end
+		self.target_type.ball = self.target_type.radius or 1
+
+		core.fov.calc_circle(
+			d.stop_radius_x,
+			d.stop_radius_y,
+			game.level.map.w,
+			game.level.map.h,
+			self.target_type.ball,
+			function(_, px, py)
+				if self.target_type.block_radius and self.target_type:block_radius(px, py, true) then return true end
+			end,
+			function(_, px, py)
+				if not self.target_type.no_restrict and not game.level.map.remembers(px, py) and not game.level.map.seens(px, py) then
+					d.display_highlight(self.syg, px, py)
+				else
+					d.display_highlight(self.sg, px, py)
+				end
+			end,
+			nil
+		)
 	end
 end)

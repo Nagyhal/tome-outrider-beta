@@ -1,9 +1,6 @@
 local _M = loadPrevious(...)
 
-local base_move = _M.move
 local base_init = _M.init
-local base_onTakeHit = _M.onTakeHit
-
 function _M:init(t, no_default)
 	t.mount = nil
 	t.can_mount = t.can_mount or false
@@ -17,6 +14,7 @@ function _M:init(t, no_default)
 	base_init(self, t, no_default)
 end
 
+local base_onTakeHit = _M.onTakeHit
 function _M:onTakeHit(value, src)
 	--Mounted takes damage in rider's stead
 	if self:isMounted() then
@@ -205,17 +203,32 @@ function _M:learnPool(t)
 end
 
 function _M:moveDragged(x, y, force)
+	-- Make sure we have the dragged_entities table
 	self.dragged_entities = self.dragged_entities or {}
-	if #self.dragged_entities == 0 then return true end
 
+	-- Check if the dragged_entities table is empty
+	if next(self.dragged_entities) == nil then return true end
+
+	-- Here, we get the entities we want to drag, but also the safe order, so 
+	-- as to never move an actor into the space of another.
 	if self.x and self.y then
 		local dx, dy = x-self.x, y-self.y
 		local sequence = {}
-		for e, _ in pairs(self.dragged_entities) do
+
+		for e, _ in pairs(table.merge({[self]=1}, self.dragged_entities)) do
 			local blocking = game.level.map:checkAllEntitiesLayersNoStop(e.x+dx, e.y+dy, "block_move", e)
-			for t, v in pairs(blocking) do
-				local ee =t[2]
-				if not self.dragged_entities[ee] and ee~=self then return false end
+			for t, _ in pairs(blocking) do
+				local ee = t[2]
+				if not self.dragged_entities[ee] and ee~=self then 
+					if e~=self then game.logPlayer(self, ("You can't take your dragged %s there!"):format(e.name)) end
+					-- If we can't drag the target, but we're gonna use a talent like a teleport etc.,
+					-- don't interrupt the teleport and just move without the dragged target.
+					if core.fov.distance(self.x, self.y, x, y) > 1 then
+						return true
+					else
+						return false
+					end
+				end
 			end
 			local order = 0
 			if dy~=0 then order=order+(e.y-self.y)*dy end
@@ -225,26 +238,31 @@ function _M:moveDragged(x, y, force)
 		table.sort(sequence, function(a, b) return a[2]<b[2] end)
 		for _, t in ipairs(sequence) do
 			local e = t[1]
-			e:move(e.x+dx, e.y+dy, true)
+			if e~=self then e:move(e.x+dx, e.y+dy, true) end
 		end
 	end
 
 	return true
 end
 
+local base_move = _M.move
 function _M:move(x, y, force)
-	--Currently, if you push a dragged enemy into a wall then you can't bump-attack it even when it obviously can no longer be dragged. You'll just have to select the "attack" command instead.
-	--TODO: Improve this
-	if not self:moveDragged(x, y, force) then return false end
+	if not self:moveDragged(x, y, force) then
+		if not force and game.level.map:checkAllEntities(x, y, "block_move", self, true) then
+			return true
+		else
+			return false
+		end
+	end
 
 	local energy, mount = self.energy.value, (self:isMounted() and self.mount)
 	local ox, oy = self.x, self.y
-	local ret = base_move(self, x, y, force)
+	local ret = {base_move(self, x, y, force)}
 	local new_x, new_y = self.x, self.y
 	local energy_diff = energy - self.energy.value
 	if mount and energy_diff>0 and (ox~=new_x or oy~=new_y) then
-		--Global speed multiplier depletes mount's and rider's energy at same rate
-		--TODO: Consider removing rider's global speed from movespeed calculation altogether
+		-- Global speed multiplier depletes mount's and rider's energy at same rate
+		-- @todo Consider removing rider's global speed from movespeed calculation altogether
 		local factor = mount.global_speed
 		mount:useEnergy(energy_diff*factor)
 		--Quick hack while I work on multi-occupant tiles.
@@ -252,10 +270,11 @@ function _M:move(x, y, force)
 		--Let the mount get targets while riding.
 		mount:runAI("target_mount")
 	end
-	return ret
+	return unpack(ret)
 end
 
 local base_projected = _M.projected
+
 function  _M:projected(tx, ty, who, t, x, y, damtype, dam, particles)
 	local grids = self.impunity_avoid_grids
 	local ret = false
@@ -387,6 +406,15 @@ function _M:loyaltyCheck(pet, silent)
 		end
 		return true
 	end
+end
+
+--- Prevent the mount from teleporting away from the rider
+local base_teleportRandom = _M.teleportRandom
+function _M:teleportRandom(x, y, dist, min_dist)
+	if self:isRidden() then return true end
+
+	local ret = {base_teleportRandom(self, x, y, dist, min_dist)}
+	return unpack(ret)
 end
 
 --Useful debugging function, saved for later.

@@ -152,8 +152,6 @@ newTalent{
 	end,
 }
 
-
-
 newTalent{
 	name = "Feigned Retreat", short_name = "OUTRIDER_FEIGNED_RETREAT", image="talents/feigned_retreat.png",
 	type = {"technique/dreadful-onset", 2},
@@ -174,23 +172,6 @@ newTalent{
 	end,
 	requires_target = true,
 	target = function(self, t) return {type="hit", range=self:getTalentRange(t)} end,
-	getTarget2ForPlayer = function(self, target, t, move_dist)
-		-- local tg2 = {type="beam", source_actor=self, selffire=false, range=move_dist, talent=t, no_start_scan=true, no_move_tooltip=true}
-		-- tg2.display_line_step = function(game_target, d) 
-		-- 	local t_range = core.fov.distance(
-		-- 		game_target.target_type.start_x,
-		-- 		game_target.target_type.start_y,
-		-- 		d.lx,
-		-- 		d.ly)
-		-- 	if t_range >= 1 and t_range <= tg2.range and not d.block and checkUserIsBehindTarget(self, target, d.lx, d.ly) then
-		-- 		d.s = game_target.sb
-		-- 	else
-		-- 		d.s = game_target.sr
-		-- 	end
-		-- 	d.display_highlight(d.s, d.lx, d.ly)
-		-- end
-		-- return tg2
-	end,
 	getTarget2ForAI = function(self, t, move_dist, tgt_dist)
 		local cone_angle = 180/math.pi*math.atan(1/(tgt_dist + 1)) + 5 --5° extra angle
 		return {type="cone", cone_angle=cone_angle, source_actor=self, selffire=false, range=0, radius=move_dist, talent=t}
@@ -426,7 +407,6 @@ newTalent{
 newTalent{
 	name = "Living Shield", short_name = "OUTRIDER_LIVING_SHIELD", image="talents/living_shield.png",
 	type = {"technique/dreadful-onset", 4},
-	hide="always", --DEBUG: Hiding untested talents 
 	require = mnt_dexcun_req4,
 	points = 5,
 	random_ego = "attack",
@@ -434,10 +414,6 @@ newTalent{
 	stamina = 30,
 	tactical = { ATTACK = 2, DISABLE = 2, DEFEND = 2 },
 	requires_target = true,
-	getDef = function(self, t) return self:combatTalentScale(t, 5, 15) end,
-	getDuration = function(self, t) return 2 + math.floor(self:getTalentLevel(t)) end,
-	getPower = function(self, t) return self:combatTalentPhysicalDamage(t, 5, 25) end,
-	getTransferChance =  function(self, t) return 30 + self:getTalentLevel(t) * 5 end,
 	action = function(self, t)
 		local tg = {type="hit", range=self:getTalentRange(t)}
 		local x, y, target = self:getTarget(tg)
@@ -446,35 +422,83 @@ newTalent{
 
 		local grappled = false
 
-		-- breaks active grapples if the target is not grappled
+		-- Break active grapples if the target is not grappled
 		if target:isGrappled(self) then
 			grappled = true
 		else
 			self:breakGrapples()
 		end
-		-- end the talent without effect if the target is to big
+
+		-- End the talent without effect if the target is to big
 		if self:grappleSizeCheck(target) then
 			return true
 		end
-		-- start the grapple; this will automatically hit and reapply the grapple if we're already grappling the target
+
+		-- Start the grapple; this will automatically hit and reapply the grapple if we're already grappling the target
 		local hit = self:startGrapple(target)
 		local eff = target:hasEffect(target.EFF_GRAPPLED)
+		local eff2 = self:hasEffect(self.EFF_GRAPPLING)
 
-		local duration = t.getDuration(self, t)
+		local dur = t.getDur(self, t)
 
 		if hit and eff then
-			eff.dur=duration
-			target:setEffect(target.EFF_OUTRIDER_LIVING_SHIELD, duration, {src=self, chance=t.getTransferChance(self, t), def=t.getDef(self, t)})
-			self:setEffect(target.EFF_OUTRIDER_LIVING_SHIELDED, duration, {trgt=target, chance=t.getTransferChance(self, t)})
+			eff.dur=dur
+			eff2.dur=dur
+			local shield = self:getTalentLevelRaw(t) >= 5 and t.getShield(self, t) or nil
+			local min_incoming = t.getMinIncoming(self, t)
+			target:setEffect(target.EFF_OUTRIDER_LIVING_SHIELD, dur, {
+				src=self, chance=t.getTransferChance(self, t), def=t.getDef(self, t)})
+			self:setEffect(self.EFF_OUTRIDER_LIVING_SHIELDED, dur,
+				{target=target,
+				chance=t.getTransferChance(self, t),
+				shield=shield, min_incoming=min_incoming})
 			return true
 		end
 	end,
 	info = function(self, t)
 		local def = t.getDef(self, t)
-		local duration = t.getDuration(self, t)
+		local dur = t.getDur(self, t)
 		local chance = t.getTransferChance(self, t)
+		local min_incoming = t.getMinIncoming(self, t)
+		local shield = t.getShield(self, t)
 		return ([[Grapple an adjacent enemy up to one size category larger than you for %d turns; it suffers a %d penalty to defense and all ranged and melee attacks now have a %d%% chance to hit this enemy instead of you. You may move to drag the enemy with you. 
-		At talent level 5, you have mastered the art of cruel redirection, gaining the Block talent for a 100%% chance to reduce up to 100 damage, switching squares upon an impact.]])
-		:format(def, duration, chance)
+		At talent level 5, you have mastered the art of cruel redirection, gaining the Block talent for a 100%% chance to reduce one incoming attack (of minimum %d damage) by %d%% (scaling with Cunning), switching squares upon an impact.]])
+		:format(dur, def, chance, min_incoming, shield)
+	end,
+	getDef = function(self, t) return self:combatTalentScale(t, 5, 15) end,
+	getDur = function(self, t) return 2 + math.floor(self:getTalentLevel(t)) end,
+	getPower = function(self, t) return self:combatTalentPhysicalDamage(t, 5, 25) end,
+	getTransferChance =  function(self, t) return 30 + self:getTalentLevel(t) * 5 end,
+	getMinIncoming = function(self, t) return 45 + self.level*1.5 end,
+	getShield = function(self, t) return math.min(75, self:combatStatScale("cun", 45, 75, 0.7)) end,
+}
+
+newTalent{
+	name = "Block (with Living Shield)", short_name = "OUTRIDER_LIVING_SHIELD_BLOCK",
+	image = "talents/block.png",
+	type = {"mounted/mounted-base", 1},
+	cooldown = function(self, t)
+		return 8
+	end,
+	points = 1, hard_cap = 1,
+	range = 1,
+	ignored_by_hotkeyautotalents = true,
+	requires_target = true,
+	tactical = { ATTACK = 3, DEFEND = 3 },
+	on_pre_use = function(self, t, silent)
+		if not self:hasEffect(self.EFF_OUTRIDER_LIVING_SHIELDED) then if not silent then game.logPlayer(self, "Error! You can only use this talent with a living shield.") end return false end return true end,
+	action = function(self, t)
+		local p = self:hasEffect(self.EFF_OUTRIDER_LIVING_SHIELDED)
+		if not p then return false end
+
+		self:setEffect(self.EFF_OUTRIDER_LIVING_SHIELD_BLOCKING, 2, {power = p.shield, target = p.target, min_incoming=p.min_incoming})
+		return true
+	end,
+	info = function(self, t)
+		local p = self:hasEffect(self.EFF_OUTRIDER_LIVING_SHIELDED) 
+		local power = p and p.shield or 0
+		local min_incoming = p and p.min_incoming or 0
+		return ([[You've mastered the art of cruel terror tactics, and can raise the target of your Living Shield as deftly to block damage as you can any shield item. Activate to, for 2 turns, redirect %d%% damage from the next incoming attack (of at least %d damage of any type) to your target.]]):
+			format(power, min_incoming)
 	end,
 }

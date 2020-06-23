@@ -252,7 +252,7 @@ newTalent{
 }
 
 newTalent{
-	name = "Toss Giblets",short_name = "OUTRIDER_GIBLETS", image = "talents/giblets.png",
+	name = "Toss Giblets", short_name = "OUTRIDER_GIBLETS", image = "talents/giblets.png",
 	display_name = function(self, t)
 		local eff = self:hasEffect(self.EFF_OUTRIDER_GIBLETS)
 		return eff and eff.display_name or "Giblets"
@@ -261,34 +261,70 @@ newTalent{
 	hide = true,
 	ignored_by_hotkeyautotalents = true,
 	points = 1,
+	hard_cap =1,
 	cooldown = 0,
 	tactical = { ATTACKAREA = { confusion = 1 }, DISABLE = { blind = 1} },
 	range = 5,
 	radius = 1,
 	requires_target = true,
 	target = function(self, t)
-		return {type="ball", range=self:getTalentRange(t), radius=self:getTalentRadius(t), talent=t, friendlyfire=false}
+		local pet = self:getOutriderPet()
+		return {type="foodball", range=self:getTalentRange(t), radius=self:getTalentRadius(t),
+			talent=t,
+			friendlyfire=false, nowarning=true,
+			feed_to=pet,}
 	end,
 	action = function(self, t)
-		local tg = {type="hit", range=self:getTalentRange(t), talent=t}
+		local tg = self:getTalentTarget(t)
 		local x, y = self:getTarget(tg)
 		if not x or not y then return nil end
-		self:project(tg, x, y, function(tx, ty)
-			local target = game.level.map(tx, ty, Map.ACTOR)
-			if not target then return end
-		end)
-		-- TODO: Add a sound
-		-- game:playSoundNear(self, "talents/slime")
+
+		-- Have we targeted our pet? If so, it's feeding time!
+		local pet = self:getOutriderPet()
+		if x==pet.x and y==pet.y then
+			-- Feed the pet
+			pet:heal(t.getLife(self, t))
+			self:incLoyalty(t.getLoyalty(self, t))
+
+			-- Add a combined growl and chomp sound effect, similar to Gruesome Depredation
+			game:playSoundNear(self, {
+				"talents/breath",
+				pitch=1.9,
+				vol=.3})
+			game:playSoundNear(self, {
+				"creatures/ants/ant_1",
+				pitch=0.75})
+		-- If not: Terrify our enemies!
+		else
+			local dam_function = function(tx, ty, tg, self)
+				local a = game.level.map(tx, ty, Map.ACTOR)
+				if a and self:reactionToward(a) < 0 and a:canBe("fear") then 
+					a:setEffect(a.EFF_PANICKED, t.getDur(self, t), {
+						src=self,
+						apply_power=math.max(self:combatMindpower()), chance=50, range=10
+					})
+				end
+			end
+
+			self:project(tg, x, y, dam_function)
+
+			game:playSoundNear(self, "talents/slime", {pitch=0.3})
+		end
+
+		self:removeEffect(self.EFF_OUTRIDER_GIBLETS, true, true)
 		return true
 	end,
 	info = function(self, t)
+		-- local t2 = self:getTalentFromId(self.T_OUTRIDER_GORY_SPECTACLE)
+		local p = self:hasEffect(self.EFF_OUTRIDER_GIBLETS)
+		local name = p and p.giblets_name or "hunk of gore"
+		local indefinite_article_form = p and p.indefinite_article_form or "a"
+
 		local dur = t.getDur(self, t)
 		local life = t.getLife(self, t)
 		local loyalty = t.getLoyalty(self, t)
-		return ([[You have the %d, a gruesome trophy of your dominance in combat. Throw at your foes, causing all in radius 1 to flee for %d turns. Or better yet, feed to your beast to renew %d life and % loyalty.
-
-			Lasts until Gory Spectacle comes back off cooldown.]]):
-			format(dam, dur, radius, speed)
+		return ([[You have %s %s, a gruesome trophy of your dominance in combat. Throw at your foes to cause all in radius 1 to flee for %d turns. Or better yet, feed to your beast to renew %d life and %d loyalty.]]):
+			format(indefinite_article_form, name, dur, life, loyalty)
 	end,
 	getDur = function(self, t) return 2 end,
 	getLife = function(self, t) 
@@ -304,7 +340,6 @@ newTalent{
 newTalent{
 	name = "Gory Spectacle", short_name = "OUTRIDER_GORY_SPECTACLE", image = "talents/gory_spectacle.png",
 	type = {"mounted/barbarous-combat", 4},
-	hide="always", --DEBUG: Hiding untested talents
 	require = mnt_strcun_req4,
 	points = 5,
 	random_ego = "attack",
@@ -333,18 +368,30 @@ newTalent{
 		local hit = self:attackTarget(target, nil, t.getDam(self, t), true)
 
 		--Do we hit and kill it? Things are about to get SPECTACULAR. And very gory.
-		if hit and target.dead then
+		if hit then
+			target:setEffect(target.EFF_CRIPPLE, t.getCrippleDur(self, t),
+				{speed=t.getSpeed(self, t), apply_power=self:combatPhysicalpower(),
+			})
+			t.doBlind(self, t, target)
+		end
+
+
+		self:setEffect(self.EFF_OUTRIDER_GIBLETS, 5, {
+			did_kill = true,
+			src = target,
+		})
+		return true
+	end,
+	doBlind = function(self, t, target)
+		if target.dead then
 			local tg = t.getSecondaryTarget(self, t)
 			local dur = t.getBlindDur(self, t)
 			self:project(tg, self.x, self.y, function(px, py, tg, self)
-				local target = game.level.map(px, py, engine.Map.ACTOR)
+				local target = game.level.map(px, py, Map.ACTOR)
 				if target and self:reactionToward(target)<0 and target:canBe("blinded") then
 					target:setEffect(target.EFF_BLINDED, dur, {apply_power=self:combatMindpower()})
 				end
 			end)
-		elseif hit then
-			target:setEffect(target.EFF_CRIPPLE, t.getCrippleDur(self, t),
-				{speed=t.getSpeed(self, t), apply_power=self:combatPhysicalpower()})
 		end
 		return true
 	end,

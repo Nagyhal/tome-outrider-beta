@@ -181,6 +181,22 @@ newEffect{
 	end,
 }
 
+-- @todo Make some reaaally beautiful paired effects functionality
+local function checkPairedEffect(target, effect_id, src, must_be_adjacent)
+	local p = target:hasEffect(target[effect_id])
+
+	if not p or (p.src and p.src ~= src) or target.dead or not game.level:hasEntity(target) then
+		return false
+	else
+		local reference = p.src or p.target or p.trgt
+		local moved_away = must_be_adjacent and core.fov.distance(reference.x, reference.y, target.x, target.y) > 1
+		if must_be_adjacent and moved_away then
+			return false
+		end
+	end
+	return true
+end
+
 newEffect{
 	name = "OUTRIDER_LIVING_SHIELD", image="talents/living_shield.png",
 	desc = "Used as a Living Shield",
@@ -189,8 +205,8 @@ newEffect{
 	subtype = { grapple=true },
 	status = "detrimental",
 	parameters = { pct = 25, def=5, src},
-	on_gain = function(self, err) return "#Target# is being used as a living shield!", "+Living Shield" end,
-	on_lose = function(self, err) return "#Target# is no longer a living shield", "-Living Shield" end,
+	on_gain = function(self, eff) return "#Target# is being used as a living shield!", "+Living Shield" end,
+	on_lose = function(self, eff) return "#Target# is no longer a living shield", "-Living Shield" end,
 	activate = function(self, eff)
 		self:effectTemporaryValue(eff, "combat_def", -eff.def)
 		if not eff.src then
@@ -199,41 +215,70 @@ newEffect{
 		end
 	end,
 	deactivate = function(self, eff)
+		eff.src:removeEffect(eff.src.EFF_GRAPPLING)
 		eff.src:removeEffect(eff.src.EFF_OUTRIDER_LIVING_SHIELDED)
 	 end,
-	do_onTakeHit = function(self, eff, dam) end,
-	on_timeout = function(self, eff) end,
+	callbackOnDie = function(self, eff)
+		eff.src:removeEffect(eff.src.EFF_GRAPPLING)
+		eff.src:removeEffect(eff.src.EFF_OUTRIDER_LIVING_SHIELDED)
+	end,
+	on_timeout = function(self, eff)
+		if not checkPairedEffect(eff.src, "EFF_GRAPPLING", nil, true)
+			or not checkPairedEffect(eff.src, "EFF_OUTRIDER_LIVING_SHIELDED", nil, true) then
+			self:removeEffect(eff.effect_id)
+		end
+	end,
 }
 
 newEffect{
 	name = "OUTRIDER_LIVING_SHIELDED", image="talents/living_shield.png",
 	desc = "Living Shield",
-	display_desc = function(self, eff) return ("Living Shield: %s"):format(string.bookCapitalize(eff.trgt.name)) end,
+	display_desc = function(self, eff) return ("Living Shield: %s"):format(string.bookCapitalize(eff.target.name)) end,
 	long_desc = function(self, eff) return ("The target grips its victim and enjoys a %d%% chance to displace damage onto it."):format(eff.chance) end,
 	type = "physical",
 	subtype = { grapple=true },
 	status = "beneficial",
-	parameters = { chance=25, trgt},
+	parameters = { chance=25 },
 	on_gain = function(self, err) return "#Target# is defended by the living shield!", "+Shielded" end,
 	on_lose = function(self, err) return "#Target# no longer has a living shield", "-Shielded" end,
 	activate = function(self, eff)
-		if not eff.trgt then
+		if not eff.target then
 			self:removeEffect(self.EFF_OUTRIDER_LIVING_SHIELDED, nil, true)
 			error("No target sent to temporary effect Shield: Living Shield.")
 		end
 		if not self.dragged_entities then self.dragged_entities = {} end
-		local t, e = self.dragged_entities, eff.trgt
+		local t, e = self.dragged_entities, eff.target
 		t[e] = t[e] and t[e]+1 or 1
+		if eff.shield then
+			-- @todo: make the util function work
+			if self.hotkey and self.isHotkeyBound then
+				local pos = self:isHotkeyBound("talent", self.T_OUTRIDER_LIVING_SHIELD)
+				if pos then
+					self.hotkey[pos] = {"talent", self.T_OUTRIDER_LIVING_SHIELD_BLOCK}
+				end
+			end
+
+			util.hotkeySwapOnLearn(
+				self, "T_OUTRIDER_LIVING_SHIELD", "T_OUTRIDER_LIVING_SHIELD_BLOCK",
+				function()
+					self:learnTalent(self.T_OUTRIDER_LIVING_SHIELD_BLOCK, true, 1, {no_unlearn=true})
+				end
+			)
+		end
 	end,
 	deactivate = function(self, eff)
-		self.dragged_entities[eff.trgt] = self.dragged_entities[eff.trgt]-1
-		if self.dragged_entities[eff.trgt] == 0 then self.dragged_entities[eff.trgt] = nil end
-		eff.trgt:removeEffect(eff.trgt.EFF_OUTRIDER_LIVING_SHIELD)
+		self.dragged_entities[eff.target] = self.dragged_entities[eff.target]-1
+		if self.dragged_entities[eff.target] == 0 then self.dragged_entities[eff.target] = nil end
+		eff.target:removeEffect(eff.target.EFF_OUTRIDER_LIVING_SHIELD)
+		if self:knowTalent(self.T_OUTRIDER_LIVING_SHIELD_BLOCK) then
+			util.hotkeySwap(self, "T_OUTRIDER_LIVING_SHIELD_BLOCK", "T_OUTRIDER_LIVING_SHIELD")
+			self:unlearnTalent(self.T_OUTRIDER_LIVING_SHIELD_BLOCK)
+		end
 	end,
 	on_timeout = function(self, eff)
-		local p = eff.trgt:hasEffect(eff.trgt.EFF_GRAPPLED)
-		if not p or p.src ~= self or core.fov.distance(self.x, self.y, eff.trgt.x, eff.trgt.y) > 1 or eff.trgt.dead or not game.level:hasEntity(eff.trgt) then
-			self:removeEffect(self.EFF_OUTRIDER_LIVING_SHIELDED)
+		if not checkPairedEffect(eff.target, "EFF_GRAPPLED", self, true)
+			or not checkPairedEffect(eff.target, "EFF_OUTRIDER_LIVING_SHIELD", self, true) then
+			self:removeEffect(eff.effect_id)
 		end
 	end,
 }
@@ -1137,15 +1182,6 @@ newEffect{
 	end,
 }
 
-local hotkeySwap = function(self, eff, original_tid, new_tid)
-	if self.hotkey and self.isHotkeyBound then
-		local pos = self:isHotkeyBound("talent", self[original_tid])
-		if pos then
-			self.hotkey[pos] = {"talent", self[new_tid]}
-		end
-	end
-end
-
 newEffect{
 	name = "OUTRIDER_GIBLETS", image = "talents/giblets.png",
 	desc = "Gory Trophy",
@@ -1156,10 +1192,10 @@ newEffect{
 			return "Gory Trophy"
 		end
 	end,
-	long_desc = function(self, eff) return ("You've got %s %s! That's absolutely disgusting. But oh, what to do with it?"):format(eff.giblets_name, eff.indefinite_article_form) end,
+	long_desc = function(self, eff) return ("You've got %s %s! That's absolutely disgusting. But oh, what to do with it?"):format(eff.indefinite_article_form, eff.giblets_name) end,
 	-- old_desc = function(self, eff) return ("The Outrider retains a %s in inventory, a cruel trophy of %s's vivisection"):format(eff.giblets_name, eff.src) end,
 	type = "other",
-	no_remove = true,
+	-- no_remove = true,
 	cancel_on_level_change = true,
 	subtype = { miscellaneous = true },
 	status = "beneficial",
@@ -1169,33 +1205,40 @@ newEffect{
 	activate = function(self, eff)
 		if not eff.src then self:removeEffect(eff.effect_id) return end
 
+		-- @todo Create the giblets icons
 		local bits = did_kill and {
-			{"%s heart", "a"},
-			{"%s intestines", "some"},
-			{"%s lungs", "some"},
+			{"%s heart", "a", "talents/giblets.png"},
+			{"%s intestines", "some", "talents/giblets.png"},
+			{"%s lungs", "some", "talents/giblets.png"},
+			{"%s torso", "half a", "talents/giblets.png"},
 		} or {
-			{"%s ear", "a"},
-			{"chunk of %s gore", "a"},
-			{"scrap of %s flesh", "a"},
-			{"%s giblets", "some"},
+			{"%s ear", "a", "talents/giblets.png"},
+			{"%s finger", "a", "talents/giblets.png"},
+			{"chunk of %s gore", "a", "talents/giblets.png"},
+			{"scrap of %s flesh", "a", "talents/giblets.png"},
+			{"%s giblets", "some", "talents/giblets.png"},
 		}
 
 		local desc = rng.table(bits)
 
 		--This is some powerful procedural generation going on here!
-		local name = src.name
-		if src.unique then name = name.."'s" end
+		local name = eff.src.name
+		if eff.src.unique then name = name.."'s" end
 		
-		eff.giblets_name = (desc[1]):format(src.name)
+		eff.giblets_name = (desc[1]):format(eff.src.name)
 		--Do we have a giblet or some giblets?
 		eff.indefinite_article_form = desc[2]
+		eff.image_variant = desc[3]
 
-		-- if string.find(desc[1], "%s") then
-		hotkeySwap(self, eff, self.T_OUTRIDER_GORY_SPECTACLE, SELF.T_OUTRIDER_GIBLETS)
-		self:learnTalent(self.T_OUTRIDER_GIBLETS, true, 1, {no_unlearn=true})
+		util.hotkeySwapOnLearn(
+			self, "T_OUTRIDER_GORY_SPECTACLE", "T_OUTRIDER_GIBLETS",
+			function()
+				self:learnTalent(self.T_OUTRIDER_GIBLETS, true, 1, {no_unlearn=true})
+			end
+		)
 	end,
 	deactivate = function(self, eff)
-		hotkeySwap(self, eff, self.T_OUTRIDER_GORY_SPECTACLE, SELF.T_OUTRIDER_GIBLETS)
+		util.hotkeySwap(self, "T_OUTRIDER_GIBLETS", "T_OUTRIDER_GORY_SPECTACLE")
 		self:unlearnTalent(self.T_OUTRIDER_GIBLETS, 1, nil, {no_unlearn=true})
 	end,
 }
@@ -1333,6 +1376,34 @@ newEffect{
 		-- }))
 		assert(eff.src, "No source sent to effect EFF_OUTRIDER_FEIGNED_RETREAT.")
 		eff.particle = self:addParticles(Particles.new("circle", 1, {base_rot=1, oversize=1, a=200, appear=12, speed=0, img="spring_attack", radius=0}))
+	end,
+	deactivate = function(self, eff)
+	end,
+}
+
+newEffect{
+	name = "OUTRIDER_LIVING_SHIELD_BLOCKING", image = "talents/block.png",
+	desc = "Blocking (with Living Shield",
+	long_desc = function(self, eff) return ("Negates the next attack of damage over %d, redirecting it to your target and swapping places with it."):format(eff.min_incoming) end,
+	type = "physical",
+	subtype = { tactic=true },
+	status = "beneficial",
+	parameters = { min_incoming=50, pct=50 },
+	on_gain = function(self, eff) return nil, nil end,
+	on_lose = function(self, eff) return nil, nil end,
+	callbackOnTakeDamage = function(self, eff, src, x, y, type, dam, state)
+		if dam>eff.min_incoming then
+			local target = eff.target
+			self:project({type="hit"}, target.x, target.y, type, dam*eff.power/100)
+			-- Do the swap, trying my best to do it as safely as I can
+			self.x, self.y, target.x, target.y = target.x, target.y, self.x, self.y
+			self:move(self.x, self.y, true)
+			target:move(target.x, target.y, true)
+		end
+		return {dam=dam*(1-eff.power/100)}
+	end,
+	activate = function(self, eff)
+		self:effectParticles(eff, {type="block"})
 	end,
 	deactivate = function(self, eff)
 	end,

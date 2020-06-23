@@ -59,3 +59,11 @@ util.hotkeySwap = function(self, original_tid, new_tid)
 		end
 	end
 end
+
+util.hotkeySwapOnLearn = function(self, original_tid, new_tid, learn_func)
+	util.hotkeySwap(self, original_tid, new_tid)
+	local ohk = self.hotkey
+	self.hotkey = nil
+	learn_func()
+	self.hotkey = ohk
+end
