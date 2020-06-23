@@ -399,10 +399,14 @@ newTalent{
 		local max_dist = self:callTalent(self.T_OUTRIDER_SUBDUE_THE_BEAST, "getMaxDist") or 1
 		if core.fov.distance(self.x, self.y, mount.x, mount.y)<=max_dist and string.find(ab.type[1],  "inscriptions") then
 			old_fake = mount.__inscription_data_fake
-			local name = string.sub(ab.id, 3)
-			mount.__inscription_data_fake = self.inscriptions_data[name]
-			mount:forceUseTalent(ab.id, {no_energy=true, talent_reuse=true, no_talent_fail=true, silent=true})
+			-- Protected call so an error doesn't stop us swapping back
+			local _, err = pcall(function() 
+				local name = string.sub(ab.id, 3)
+				mount.__inscription_data_fake = self.inscriptions_data[name]
+				mount:forceUseTalent(ab.id, {no_energy=true, talent_reuse=true, no_talent_fail=true, silent=true})
+			end)
 			mount.__inscription_data_fake=old_fake
+			if err then error(err) end
 		end
 	end,
 	callbackOnLevelup = function(self, t, level)
