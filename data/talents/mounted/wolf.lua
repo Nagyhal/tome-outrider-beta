@@ -478,30 +478,20 @@ newTalent{
 }
 
 newTalent{
-	name = "Predatory Flanking : Specialization", short_name = "OUTRIDER_WOLF_FLANKING", image="talents/predatory_flanking.png",
+	name = "Improved Flanking", short_name = "OUTRIDER_WOLF_FLANKING", image="talents/predatory_flanking.png",
 	type = {"wolf/pack-hunter", 3},
 	points = 5,
 	require = mnt_cun_req3,
 	mode = "passive",
 	shared_talent = "T_OUTRIDER_COMMAND_WOLF_FLANKING",
+	range = function(self, t)
+		local mod = self:getTalentTypeMastery(t.type[1])
+		local tl = self:getTalentLevel(t) - mod*2 -- Start from TL 3
+		return tl>0 and self:combatTalentScale(tl, 2, 3.5) or 2
+	end,
 	learn_shared_talent_at = 3,
-	--Might want to do this as often as possible
-	doCheck = function(self, t)
-		local tgts = {}
-		for _, c in pairs(util.adjacentCoords(self.x, self.y)) do
-			local target = game.level.map(c[1], c[2], Map.ACTOR)
-			if target and self:reactionToward(target) < 0 then tgts[#tgts+1] = target end
-		end
-		for _, target in ipairs(tgts) do
-			local allies = {}
-			for _, c in pairs(util.adjacentCoords(target.x, target.y)) do
-				local target2 = game.level.map(c[1], c[2], Map.ACTOR)
-				if target2 and self:reactionToward(target2) >= 0 and core.fov.distance(self.x, self.y, target2.x, target2.y)>1 then allies[#allies+1] = target2 end
-				if #allies>=1 then
-					target:setEffect(target.EFF_OUTRIDER_PREDATORY_FLANKING, 2, {src=self, allies=allies, src_pct=t.getPct(self, t), allies_pct=t.getSecondaryPct(self, t)})
-				end --We run the check to see if we are no longer flanking from within the enemy's temp effect.
-			end
-		end
+	setEffect = function(self, t)
+		self:setEffect(self.EFF_OUTRIDER_WOLF_FLANKING, 2, {res=t.getRes(self, t)})
 	end,
 	on_learn = function(self, t)
 		if self:getTalentLevelRaw(t) >= t.learn_shared_talent_at then
@@ -516,25 +506,25 @@ newTalent{
 	callbackOnActBase = function(self, t)
 		t.doCheck(self, t)
 	end,
-	callbackOnMove = function(self, t, ...)
-		t.doCheck(self, t)
-	end,
 	info = function(self, t)
-		local bonus_dam_pct = t.getBonusDamPct(self, t)
-		local dam_reduction_pct = t.getDamReductionPct(self, t)
-		local command_range = self:getTalentRange(self.T_OUTRIDER_COMMAND_WOLF_FLANKING)
+		local dam = t.getDam(self, t)
+		local res = t.getRes(self, t)
+		local command_range = self:getTalentRange(the)
 		local attack_dam_pct = t.getAttackDam(self, t)*100
 		local bleed_dam_pct = t.getBleedDamPct(self, t)
 		return ([[When using Predatory Flanking, both the wolf and its allies gain an additional %d%% damage (you can take advantage of this even without learning the Predatory Flanking talent). When fighting this way, the wolf's positional advantage reduces incoming damage by %d%%.
 
-			At talent level 3, the wolf's owner can used Command: Flank Enemy, instantly sending the wolf behind target enemy's back (in range %d) and inciting a %d%% damage attack which bleeds for %d%% damage.]])
-			:format(bonus_dam_pct, dam_reduction_pct, command_range, attack_dam_pct, bleed_dam_pct)
+			At talent level 3, the wolf's owner can used Command: Flank Enemy, instantly sending the wolf behind target enemy's back (in range %d) and inciting a %d%% damage attack which bleeds for %d%% total damage over 5 turns.]])
+			:format(dam, res, command_range, attack_dam_pct, bleed_dam_pct)
 		end,
-	getBonusDamPct = function(self, t) return self:combatTalentScale(t, 3, 15, 0.8) end,
-	getDamReductionPct = function(self, t) return self:combatTalentScale(t, 5, 25, 0.8) end,
-	getAttackDam = function(self, t) return self:combatTalentScale(t, 1.2, 1.6) end,
-	getBleedDamPct = function(self, t) return t.getAttackDam(self, t) * 100  * 1.75
-	end
+	getDam = function(self, t) return self:combatTalentScale(t, 3, 15, 0.8) end,
+	getRes = function(self, t) return self:combatTalentScale(t, 5, 25, 0.8) end,
+	getBleedDamPct = function(self, t) return 80 end,
+	getAttackDam = function(self, t)
+		local mod = self:getTalentTypeMastery(t.type[1])
+		local tl = self:getTalentLevel(t) - mod*2 -- Start from TL 3
+		return tl>0 and self:combatTalentScale(tl, 0.8, 1.5) or 0
+	end,
 }
 
 newTalent{
