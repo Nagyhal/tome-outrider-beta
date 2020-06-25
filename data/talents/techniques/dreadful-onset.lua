@@ -248,35 +248,22 @@ newTalent{
 		if not target:hasEffect(target.EFF_OUTRIDER_FEIGNED_RETREAT_TARGET) then
 			return true
 		end
-		self:setEffect(
-			self.EFF_EVASION,
-			t.getEvasionDur(self, t),
-			{chance=t.getCurrentEvasion(self, t)})
 		self:setEffect(self.EFF_OUTRIDER_FEIGNED_RETREAT, 2, {target=target, damage=t.getDamPct(self, t)/100})
 
 		return true
 	end,
 	info = function(self, t)
-		local evasion_dur = t.getEvasionDur(self, t)
 		local dist = t.getDist(self, t)
 		local dam_pct = t.getDamPct(self, t)
 		local attacks_no = t.getAttacksNo(self, t)
-		return ([[One of the most famous tools in the Outrider repertory of mobile combat strategy and psychological warfare.
+		return ([[Turning suddenly and feigning flight from battle, you ready a cruel ambush. Rush up to %d squares away from your target, but deal %d%% damage with your next %d attacks against it.
 
-			Turn suddenly and flee the battle, as you rush up to %d squares away from your target. The more you seem at a genuine disadvantage, the more your enemies are taken in; for %d turns, gain 20%% evasion which increases to 50%% if you are on death's door.
-
-			But it is only a ruse! For when you turn to face the enemy anew, you do so at the moment it is most vulnerable; gain %d%% damage to your next %d attacks. But you MUST turn back, to regain your honour, or you can't use this strategem again. Feigned Retreat stays on cooldown until you either defeat the original target, or move on and kill 30 more combatants.]]):
-		format(dist, evasion_dur, dam_pct, attacks_no)
+			If you fail to slay your mark, Feigned Retreat stays on cooldown, as the ruse is now known. You must kill 30 more combatants in order to recover it.]]):
+		format(dist, dam_pct, attacks_no)
 	end,
-	getEvasionDur = function(self, t) return self:combatTalentScale(t, 3, 7) end,
 	getDist = function(self, t) return self:combatTalentScale(t, 4,  7) end,
 	getDamPct = function(self, t) return self:combatTalentScale(t, 110, 140) end,
 	getAttacksNo = function(self, t) return math.floor(self:combatTalentScale(t, 1, 2.8)) end,
-	getCurrentEvasion = function(self, t)
-		local life_portion_left = util.bound(self.life, 0, self.max_life) / self.max_life
-		--LERP, a fantastic and underused utility function. Do you LERP?
-		return util.lerp(20, 50, life_portion_left)
-	end,
 }
 
 newTalent{
