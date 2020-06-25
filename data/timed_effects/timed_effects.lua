@@ -1195,7 +1195,6 @@ newEffect{
 	long_desc = function(self, eff) return ("You've got %s %s! That's absolutely disgusting. But oh, what to do with it?"):format(eff.indefinite_article_form, eff.giblets_name) end,
 	-- old_desc = function(self, eff) return ("The Outrider retains a %s in inventory, a cruel trophy of %s's vivisection"):format(eff.giblets_name, eff.src) end,
 	type = "other",
-	-- no_remove = true,
 	cancel_on_level_change = true,
 	subtype = { miscellaneous = true },
 	status = "beneficial",

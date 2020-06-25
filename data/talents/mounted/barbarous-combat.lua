@@ -308,7 +308,8 @@ newTalent{
 
 			self:project(tg, x, y, dam_function)
 
-			game:playSoundNear(self, "talents/slime", {pitch=0.3})
+			game:playSoundNear(self, "creatures/jelly/jelly_1", {pitch=0.8})
+			game.level.map:particleEmitter(x, y, 3, "blood", {})
 		end
 
 		self:removeEffect(self.EFF_OUTRIDER_GIBLETS, true, true)
@@ -343,7 +344,7 @@ newTalent{
 	require = mnt_strcun_req4,
 	points = 5,
 	random_ego = "attack",
-	cooldown = 10,
+	cooldown = 15,
 	stamina = 25,
 	tactical = { ATTACK = { weapon = 1 } },
 	target = function(self, t) return {type="hit", range=self:getTalentRange(t)} end,
@@ -401,10 +402,16 @@ newTalent{
 		local cripple_dur = t.getBlindDur(self, t)
 		local radius = t.getBlindRadiusMounted(self, t)
 		local speed = t.getSpeed(self, t)
+
+		local t2 = self:getTalentFromId(self.T_OUTRIDER_GIBLETS)
+		local life = t2.getLife(self, t2)
+		local loyalty = t2.getLoyalty(self, t2)
 		return ([[You gouge your enemy for %d%% damage. If it is killed, then the horrific maiming you inflict spreads terror in all nearby foes, blinding them as they must avert their eyes for %d turns. If you are mounted, then you may raise the severed remnants of your victim high above for all to see, blinding instead all enemies in radius %d.
 
-			If you fail to slay your foe, however, then instead you cripple it for %d turns, reducing melee, spellcasting and mind speed by %d%% as it struggles to recover from your wicked wound.]]):
-			format(dam, blind_dur, radius, cripple_dur, speed)
+			If you fail to slay your foe, however, then instead you cripple it for %d turns, reducing melee, spellcasting and mind speed by %d%% as it struggles to recover from your wicked wound.
+
+			What will you do with the gory spoils that you carve? Throw them back into the crowds to cause mayhem (a 2 turn fear, radius 1, range 5), or feed them to your beast (recovers %d health and %d loyalty). The gory giblets will remain in your inventory for 5 turns.]]):
+			format(dam, blind_dur, radius, cripple_dur, speed, life, loyalty)
 	end,
 	getDam = function(self, t) return self:combatTalentWeaponDamage(t, 1.2, 1.7) end,
 	getBlindDur = function(self, t) return self:combatTalentScale(t, 4, 6) end,
