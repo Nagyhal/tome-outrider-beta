@@ -10,7 +10,7 @@ newTalent{
 		if self.resting.cnt >= 15 then
 			perc = math.min(self.resting.cnt, 16)
 		end
-		act:incLoyalty(act.stamina_regen * perc)
+		self:incLoyalty(self.loyalty_regen * perc)
 	end,
 	no_unlearn_last = true,
 	-- callbackOnRest = function (self, t, type)
