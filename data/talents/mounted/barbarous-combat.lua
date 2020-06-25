@@ -283,8 +283,16 @@ newTalent{
 		local pet = self:getOutriderPet()
 		if x==pet.x and y==pet.y then
 			-- Feed the pet
-			pet:heal(t.getLife(self, t))
-			self:incLoyalty(t.getLoyalty(self, t))
+			local p=self:hasEffect(self.EFF_OUTRIDER_GIBLETS)
+
+			local loyalty, life = t.getLoyalty(self, t), t.getLife(self, t)
+			if not p.did_kill then loyalty, life = loyalty*.75, life*.75 end
+			pet:heal(life)
+			self:incLoyalty(loyalty)
+
+			game.logPlayer(self, 
+				"#OUTRIDER_GREEN#%s regains %d loyalty from devouring %s %s!#LAST#",
+				pet.name:capitalize(), loyalty, p.indefinite_article_form, p.giblets_name)
 
 			-- Add a combined growl and chomp sound effect, similar to Gruesome Depredation
 			game:playSoundNear(self, {
