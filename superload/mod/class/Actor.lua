@@ -454,6 +454,17 @@ function _M:teleportRandom(x, y, dist, min_dist)
 	return unpack(ret)
 end
 
+--- A ludicrous hack.
+local base_quickSwitchWeapons = _M.quickSwitchWeapons
+function _M:quickSwitchWeapons(free_swap, message, silent)
+	if self:isTalentActive(self.T_OUTRIDER_MASTER_OF_BRUTALITY) and message=="warden" then
+		message = nil
+	end
+
+	local ret = {base_quickSwitchWeapons(self, free_swap, message, silent)}
+	return unpack(ret)
+end
+
 --Useful debugging function, saved for later.
 -- local base_callTalent = _M.callTalent
 -- function _M:callTalent(tid, name, ...)
