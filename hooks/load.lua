@@ -236,10 +236,10 @@ class:bindHook("Actor:takeHit", function(self, data)
 	--Chance to dismount on hit.
 	local eff = self:hasEffect(self.EFF_OUTRIDER_RIDDEN) or self:hasEffect(self.EFF_OUTRIDER_MOUNT)
 	rider = (eff and eff.rider) or ((eff and eff.mount) and self)
-	if rider and data.value / self.max_life > .1 then
+	if rider and data.value / self.max_life > 0.1 then
 		--Maybe do a getDismountChance() so Loyalty can be factored in?
-		local pct = self:combatScale(data.value, 10, self.max_life*1, 50, self.max_life*.25)
-		if rng.percent(25) then rider:dismount() end
+		-- local pct = self:combatScale(data.value, 10, self.max_life*1, 50, self.max_life*.25)
+		if rng.percent(25) then rider:forceDismount() end
 	end
 end)
 

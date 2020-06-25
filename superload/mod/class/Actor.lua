@@ -184,7 +184,20 @@ function _M:dismount(x, y, silent, force)
 		local ok = self:move(x, y, true)
 		self:removeEffect(self.EFF_OUTRIDER_MOUNT, false, true)
 		mount:removeEffect(self.EFF_OUTRIDER_RIDDEN, false, true)
-		game.logSeen(self, "%s dismounts from %s", self.name:capitalize(), mount.name:capitalize())
+		if force==true then
+			--Dismount for between 1-4 turns, based on your loyalty
+			local mod = (1 - self.loyalty/self.max_loyalty) * 4
+			local max_dur = mod>=1 and math.round(mod) or 0
+			local dur = max_dur>0 and rng.range(1, max_dur) or 0
+
+			local str = dur>0 and (" for %d turns"):format(dur) or ""
+			game.logSeen(self, "#RED#%s is knocked from %s"..str.."!#LAST#", self.name:capitalize(), mount.name:capitalize())
+			if dur>0 then
+				self:startTalentCooldown(self.T_OUTRIDER_MOUNT, math.max(dur, self.talents_cd["T_OUTRIDER_MOUNT"] or 0))
+			end
+		else
+			game.logSeen(self, "%s dismounts from %s", self.name:capitalize(), mount.name:capitalize())
+		end
 		game.level:addEntity(self)
 		-- game.zone:addEntity(game.level, self, "actor", self.x, self.y)
 		if not ok then return end
@@ -194,8 +207,8 @@ function _M:dismount(x, y, silent, force)
 		mount:move(ox, oy, true)
 		mount.changed = true
 		self.changed = true
-		self:fireTalentCheck("callbackOnDismount")
-		mount:fireTalentCheck("callbackOnDismounted")
+		self:fireTalentCheck("callbackOnDismount", mount)
+		mount:fireTalentCheck("callbackOnDismounted", self)
 		if self.hotkey and self.isHotkeyBound then
 			local pos = self:isHotkeyBound("talent", self.T_OUTRIDER_DISMOUNT)
 			if pos then
@@ -204,6 +217,11 @@ function _M:dismount(x, y, silent, force)
 		end
 		return true
 	else return nil end
+end
+
+--- Something of a legacy / shorthand method, may be changed at a later date
+function _M:forceDismount()
+	self:dismount(nil, nil, nil, true)
 end
 
 function _M:flyOver(x, y, dist)
@@ -386,7 +404,7 @@ function _M:knockback(srcx, srcy, dist, recursive, on_terrain)
 	if self:isMounted() and self.x~=ox or self.y~=oy then
 		if rng.percent(25) then
 			local mount = self:hasMount()
-			self:dismount()
+			self:forceDismount()
 		end
 	end
 end
