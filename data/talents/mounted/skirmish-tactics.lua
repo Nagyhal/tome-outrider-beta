@@ -295,6 +295,64 @@ newTalent{
 	getMaxStamina = function(self, t) return self:combatTalentScale(t, .5, 2.5) end,
 }
 
+newTalent{
+	name = "Loose in the Saddle", short_name = "LOOSE_IN_THE_SADDLE", image = "talents/loose_in_the_saddle.png",
+	type = {"mounted/skirmish-tactics", 3},
+	points = 5,
+	mode = "sustained",
+	sustain_stamina = 50,
+	no_energy = true,
+	cooldown = function(self, t) return self:combatTalentLimit(t, 8, 20, 12) end,
+	require = techs_dex_req3,
+	activate = function(self, t)
+		local mount = self:hasMount()
+		local ret = {
+			reduction=t.getReduction(self, t)/100,
+		}
+		if mount then
+			mount:setEffect(mount.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE_SHARED, 2, ret)
+			ret.mount = mount
+		end
+		return ret
+	end,
+	checkMount = function(self, t)
+		-- I can't see why the mount would lose its paired effect, but my experience with
+		-- ToME has taught me that it *will*
+		local mount = self:getOutriderPet()
+
+		if not mount:hasEffect(mount.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE_SHARED) then
+			mount:setEffect(mount.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE_SHARED, 2, ret)
+		end
+	end,
+	callbackOnActBase = function(self, t)
+		t.checkMount(self, t)
+	end,
+	deactivate = function(self, t, p)
+		if ret.mount then
+			ret.mount:removeEffect(ret.mount.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE_SHARED, true, true)
+		end
+		return true
+	end,
+	callbackOnTakeDamage = function(self, t, src, x, y, type, dam, state)
+		if not self:isMounted() then return end
+		local p = self:isTalentActive(t.id)
+		if dam>self.max_life*.15 then
+			dam = dam - dam*p.reduction
+			self:setEffect(self.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE, 2, {speed=t.getSpeed(self, t)/100})
+			self:forceUseTalent(self.T_OUTRIDER_LOOSE_IN_THE_SADDLE, {ignore_energy=true})
+		end
+		return {dam=dam}
+	end,
+	info = function(self, t)
+		local reduction = t.getReduction(self, t)
+		local speed = t.getSpeed(self, t)
+		return ([[While mounted, if you or your mount are hit for over 15%% of your max health (but not enough to kill you), then you take only %d%% of that damage, this sustain deactivates, and you gain a movement speed increase of %d%% for one turn and may mount or dismount freely - but if you do anything other than mount, dismount or move, then this bonus ends.]]):
+		format(reduction, speed)
+	end,
+	getReduction = function(self, t) return self:combatTalentLimit(t, 80, 35, 60) end,
+	getSpeed = function(self, t) return self:combatTalentScale(t, 400, 650) end,
+}
+
 --4: Cacophonous Downpour
 --How should it work? Fire arrows against everyone, then over 2 turns repeat
 newTalent{
@@ -357,51 +415,4 @@ newTalent{
 	getDur = function(self, t) return self:combatTalentScale(t, 3, 5) end,
 	getConfusePower = function(self, t) return self:combatTalentLimit(t, 60, 27, 52) end,
 	getSilenceChance = function(self, t) return math.max(50, self:combatTalentLimit(t, 90, 19, 54)) end,
-}
-
-newTalent{
-	name = "Loose in the Saddle", short_name = "LOOSE_IN_THE_SADDLE", image = "talents/loose_in_the_saddle.png",
-	type = {"mounted/skirmish-tactics", 3},
-	hide="always", --DEBUG: Hiding untested talents 
-	points = 5,
-	mode = "sustained",
-	sustain_stamina = 50,
-	no_energy = true,
-	cooldown = function(self, t) return self:combatTalentLimit(t, 8, 20, 12) end,
-	require = techs_dex_req3,
-	activate = function(self, t)
-		local mount = self:hasMount()
-		local ret = {
-			reduction=t.getReduction(self, t)/100,
-		}
-		if mount then
-			mount:setEffect(mount.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE_SHARED, 2, ret)
-			ret.mount = mount
-		end
-		return ret
-	end,
-	deactivate = function(self, t, p)
-		if ret.mount then
-			ret.mount:removeEffect(ret.mount.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE_SHARED, true, true)
-		end
-		return true
-	end,
-	callbackOnTakeDamage = function(self, t, src, x, y, type, dam, state)
-		if not self:isMounted() then return end
-		local p = self:isTalentActive(t.id)
-		if dam>self.max_life*.15 then
-			dam = dam - dam*p.reduction
-			self:setEffect(self.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE, 2, {speed=t.getSpeed(self, t)/100})
-			self:forceUseTalent(self.T_OUTRIDER_LOOSE_IN_THE_SADDLE, {ignore_energy=true})
-		end
-		return {dam=dam}
-	end,
-	info = function(self, t)
-		local reduction = t.getReduction(self, t)
-		local speed = t.getSpeed(self, t)
-		return ([[While mounted, if you or your mount are hit for over 15%% of your max health (but not enough to kill you), then you take only %d%% of that damage, this sustain deactivates, and you gain a movement speed increase of %d%% for one turn and may mount or dismount freely - but if you do anything other than mount, dismount or move, then this bonus ends.]]):
-		format(reduction, speed)
-	end,
-	getReduction = function(self, t) return self:combatTalentLimit(t, 80, 35, 60) end,
-	getSpeed = function(self, t) return self:combatTalentScale(t, 400, 650) end,
 }
