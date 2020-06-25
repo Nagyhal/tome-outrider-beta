@@ -227,3 +227,6 @@ newTalent{
 	end,
 	getRes = function(self, t) return self:combatTalentLimit(t, 100, 20, 65) end,
 }
+
+-- @idea  Take this old Subdue the Beast feature and tack it onto here
+-- As you master the domestication of wild riding beasts, you are able to still their fury long enough to inscribe them with infusions. You gain an infusion slot for your mount, and may gain others for each Bestial Dominion talent you raise to 5/5 (up to 3 slots).

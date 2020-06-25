@@ -39,6 +39,12 @@ function _M:onTakeHit(value, src)
 						-- Firstly let's the damage using standard C rounding style
 						-- which, I *think*, is "round to nearest and ties to even".
 
+
+						--Safety check
+						if not m.turn_procs.temp_mount_damage or not next(m.turn_procs.temp_mount_damage) then
+							return
+						end
+
 						-- We'll also tally total damage taken as we do that.
 						local total = 0 
 
@@ -162,7 +168,7 @@ function _M:mountTarget(target)
 end
 
 --Should be just a _M:dismount
-function _M:dismount(x, y, silent)
+function _M:dismount(x, y, silent, force)
 	local mount = self:getMount()
 	if not self:isMounted() or not mount then
 		if not silent then game.logPlayer(self, "You're not mounted!") end

@@ -36,11 +36,12 @@ newTalent{
 	name = "Mount", short_name = "OUTRIDER_MOUNT", image = "talents/mount.png",
 	type = {"mounted/mounted-base", 1},
 	points = 1,
+	cooldown = 0,
 	message = false,
 	no_break_stealth = true, -- stealth is broken in attackTarget
 	requires_target = true,
-	tactical = { BUFF = 2, DEFEND = 3 },
 	no_unlearn_last = true,
+	tactical = { BUFF = 2, DEFEND = 3 },
 	range = function(self, t)
 		if self:knowTalent(self.T_OUTRIDER_MOUNTED_ACROBATICS) then
 			return self:callTalent(self.T_OUTRIDER_MOUNTED_ACROBATICS, "range")
@@ -49,7 +50,7 @@ newTalent{
 	on_pre_use = function(self, t, silent, fake)
 		return preCheckHasMount(self, t, silent, fake) and 
 			preCheckIsNotMounted(self, t, silent, fake) and
-			preCheckHasMountInRange(self, t, silent, fake, 1)
+			preCheckHasMountInRange(self, t, silent, fake, self:getTalentRange(t))
 	end,
 	action = function(self, t)
 		if not self:hasMount() then game.logPlayer(self, "You have no mount!") return nil end

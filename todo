@@ -77,57 +77,92 @@ Riding forth (two days deadline) :
   ✔ Spring Attack : crit bonus @done (20-06-22 10:34)
   ✔ Spring Attack : bonuses that refresh @done (20-06-22 10:34)
   ✔ Put Impalement to TL3 and play with Feigned Retreat in that position @done (20-06-22 13:51)
-  ☐ Any ideas for Shock Tactics?
-  ☐ Any ideas for Beast Aspect?
-  ☐ Git : Upload changes meticulously
-  ☐ Feigned retreat: better desc
-  ☐ Ask DG to get access to the repo back so you can do retrieve this stuff
+  ✔ Git : Upload changes meticulously @done (20-06-22 14:59)
+  ✔ Test & refactor the Living Shield @done (20-06-22 20:54)
+  ✔ Dragging : can push enemies when blocked by wall @done (20-06-23 17:23)
+  ✔ Dragging : not released after killing enemy @done (20-06-23 19:15)
+  ✔ Giblets : make it disappear after use @done (20-06-23 21:28)
+  ✔ Giblets : feed to wolf @done (20-06-23 21:28)
+  ✔ Giblets : feed to wolf (Can the targeting be made single-square when hovering over player?) @done (20-06-23 21:28)
+  ✔ Giblets : test the fear effect @done (20-06-23 22:09)
+  ✔ Pack it off to Git @done (20-06-23 23:07)
+  ✔ Try and find a good splat particle for Giblets @done (20-06-23 23:11)
+  ✔ Feigned retreat: better desc @done (20-06-23 23:31)
+  ✔ Any ideas for Shock Tactics? @done (20-06-24 00:15)
+  ✔ Any ideas for Beast Aspect? @done (20-06-24 00:15)
+  -------------------------------
+  ✔ Clean up mount damage..stead message logs @done (20-06-25 00:56)
+  ✔ Remove Temp Warden message logs @done (20-06-25 00:56)
+  ✔ Make Spring Attack a sustain @done (20-06-25 02:17)
+  ✔ Mount block : Prevent re-mounting for a couple of turns after being knocked off @done (20-06-25 09:30)
+  ✔ Put in the next 3 tier 3 talents. Woo! @done (20-06-25 10:42)
+  ✔ Subdue the beast : Tweak it @done (20-06-25 13:23)
+  ✔ Unbridled Ferocity : Make the mount bigger @done (20-06-25 16:48)
+  ✔ Flanking : Merge it with beast flanking @done (20-06-25 19:13)
+  ☐ Flanking : Test it to hell and back
+  ☐ Flanking : Make it work at a distance (ooo!), but maybe not initiating the temporary effect
+  ☐ Mounted Archery : Make an archer and make it work well
+  ☐ Challenge : Dialog if you forget to use your Wild Challenge
+  ☐ Master of Brutality : Make it a passive?
+  ☐ Fix the way dragged_entities works
+  ☐ After executing this basic handiwork, switch to re-instating your dev tools
+  -------------------------------
+
+  ☐ Distinguish the two provokes
+  ☐ Make Spring Attack proc really generously
+  ☐ See how the provoke component of Scatter the Unworthy works when you play it, maybe change the effect
+  ☐ You need to find a situation where you can test Living Shield 5/5
+  ☐ Make Unbridled Ferocity really cool
+  ☐ Make the mount tile bigger when using Unbridled Ferocity
   ☐ Beast Archery - a sustain timer
   ☐ Beast Archery - disabled on attack
-  ☐ Mount block : Prevent re-mounting for a couple of turns after being knocked off
-  ☐ Test & refactor the Living Shield
-  ☐ Test & refactor Scatter the Unworthy
+  ☐ Ask DG to get access to the repo back so you can retrieve this stuff
+  ☐ I'm collecting a list of difficult problems in the problem file and this would be a good chance to ask DG, minmay, astral
+  ☐ Feast of Blood : Can you make it last a couple of turns?
+  ☐ Bestial Dominion : More talent points!
+  ☐ Bestial Dominion talent points on beast capture
 
-The remainder of the player talents (2 days):
-  ☐ Finish off the resting routine
-  ☐ If need be, look into shaders as well as particle effects  
+The rest of the work (5 days):
+  ✔ Finish off the resting routine @done (20-06-22 15:00)
+  ✘ Let 'Em Have It! needs a cleanup, make it the 2nd talent @cancelled (20-06-21 12:39)
+  ✔ Your "Rearing Assault" is probably gonna lose its spot though @done (20-06-22 14:43)
+  ----------------------------
+  Research
+  ☐ Take a look at GLSL  
+  ----------------------------
+  Clean up 
   ☐ Update shared_talent to work with a table
   ☐ Sort out the helper functions and make a preCheckCanMove which includes the mount
   ☐ Think about having messages, as well as penalties, for when you have a 2hander
-  ☐ Tune Gruesome Depredation up.
-  ☐ Subdue the Beast - a big unknown!
-  ☐ Make Unbridled Ferocity really cool
-  ☐ Make the mount tile bigger when using Unbridled Ferocity
-  ✘ Let 'Em Have It! needs a cleanup, make it the 2nd talent @cancelled (20-06-21 12:39)
-  ✔ Your "Rearing Assault" is probably gonna lose its spot though @done (20-06-22 14:43)
+  ----------------------------
+  Wolf up
+  ☐ Commands: Come Here! and There, there!
   ☐ Now, you will need to look at the Wolf talents and figure out what is wrong with them and what redesigns are possible
   ☐ Wolf (first 4 talents)
   ☐ Wolf (next 4 talents)
-  ☐ Feast of Blood : Can you make it last a couple of turns?
-  ☐ 
   ☐ Bestial traits : What will they be like? Collect ideas
   ☐ Bestial traits : Make sure they work and think about their implementation. This might be one you keep coming back to, however.
   ☐ Bestial traits : Make it take a half-level of XP to reveal a new one. Do the interface for this (a progress bar on talent? or just %?)
-  ☐ I'm collecting a list of difficult problems in the problem file and this would be a good chance to ask DG, minmay, astral
-  ☐ At this stage, I also want to add LuaDoc-approved annotations to all of my helper functions, very specific todos, and remove much of the mess.
-  ☐ And check / clean up all helper talents again. This will make the next stage that much easier.
+  ☐ Clean up e v e r y t h i n g
 
-Wolf talents :
- ☐ Have a look at EVERYTHING and figure out what you want to change
- ☐ Refactor, reapproach and reattack anything that's bugging you
- ☐ Think about a completely new kind of communicatior design pattern (superloads & an id table that is continually refreshed/deleted)
+Esoterica :
+  ☐ Tune Gruesome Depredation up if it needs it for Loyalty maintenance.
+  ----------------------------
+  Further clean up
+  ☐ Have a look at EVERYTHING and figure out what you want to change
+  ☐ Refactor, reapproach and reattack anything that's bugging you
+  ☐ At this stage, I also want to add LuaDoc-approved annotations to all of my helper functions, very specific todos, and remove much of the mess.
+  ☐ And check / clean up all helper talents again.
+  ☐ Think about a completely new kind of communicatior design pattern (superloads & an id table that is continually refreshed/deleted)
 
 Talent code polish-up (2 days):
   ☐ Check that things like "range" are good for the AI to use
   ☐ is_melee; requires_target; speed; damDesc
   ☐ etc!
 
-Playtest ^e^ (3 days):
+Playtest ^e^ (5 days):
   ☐ Have fun. Get it out there!
   ☐ Icons re-touch as you do this.
-
-Big problems:
-   Upvalues in the needed functions. How to load without them?
 
 After releasing a playable Outrider:
 There'll be a lot of bug-fixing and balancing and updates to make, but I'd really like to take some time out to work on other stuff and expand my coding chops

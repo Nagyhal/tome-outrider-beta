@@ -100,7 +100,6 @@ function projectLineBehind(self, target, t, dist)
 	-- Now project to our tested coords
 	self:project(tg2, try_x, try_y, function(px, py, typ, self)
 		local act = game.level.map(px, py, engine.Map.ACTOR)
-		game.log(("checking grid : %d, %d"):format(px, py))
 		if not game.level.map:checkEntity(px, py, engine.Map.TERRAIN, "block_move", self) and (not act or not self:canSee(act)) then
 			grids[#grids+1] = {px, py, dist=core.fov.distance(px, py, self.x, self.y) + rng.float(0, 0.1)}
 		end
@@ -119,7 +118,6 @@ function projectLineBehind(self, target, t, dist)
 			break
 		end
 	end
-	game.log(("tx, ty : %d, %d"):format(tx or 0, ty or 0))
 	return tx, ty
 end
 

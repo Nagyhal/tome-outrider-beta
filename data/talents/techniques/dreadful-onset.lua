@@ -112,8 +112,7 @@ newTalent{
 		end
 	end,
 	activate = function(self, t)
-		local ret = {}
-		return t.addTempVals(self, t, ret)
+		return t.addTempVals(self, t, {})
 	end,
 	deactivate = function(self, t, p)
 		return true

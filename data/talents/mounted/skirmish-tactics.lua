@@ -227,7 +227,6 @@ newTalent{
 	end,
 }
 
-
 newTalent{
 	name = "Spring Attack", short_name = "OUTRIDER_SPRING_ATTACK", image = "talents/spring_attack.png",
 	type = {"mounted/skirmish-tactics", 2},

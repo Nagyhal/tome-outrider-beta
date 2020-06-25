@@ -20,30 +20,23 @@ Things not to forget:
 
 • The Skykraken - tentacle tail, water spray, smash through terrain, steam
 	(...maybe it can switch through a few different attacks based on a number of elemental drake classics)
-• Animal Affinity as a prodigy?
+• Animal Affinity as a prodigy? YES, could be - learn Beast Aspect and gain a bunch of buffs! Become a Beastlord!
 • Disobedience for your Challenged animals
 • Challenged mobs can also run away e.g. at 50% health--fight back the swarm!
 • Special Arena mission leading to Skykraken showdown
-• Smash Defenses : we'll need to implement thats fully
-• Need squelch noises for giblets throw 
 • Capstones : Shatter and Unbridled Ferocity need to be just a bit beefier
-		and maybe Rearing Assault. You could merge it with Smash!
 • How to theme it if we put Mounted Archery into Beastmaster's Mark and also add missile slowing-down to Loose in the Saddle?
-• Double fatigue for mounted talents
 • Overrun could have a quick daze tacked on 
 • Sickle-Hook Spear
 • Horn-Bellied Bow
-• Lance w/ Knightly (Glorious, whatever) Charge
 • Solar Knight class! And some kind of Cataphract!
 • Ogre mounts : The hoar spider, mammoth & direwolf
 • Halflings in treants can't shoot, treant moves slow but has root, fun had by all
-• Icons : Giblets for Gory Spectacle
-• Think about Challenge the Wilds
-• Spring Attack: A simple attack, ranged or melee, which switches to ranged, jumps back a square or two, and sets the Spring Attack bonus as currently implemented. THEN, you need some kind of indicator or feedback for the player so that they realize Spring Attack hits are indeed more powerful - but what can it be? A movement slow? Lost turns for the enemy on hit? Gained turns for the player? I dunno!
 • Mounted Archery should be an effect, and anyway
 • Needs more Stamina gain, and Loyalty too... a "there, there!" where you pet your pet, provided you're safe and out of reach of enemy attacks? Maybe when you just stand still with your pet?
 • Spring attack secondary effects - will it have a stronger melee component? It could be designed to incentivize you to expend mobility talents even a little more. Perhaps the melee strike will reduce their cooldown.
 • Or, tie this into Feigned Retreat more. This would be good if Dreadful Onset were a generic category and Impalement were the tier 3 talent instead.
+• Talk of which, a new generic category? For mounts, or...?
 
 --------------------------------------------------------
 
@@ -114,3 +107,69 @@ _M.aiSubstDamtypes = {
 		end
 
 
+Shock tactics
+
+1/ Glorious Charge
+2/ Shock and Awe
+3/ Whirr of Blades
+4/ Mounted Supremacy
+  This could really just be a bonus to melee damage while mounted - see what you need
+  Or shrug-off effects, that kind of thing (yes!)
+-----------------------------
+
+Bestial aspect
+
+Now, this is an entirely new field. What do we want to have here? Nothing that will encroach too much upon any Werewolf-like classes, but... we could have something good. Let's see...
+
+1/ Aspect of the Beast
+	Take on some characteristics depending on your chosen beast; the wolf would gain... a bite attack, bleeding claws, dexterity and sensing
+2/ Paw the Ground
+	While dismounted, gain a jump attack similar to Savage Bound (could go in your Overrun slot...)
+	(or you could just get to share Savage Bound when you use it, also a good idea)
+	When dismounted, get a boost for a few turns (movement, defense, apr or something)
+3/ Bestial Affinity
+	Increase your abilities and your beast's abilities by a ratio of each other's
+	at 3/5 : share an animal talent (e.g. Go For the Throat)
+	at 5/5 : share Gruesome Depredation
+4/ Primordial Howl
+	a) Transform or b) Summmon 2 allied beasts
+
+-----------------------------
+Prodigy ideas
+
+1/ Spirit Animal
+
+Your animal is an immortal spirit that will follow you forever.
+
+When hurt / killed it will enter spirit form and cause havoc on the battlefield
+
+It will gain many passive defenses and spell immunities
+
+It will also defend you from mental effects
+
+You can teleport it (cooldown 20)
+
+2/ Beastlord
+
+Change to the Beastlord class, unlocking the Bestial Aspect category and increasing Bestial Dominion, Beast Heart to 1.50
+
+Beasts you attack will leave calmly if you reduce them to 50% damage.
+
++50 Loyalty
+
+You can rage at low loyalty, also removing your beast's disobediences and sending them into a rage
+
+Bestial Aspect
+
+1/ Aspect of the Beast
+	Take on some characteristics depending on your chosen beast; the wolf would gain... a bite attack, bleeding claws, dexterity and sensing
+2/ Paw the Ground
+	While dismounted, gain a jump attack similar to Savage Bound (could go in your Overrun slot...)
+	(or you could just get to share Savage Bound when you use it, also a good idea)
+	When dismounted, get a boost for a few turns (movement, defense, apr or something)
+3/ Bestial Affinity
+	Increase your abilities and your beast's abilities by a ratio of each other's
+	at 3/5 : share an animal talent (e.g. Go For the Throat)
+	at 5/5 : share Gruesome Depredation
+4/ Primordial Howl
+	a) Transform or b) Summmon 2 allied beasts

@@ -43,3 +43,26 @@ Lua Error: /mod/class/Actor.lua:2216: attempt to index local 'e' (a nil value)
 	At /engine/interface/GameTargeting.lua:77 targetDisplayTooltip
 	At /mod/class/Game.lua:1927 
 true
+
+-------------------------------------------------
+##Use Talent Lua Error##	T_DISARM	Actor:	5212	Saloseba the war bear
+Lua Error: /engine/interface/ActorTalents.lua:329: /engine/interface/ActorTalents.lua:302: /engine/interface/ActorTalents.lua:164: /mod/class/interface/Combat.lua:414: attempt to index local 'target' (a nil value)
+stack traceback:
+	/mod/class/interface/Combat.lua:414: in function 'attackTargetWith'
+	/mod/class/interface/Combat.lua:211: in function 'base_attackTarget'
+	...addons/outrider/superload/mod/class/interface/Combat.lua:104: in function 'attackTarget'
+	/data/talents/misc/npcs.lua:244: in function </data/talents/misc/npcs.lua:240>
+	[C]: in function 'xpcall'
+	/engine/interface/ActorTalents.lua:162: in function </engine/interface/ActorTalents.lua:151>
+	At [C]:-1 
+	At [C]:-1 error
+	At /engine/interface/ActorTalents.lua:329 
+	At /mod/ai//improved_tactical.lua:1081 
+	At /mod/class/interface/ActorAI.lua:70 runAI
+	At /mod/ai//improved_tactical.lua:1142 
+	At /mod/class/interface/ActorAI.lua:70 doAI
+	At /mod/class/NPC.lua:77 act
+	At /mod/addons/outrider/superload/engine/GameEnergyBased.lua:71 tickLevel
+	At /engine/GameEnergyBased.lua:64 tick
+	At /engine/GameTurnBased.lua:51 tick
+	At /mod/class/Game.lua:1534 

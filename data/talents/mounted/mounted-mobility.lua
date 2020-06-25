@@ -181,7 +181,9 @@ newTalent{
 		return preCheckHasMountPresent(self, t, silent, fake)
 		and preCheckMountCanMove(self, t, silent, fake)
 	end,
-	target = function(self, t) return {
+	target = function(self, t)
+		local mount = self:getOutriderPet()
+		return mount and {
 		type="hit",
 		range=self:getTalentRange(t),
 		start_x=mount.x, start_y=mount.y,

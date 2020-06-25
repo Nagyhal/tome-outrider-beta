@@ -52,7 +52,7 @@ local mounts_list = {
 			loyalty = 100,
 			share_damage = 0.4
 		},
-		max_inscriptions =1
+		max_inscriptions =1,
 	},
 	spider = {	
 		base = "BASE_NPC_SPIDER",
@@ -443,8 +443,8 @@ newTalent{
 			t.doWarning(self, t)
 			--No return values from dialogs?
 		else
-			local ct = self:isQuestStatus("outrider-start", engine.Quest.PENDING) and 10 or t.getNum(self, t)
-			self:setEffect(self.EFF_OUTRIDER_WILD_CHALLENGE, 3, {ct=ct})
+			-- local ct = self:isQuestStatus("outrider-start", engine.Quest.PENDING) and 10 or t.getNum(self, t)
+			self:setEffect(self.EFF_OUTRIDER_WILD_CHALLENGE, 3, {ct=t.getNum(self, t)})
 		end
 		return
 	end,
@@ -721,7 +721,6 @@ newTalent{
 newTalent{
 	name = "Unbridled Ferocity", short_name = "OUTRIDER_UNBRIDLED_FEROCITY", image = "talents/unbridled_ferocity.png",
 	type = {"mounted/bestial-dominion", 4},
-	hide="always", --DEBUG: Hiding untested talents 
 	points = 5,
 	cooldown = function(self, t) return self:combatTalentLimit(t, 20, 50, 30) end,
 	stamina = 50,

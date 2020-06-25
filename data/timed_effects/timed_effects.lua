@@ -332,7 +332,7 @@ newEffect{
 		tactic = true
 	},
 	parameters = {	
-		ct = 0, ct_to_add = 0,
+		ct = 1, ct_to_add = 0,
 		min_pct = 5, max_pct = 10, min_stamina = 0.25, max_stamina = 1,
 		current_crit = 5, current_stamina = 0.25,
 		threshold = 10
