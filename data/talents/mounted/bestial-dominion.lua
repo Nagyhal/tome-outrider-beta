@@ -698,11 +698,23 @@ newTalent{
 	points = 5,
 	stamina = 30,
 	cooldown = 50,
-	-- tactical = { STAMINA = 2 },
-	getRestore = function(self, t) return self:combatTalentScale(t, 20, 40) end,
-	getMaxLoyalty = function(self, t) return math.round(self:combatTalentScale(t, 5, 15), 5) end,
+	tactical = { LOYALTY = 3 },
+	getRestore = function(self, t) return math.min(100, self:combatTalentScale(t, 20, 40)) end,
+	getMaxLoyalty = function(self, t)
+		--You can have your nice multiples of 5 only up to TL5
+		local tl_raw = self:getTalentLevelRaw(t)
+		if tl_raw<=5 then return tl_raw*5
+		else
+			local base = self:getTalentMastery(t) 
+			local tl = self:getTalentLevel(t) - base*5
+			return math.max(25, self:combatTalentScale(tl, 29, 40))
+		end
+	end,
 	on_pre_use = function(self, t, silent, fake)
 		return preCheckHasMount(self, t, silent, fake)
+	end,
+	passives = function(self, t, p)
+		self:talentTemporaryValue(p, "max_loyalty", t.getMaxLoyalty(self, t))
 	end,
 	action = function(self, t)
 		self:incLoyalty(t.getRestore(self, t)*self.max_loyalty/ 100)
@@ -711,9 +723,7 @@ newTalent{
 	info = function(self, t)
 		local restore = t.getRestore(self, t)
 		local max_loyalty = t.getMaxLoyalty(self, t)
-		return ([[With a mighty effort, you rein in your mount's feral tendencies, recovering Loyalty equal to %d%% of its maximum. Also grants a passive increase of %d to maximum Loyalty with all mounts.
-
-			As you master the domestication of wild riding beasts, you are able to still their fury long enough to inscribe them with infusions. You gain an infusion slot for your mount, and may gain others for each Bestial Dominion talent you raise to 5/5 (up to 3 slots).]]):
+		return ([[With a mighty effort, you rein in your mount's feral tendencies, recovering Loyalty equal to %d%% of its maximum. Also grants a passive increase of %d to maximum Loyalty with all mounts.]]):
 		format(restore, max_loyalty, max_dist)
 	end,
 }
