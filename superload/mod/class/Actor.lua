@@ -16,7 +16,7 @@ end
 
 local base_onTakeHit = _M.onTakeHit
 function _M:onTakeHit(value, src)
-	--Mounted takes damage in rider's stead
+	--The mount has a chance to take damage in its rider's stead
 	if self:isMounted() then
 		local has_taunt = src:hasEffect(src.EFF_OUTRIDER_TAUNT) --Rider can tank using taunts
 		local m = self:hasMount()
@@ -24,8 +24,45 @@ function _M:onTakeHit(value, src)
 			if has_taunt and has_taunt.src==self then
 				game.logSeen(self, "%s taunts the damage away from %s!", self.name:capitalize(), m.name:capitalize())
 			else
+				-- Mount takes the hit for the rider
 				m:takeHit(value, src)
-				game.logSeen(self, "%s takes %d damage in %s's stead!", m.name:capitalize(), value, self.name)
+				-- But, instead of logging the damage straight away, we record it in a table
+				if m.turn_procs.temp_mount_damage then
+					m.turn_procs.temp_mount_damage[#m.turn_procs.temp_mount_damage+1] = value
+				else
+					m.turn_procs.temp_mount_damage = {value}
+				end
+				-- And log the values from the table at the end of the tick
+				-- (though doing it per-turn might be too complex or confusing, we'll see)
+				if not self.on_tick_end or not self.on_tick_end.names["do_temp_mount_damage_log"] then
+					game:onTickEnd(function()
+						-- Firstly let's the damage using standard C rounding style
+						-- which, I *think*, is "round to nearest and ties to even".
+
+						-- We'll also tally total damage taken as we do that.
+						local total = 0 
+
+						local strings_list = table.mapv(
+							function(v) total=total+v; return ("%d"):format(v) end,
+							m.turn_procs.temp_mount_damage
+						)
+						local nice_string = table.concat(strings_list, ", ")
+
+						--Don't forget to append a damage total!
+						local total_str = ""
+						if #strings_list > 1 then
+							total_str = (" (#RED##{bold}#%d #{normal}##LAST#total damage)"):format(total)
+						end
+
+						game.logSeen(self, "%s takes %s damage in %s's stead"..total_str.."!", 
+							m.name:capitalize(), nice_string, self.name)
+						m.turn_procs.temp_mount_damage = nil
+					end,
+					-- This sets the name of the function
+					-- We need this because we only want to call the onTickEnd function once.
+					"do_temp_mount_damage_log"
+					)
+				end
 				value = 0
 			end
 		end
