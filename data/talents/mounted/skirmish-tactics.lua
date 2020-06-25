@@ -406,7 +406,7 @@ newTalent{
 		local confuse_power = t.getConfusePower(self, t)
 		local silence_chance = t.getSilenceChance(self, t)
 		local dur = t.getDur(self, t)
-		return ([[Taking specially notched arrows from your quiver, you let loose a rain of horridly screeching missiles upon your foes. Your arrows rain down for 3 turns upon targets in radius of %d, striking 3 per turn. Each target stands a chance to be confused by the cacophony (%d power, duration).
+		return ([[Taking specially notched arrows from your quiver, you let loose a rain of horridly screeching missiles upon your foes. Your arrows rain down for 3 turns upon targets in a radius of %d, striking 3 per turn. Each target stands a chance to be confused by the cacophony (%d power, duration).
 
 			At talent level 3 there is also a %d%% chance to inflict silence, as the screeching becomes loud enough to drown out the chants of spellcasters.]])
 		:format(dam, rad, confuse_power, dur, silence_chance)

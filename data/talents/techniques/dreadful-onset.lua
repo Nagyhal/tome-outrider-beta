@@ -77,24 +77,24 @@ newTalent{
 			p.__tmpvals[i] = nil
 		end
 	end,
-	addTempVals = function(self, t, tab)
-		tab.free_off=false
+	addTempVals = function(self, t, p)
+		p.free_off=false
 		if hasOutriderWeapon(self) then
 			if hasFreeOffhand(self) then
-				self:talentTemporaryValue(tab, "combat_mindpower", t.getMindpower(self, t))
-				self:talentTemporaryValue(tab, "combat_critical_power", t.getCritPower2(self, t))
-				self:talentTemporaryValue(tab, "combat_apr", t.getApr2(self, t))
-				tab.free_off=true
+				self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower(self, t))
+				self:talentTemporaryValue(p, "combat_critical_power", t.getCritPower2(self, t))
+				self:talentTemporaryValue(p, "combat_apr", t.getApr2(self, t))
+				p.free_off=true
 			else
-				self:talentTemporaryValue(tab, "combat_mindpower", t.getMindpower(self, t))
-				self:talentTemporaryValue(tab, "combat_critical_power", t.getCritPower(self, t))
-				self:talentTemporaryValue(tab, "combat_apr", t.getApr(self, t))
+				self:talentTemporaryValue(p, "combat_mindpower", t.getMindpower(self, t))
+				self:talentTemporaryValue(p, "combat_critical_power", t.getCritPower(self, t))
+				self:talentTemporaryValue(p, "combat_apr", t.getApr(self, t))
 			end
 		end
-		self:talentTemporaryValue(tab, "outrider_master_of_brutality", t.getCritChance(self, t))
-		self:talentTemporaryValue(tab, "warden_swap", 1)
-		self:talentTemporaryValue(tab, "outrider_swap", 1)
-		return tab
+		self:talentTemporaryValue(p, "outrider_master_of_brutality", t.getCritChance(self, t))
+		self:talentTemporaryValue(p, "warden_swap", 1)
+		self:talentTemporaryValue(p, "outrider_swap", 1)
+		return p
 	end,
 	callbackOnWear  = function(self, t, o, bypass_set) t.checkOnWeaponSwap(self, t, o) end,
 	callbackOnTakeoff  = function(self, t, o, bypass_set) t.checkOnWeaponSwap(self, t, o) end,
@@ -255,10 +255,11 @@ newTalent{
 		local dist = t.getDist(self, t)
 		local dam_pct = t.getDamPct(self, t)
 		local attacks_no = t.getAttacksNo(self, t)
-		return ([[Turning suddenly and feigning flight from battle, you ready a cruel ambush. Rush up to %d squares away from your target, but deal %d%% damage with your next %d attacks against it.
+		local str = attacks_no>1 and "attacks" or "attack"
+		return ([[Turning suddenly and feigning flight from battle, you ready a cruel ambush. Rush up to %d squares away from your target, but deal %d%% damage with your next %d %s against it.
 
 			If you fail to slay your mark, Feigned Retreat stays on cooldown, as the ruse is now known. You must kill 30 more combatants in order to recover it.]]):
-		format(dist, dam_pct, attacks_no)
+		format(dist, dam_pct, attacks_no, str)
 	end,
 	getDist = function(self, t) return self:combatTalentScale(t, 4,  7) end,
 	getDamPct = function(self, t) return self:combatTalentScale(t, 110, 140) end,

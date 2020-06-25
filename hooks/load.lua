@@ -35,7 +35,6 @@ class:bindHook("ToME:load", function(self, data)
 	ActorAI:loadDefinition("/data-outrider/ai/")
 	defineColor("OUTRIDER_GREEN", 0x00, 0xD9, 0x00)
 
-
 	--Here's a very pretty and beautiful hack to make weapon swapping work on bump attack.
 	local t = ActorTalents.talents_def.T_ATTACK
 	local main_env = ActorTalents.main_env
