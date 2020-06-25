@@ -174,38 +174,50 @@ newTalent{
 	require = mnt_strcun_req3,
 	mode = "passive",
 	doCheck = function(self, t)
-		local tgts = {}
-		for _, c in pairs(util.adjacentCoords(self.x, self.y)) do
-			local target = game.level.map(c[1], c[2], Map.ACTOR)
-			if target and self:reactionToward(target) < 0 then tgts[#tgts+1] = target end
-		end
-		for _, target in ipairs(tgts) do
-			local allies = {}
-			for _, c in pairs(util.adjacentCoords(target.x, target.y)) do
-				local target2 = game.level.map(c[1], c[2], Map.ACTOR)
-				if target2 and self:reactionToward(target2) >= 0 and core.fov.distance(self.x, self.y, target2.x, target2.y)>1 then allies[#allies+1] = target2 end
-				if #allies>=1 then
-					target:setEffect(target.EFF_OUTRIDER_FLANKED, 2, {src=self, allies=allies, crit=t.getCritChance(self, t), crit_dam=t.getCritPower(self, t)})
-				end --We run the check to see if we are no longer flanking from within the enemy's temp effect.
+		-- This is a check to see if we're ready to initiate flanking
+		-- Accessed an "Actor:move" hook, both by the Outrider and its wolf mount (if there is one)
+		-- We must also check to see if the flanking must be released, but we do that in the
+		-- actual temp effect definition for EFF_OUTRIDER_FLANKED
+		local targets = getAdjacentActors(self, {only_enemies=true})
+
+		-- This can be called by a wolf, even when the player does not know Predatory Flanking.
+		-- Hence we need to handle the bonuses from both talents here, so that we don't need to 
+		-- use more than one temporary effect, or repeat this code elsewhere.
+		local pet = self:getOutriderPet()
+
+		local crit = self:knowTalent(self.T_OUTRIDER_FLANKING) and t.getCrit(self, t) or 0
+		local def = self:knowTalent(self.T_OUTRIDER_FLANKING) and t.getDef(self, t) or 0
+		local dam = 0
+		if self:knowTalent(self.T_OUTRIDER_FLANKING) then dam = dam + t.getDam(self, t) end
+		if pet:knowTalent(pet.T_OUTRIDER_WOLF_FLANKING) then dam = dam + pet:callTalent(pet.T_OUTRIDER_WOLF_FLANKING, "getDam") end
+
+		for _, target in ipairs(targets) do
+			local allies = getAdjacentActors(target, {only_allies=true, src=self})
+			if #allies>1 then
+				target:setEffect(target.EFF_OUTRIDER_FLANKED, 2, {
+					src=self, allies=allies, crit=crit, dam=dam, def=def
+				})
+				for _, ally in ipairs(allies) do
+					if ally:knowTalent(ally.T_OUTRIDER_WOLF_FLANKING) then
+						ally:callTalent(ally.EFF_OUTRIDER_WOLF_FLANKING, "setEffect")
+					end
+				end
 			end
 		end
 	end,
 	callbackOnActBase = function(self, t)
 		t.doCheck(self, t)
 	end,
-	callbackOnMove = function(self, t, ...)
-		t.doCheck(self, t)
-	end,
 	info = function(self, t)
 		local def = t.getDef(self, t)
 		local crit = t.getCritChance(self, t)
-		local crit_dam = t.getCritPower(self, t)
-		return ([[If you and one of your allies both stand adjacent to the same enemy (but not adjacent to one another), then you both gain a bonus of %d%% to critical strike chance and %d%% to critical damage against that enemy. It will also suffer a %d penalty to defense.]]):
-			format(crit, crit_dam, def)
+		local dam = t.getDam(self, t)
+		return ([[If you and one of your allies both stand adjacent to the same enemy (but not adjacent to one another), then you both gain a bonus of %d%% to critical strike chance and %d%% to all damage against that enemy. It will also suffer a %d penalty to defense.]]):
+			format(crit, dam, def)
 	end,
 	getDef = function(self, t) return self:combatTalentScale(t, 5, 12) end,
 	getCritChance = function(self, t) return self:combatTalentScale(t, 5, 15) end,
-	getCritPower = function(self, t) return self:combatTalentScale(t, 15, 35) end,
+	getDam = function(self, t) return self:combatTalentScale(t, 9, 18) end,
 }
 
 newTalent{

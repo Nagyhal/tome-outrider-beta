@@ -90,17 +90,12 @@ class:bindHook("Actor:move", function(self, data)
 		-- game.level:removeEntity(self.mount)
 		-- self.mount.x, self.mount.y = self.x, self.y
 	end
-	--This is the laziest way to code over (a hook that calls a callback, seriously?)
-	--The reason I'm doing it this way is a) time and b) I am a more... shall we say
-	--a more /architectural/.solution planned.
-	--TODO: implement this solution
+
+	-- Predatory Flanking:
+	-- We want to check this on every move, both Outider and Wolf, so let's do it from one place
 	local pet = self.outrider_pet
-	if pet and pet:knowTalent(pet.T_OUTRIDER_PREDATORY_FLANKING) then
-		pet:callTalent(pet.T_OUTRIDER_PREDATORY_FLANKING, "callbackOnMove")
-	end
-	local owner = self.owner
-	if owner and owner:knowTalent(owner.T_OUTRIDER_FLANKING) then
-		owner:callTalent(owner.T_OUTRIDER_FLANKING, "callbackOnMove")
+	if pet and pet:knowTalent(pet.T_OUTRIDER_WOLF_FLANKING) or self:knowTalent(self.T_OUTRIDER_FLANKING) then
+		self:callTalent(pet.T_OUTRIDER_FLANKING, "doCheck")
 	end
 end)
 
@@ -123,6 +118,7 @@ class:bindHook("DamageProjector:base", function(self, data)
 		end
 	end
 
+	-- @todo Delete this and incorporate it into the main flank effect
 	if target then
 		local eff = a:hasEffect(a.EFF_OUTRIDER_PREDATORY_FLANKING)
 		if eff then
@@ -135,6 +131,19 @@ class:bindHook("DamageProjector:base", function(self, data)
 			end
 		end
 	end
+
+	if target then
+		local eff = a:hasEffect(a.EFF_OUTRIDER_FLANKED)
+		if eff then
+			if eff.src==self then
+				data.dam = data.dam + (data.dam/100)
+				ret=true
+			elseif table.reverse(eff.allies)[self] then
+				data.dam = data.dam + (data.dam/100)
+				ret=true
+			end
+		end
+	end	
 	return ret
 end)
 

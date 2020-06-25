@@ -629,30 +629,31 @@ newEffect{
 }
 
 newEffect{
-	name = "OUTRIDER_FLANKED", image = "talents/flanking.png",
+	name = "EFF_OUTRIDER_FLANKED", image = "talents/predatory_flanking.png",
 	desc = "Flanked",
-	long_desc = function(self, eff) return ("Flanked by the outrider and its allies, the target suffers a defense decrease of %d, a %d%% increase to critical damage and all attackers gain a crit chance bonus of %d%% against it."):format(eff.def, eff.crit_dam, eff.crit) end,
-	type = "physical",
+	long_desc = function(self, eff) return ("Flanked by the outrider and its allies, the target suffers a defense decrease of %d, a %d%% increase to incoming damage from these sources and all attackers gain a crit chance bonus of %d%% against it."):format(eff.def, eff.dam, eff.crit) end,
+	type = "other",
 	subtype = { tactic=true },
 	status = "detrimental",
-	parameters = {def=5, crit=7, crit_dam = 10},
+	no_remove = true,
+	parameters = {def=0, crit=0, dam=0},
 	on_gain = function(self, err) return nil, "+Flanked" end,
 	on_lose = function(self, err) return nil, "-Flanked" end,
 	activate = function(self, eff)
 		if not eff.src then
-			self:removeEffect(self.EFF_OUTRIDER_PREDATORY_FLANKING, nil, true)
+			self:removeEffect(self.EFF_OUTRIDER_FLANKED, nil, true)
 			error("No source sent to temporary effect Flanking.")
 		end
 		if not eff.allies then
-			self:removeEffect(self.EFF_OUTRIDER_MOUNT, nil, true)
+			self:removeEffect(self.EFF_OUTRIDER_FLANKED, nil, true)
 			error("No allies list sent to temporary effect Flanking.")
 		end
-		self:effectTemporaryValue(eff, "combat_crit_vulnerable", eff.crit)
+		-- self:effectTemporaryValue(eff, "combat_crit_vulnerable", eff.crit)
 		self:effectTemporaryValue(eff, "combat_def", -eff.def)
 	end,
 	callbackOnActBase = function(self, eff)
 		local src = eff.src
-		if core.fov.distance(self.x, self.y, src.x, src.y) ~= 1 then self:removeEffect(eff.effect_id) end
+		if core.fov.distance(self.x, self.y, src.x, src.y) ~= 1 then self:removeEffect(eff.effect_id, false, true) end
 		local count = 0 
 		for _, ally in ipairs(eff.allies) do
 			--Checks to see if adjacent ally is not also adjacent to use,
@@ -660,42 +661,36 @@ newEffect{
 				count = count+1
 			end
 		end
-		if count < 1 then self:removeEffect(eff.effect_id) end
+		if count < 1 then self:removeEffect(eff.effect_id, false, true) end
 	end,
 }
 
-
 newEffect{
-	name = "OUTRIDER_PREDATORY_FLANKING", image = "talents/predatory_flanking.png",
-	desc = "Predatory Flanking",
-	long_desc = function(self, eff) return ("Flanked by the wolf and its allies, the target suffers %d%% increased damage from the source and %d%% from its flanking allies."):format(eff.src_pct, eff.allies_pct) end,
-	type = "physical",
+	name = "EFF_OUTRIDER_WOLF_FLANKING", image = "talents/predatory_flanking.png",
+	desc = "Flanked",
+	long_desc = function(self, eff) return ("The flanking wolf gains an additional bonus %d%% resistance to all damage"):format(eff.res) end,
+	type = "other",
 	subtype = { tactic=true },
-	status = "detrimental",
-	parameters = {src_pct=15, allies_pct = 5},
-	on_gain = function(self, err) return nil, "+Flanked" end,
-	on_lose = function(self, err) return nil, "-Flanked" end,
+	status = "beneficial",
+	no_remove = true,
+	parameters = {res=5},
+	on_gain = function(self, err) return nil, "+Improved Flanking" end,
+	on_lose = function(self, err) return nil, "-Improved Flanking" end,
 	activate = function(self, eff)
-		if not eff.src then
-			self:removeEffect(self.EFF_OUTRIDER_PREDATORY_FLANKING, nil, true)
-			error("No source sent to temporary effect Predatory Flanking.")
-		end
-		if not eff.allies then
-			self:removeEffect(self.EFF_OUTRIDER_MOUNT, nil, true)
-			error("No allies list sent to temporary effect Predatory Flanking.")
-		end
 	end,
-	callbackOnActBase = function(self, eff)
-		local src = eff.src
-		if core.fov.distance(self.x, self.y, src.x, src.y) ~= 1 then self:removeEffect(eff.effect_id) end
-		local count = 0 
-		for _, ally in ipairs(eff.allies) do
-			--Checks to see if adjacent ally is not also adjacent to wolf,
-			if core.fov.distance(self.x, self.y, ally.x, ally.y) == 1 and core.fov.distance(src.x, src.y, ally.x, ally.y) > 1 then
-				count = count+1
-			end
+	deactivate = function(self, eff)
+	end,
+	callbackOnAct = function(self, eff) self:callEffect(self.EFF_OUTRIDER_WOLF_FLANKING, "doCheck") end,
+	callbackOnActBase = function(self, eff) self:callEffect(self.EFF_OUTRIDER_WOLF_FLANKING, "doCheck") end,
+	callbackOnMove = function(self, eff) self:callEffect(self.EFF_OUTRIDER_WOLF_FLANKING, "doCheck") end,
+	doCheck = function(self, eff)
+		local talents_env = require"engine.interface.actorTalents".main_env
+		local check = false
+		for _, a in ipairs(talents.getAdjacentActors(self, {only_enemies=true})) do
+			if a:hasEffect(a.EFF_OUTRIDER_FLANKED) then check = true end
 		end
-		if count < 1 then self:removeEffect(eff.effect_id) end
+
+		if not check then self:removeEffect(self.EFF_OUTRIDER_WOLF_FLANKING, true, true) end
 	end,
 }
 
@@ -1035,10 +1030,17 @@ newEffect{
 	parameters = { reduction=.35},
 	activate = function(self, eff)
 	end,
+	checkRider = function(self, eff)
+		local rider = self.rider
+		if not rider or not rider:isTalentActive(rider.T_OUTRIDER_LOOSE_IN_THE_SADDLE) then
+			self:removeEffect(self.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE, nil, true)
+		end
+	end,
 	callbackOnTakeDamage = function(self, eff, src, x, y, type, dam, state)
-		local rider = self.rider; if not rider then return end
-		local p = rider:isTalentActive(rider.T_OUTRIDER_LOOSE_IN_THE_SADDLE); if not p then return end
-		if dam>self.max_life*.15 then
+		self:callEffect(self.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE, "checkRider")
+
+		local rider = self:getRider()
+		if dam>self.max_life*0.15 then
 			local t2 = rider:getTalentFromId(rider.T_OUTRIDER_LOOSE_IN_THE_SADDLE)
 			dam = dam - dam*p.reduction
 			rider:setEffect(rider.EFF_OUTRIDER_LOOSE_IN_THE_SADDLE, 2, {speed=t2.getSpeed(self, t)/100})
