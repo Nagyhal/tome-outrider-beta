@@ -291,18 +291,52 @@ class:bindHook("Actor:updateModdableTile:middle", function(self, data)
 end)
 
 class:bindHook("Actor:updateModdableTile:front", function(self, data)
+	game.log"ganderwog"
+	-----------------------------------------------------------------------
+	-- Display the rider high on the mount
+	-----------------------------------------------------------------------
 	local mount, add = self:getMount(), data.add; if not mount then return end
+	-- When we find the mount, remember its index in add_mos
 	local mount_index
+	local do_unbridled_ferocity = mount and
+		mount:hasEffect(mount.EFF_OUTRIDER_UNBRIDLED_FEROCITY) or self:hasEffect(self.EFF_OUTRIDER_UNBRIDLED_FEROCITY)
 
-	for i, mo in ipairs(add) do
-		if not mo.mount then mo.display_y = -.45 end
+	if mount then 
+		for i, mo in ipairs(add) do
+			if not mo.mount then
+				mo.display_y = do_unbridled_ferocity and -.65 or -.45
+			end
 
-		if mo.mount then mount_index = i end
-		if string.find(mo.image, "quiver") and mount_index then
-			--Put it behind the mount
-			add[i] = nil
-			table.insert(add, mount_index, mo)
-		end 
+			if mo.mount then 
+				mount_index = i
+				if do_unbridled_ferocity then
+					mo.display_w, mo.display_h = 1.4, 1.4
+					mo.display_x, mo.display_y = -0.2, -0.3
+				end
+			end
+
+			if string.find(mo.image, "quiver") and mount_index then
+				-- Put the quiver behind the the mount
+				-- We remembered the index so it can go exactly 1 layer behind.
+				add[i] = nil
+				table.insert(add, mount_index, mo)
+			end 
+		end
+	end
+	-----------------------------------------------------------------------
+	-- Handle the Unbridled Ferocity shader display (warning: hack!)
+	-----------------------------------------------------------------------
+	if do_unbridled_ferocity then
+		for _, mo in ipairs(add) do
+			if mo.shader and mo.shader=="awesomeaura" then
+				-- @todo Use some kind of globally-visible constants for these numbers
+				-- ... or even calculate them live -- will matter when we have different
+				-- sized-mounts
+				mo.display_w, mo.display_h = 1.4, 2.4
+				mo.display_x, mo.display_y = -0.2, -1.3
+				if mount then mo.image = mount.image end
+			end
+		end
 	end
 end)
 

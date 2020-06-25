@@ -437,12 +437,55 @@ newEffect{
 	parameters = { power=8, atk = 4, move=50 },
 	on_gain = function(self, err) return "#Target#'s ferocity is unleashed!" end,
 	on_lose = function(self, err) return "#Target#' becomes less ferocious." end,
+	callbackOnDismounted = function(self, eff, rider)
+		rider:removeShaderAura("wild_challenger")
+	end,
 	activate = function(self, eff)
 		self:effectTemporaryValue(eff, "combat_dam", eff.power)
 		self:effectTemporaryValue(eff, "combat_atk", eff.atk)
 		self:effectTemporaryValue(eff, "movement_speed", eff.move)
+
+		-- Display the mount's tile as slightly bigger
+		self.replace_display = mod.class.Actor.new{
+			image = self.image,
+		}
+		self:removeAllMOs()
+		self.replace_display.image="invis.png"
+		self.replace_display.add_mos = {{image=self.image, display_h=1.4, display_w=1.4, display_y=-0.3, display_x=-0.2}}
+		self:updateModdableTile()
+		self.replace_display:addShaderAura("wild_challenger", "awesomeaura", {time_factor=4000, alpha=0.3,  flame_scale=2}, "particles_images/naturewings.png")
+		for _, mo in ipairs(self.replace_display.add_mos) do
+			if mo.shader and mo.shader=="awesomeaura" then
+				-- @todo Use some kind of globally-visible constants for these numbers
+				-- ... or even calculate them live -- will matter when we have different
+				-- sized-mounts
+				mo.display_w, mo.display_h = 1.4, 2.4
+				mo.display_x, mo.display_y = -0.2, -1.3
+				if mount then mo.image = mount.image end
+			end
+		end
+
+		-- Give the same graphics to the rider if we're ridden
+		if self:isRidden() then
+			local rider = self:getRider()
+			rider:updateModdableTile()
+			rider.image = self.image
+			rider:addShaderAura("wild_challenger", "awesomeaura", {time_factor=4000, alpha=0.3,  flame_scale=2}, "particles_images/naturewings.png")
+		end
+		game.level.map:updateMap(self.x, self.y)
 	end,
 	deactivate = function(self, eff)
+		self.replace_display:removeShaderAura("wild_challenger")
+
+		if self:isRidden() then
+			local rider = self:getRider()
+			rider:removeShaderAura("wild_challenger")
+			rider:updateModdableTile()
+		end
+
+		self.replace_display = nil
+		self:removeAllMOs()
+		game.level.map:updateMap(self.x, self.y)
 	end,
 }
 

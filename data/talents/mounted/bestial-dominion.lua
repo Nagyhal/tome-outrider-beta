@@ -750,7 +750,8 @@ newTalent{
 		local power = t.getPower(self, t)
 		local atk = t.getAtk(self, t)
 		local move_pct = t.getMove(self, t)*100
-		return ([[You throw caution to the wind and let your bestial steed revel in the glory of the hunt, gaining a %d increase in physical power for %d turns, %d to accuracy, %d%% to move speed and not depleting but regaining Loyalty with each hit that it endures. However, if you fall from your beast while it is in this furious state, you will not be able to re-mount.]]):
+		return ([[You throw caution to the wind and let your bestial steed revel in the glory of the hunt, gaining a %d increase in physical power for %d turns, %d to accuracy, %d%% to move speed and not depleting but regaining Loyalty with each hit that it endures. It will also be immune to Disobedience effects. However, if you fall from your beast while it is in this furious state, you will not be able to re-mount.
+			]]):
 		format(power, dur, atk, move_pct)
 	end,
 	getDur = function(self, t) return self:combatTalentScale(t, 4.75, 6, .35) end,
