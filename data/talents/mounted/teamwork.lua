@@ -210,13 +210,13 @@ newTalent{
 	end,
 	info = function(self, t)
 		local def = t.getDef(self, t)
-		local crit = t.getCritChance(self, t)
+		local crit = t.getCrit(self, t)
 		local dam = t.getDam(self, t)
 		return ([[If you and one of your allies both stand adjacent to the same enemy (but not adjacent to one another), then you both gain a bonus of %d%% to critical strike chance and %d%% to all damage against that enemy. It will also suffer a %d penalty to defense.]]):
 			format(crit, dam, def)
 	end,
 	getDef = function(self, t) return self:combatTalentScale(t, 5, 12) end,
-	getCritChance = function(self, t) return self:combatTalentScale(t, 5, 15) end,
+	getCrit = function(self, t) return self:combatTalentScale(t, 5, 15) end,
 	getDam = function(self, t) return self:combatTalentScale(t, 9, 18) end,
 }
 

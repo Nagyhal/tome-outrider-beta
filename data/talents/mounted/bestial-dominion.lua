@@ -520,9 +520,10 @@ newTalent{
 	getDam = function(self, t) return self:combatTalentScale(t, 8.25, 24.5, 0.75) end,
 	-- getNum = function(self, t) return math.ceil(self:getTalentLevelRaw(t)*5) + 10 end,
 	getNum = function(self, t) 
-		-- local l = self.level, 
+		local l = self.level/3
 		local mod = 1.5 - .25 * util.bound(self:getTalentLevelRaw(t)-1, 0, 4)
-		return self:combatTalentLimit(t, 5, 22, 11) end,
+		local val = self:combatTalentLimit(t, 3, 13, 6) + mod*l
+		return math.round(val) end,
 	getNumMod = function(self, t) end,
 	getNumBase = function(self, t) end,
 	getWillToHealth = function(self, t) return self:combatStatScale("wil", 0, 80) end,

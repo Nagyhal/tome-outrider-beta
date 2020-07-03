@@ -189,7 +189,7 @@ newTalent{
 		return ([[You release a maniacal display of brutality upon your foes, lashing out with a reckless attack that hits all adjacent enemies for %d%% damage while scattering those who are puny of will, knocking them back %d squares. If you are mounted, you may have your beast rise up in a terrifying fashion, knocking back instead all foes within a radius of %d.]]):
 		format(dam, knockback, radius)
 	end,
-	getDam = function(self, t) return self:combatTalentWeaponDamage(t, 1.5, 2.1) end,
+	getDam = function(self, t) return self:combatTalentScale(t, 1.27, 1.9, 0.75) end,
 	getKnockbackRange = function(self, t) return self:combatTalentScale(t, 1.3, 4.3) end,
 	getKnockbackRadiusMounted = function(self, t) return self:combatTalentScale(t, 2, 3.8) end,
 }
@@ -202,7 +202,7 @@ newTalent{
 	stamina = 10,
 	cooldown = 18, 
 	range = 0,
-	radius = function(self, t) return math.floor(self:combatTalentScale(t, 4, 8)) end,
+	radius = function(self, t) return math.floor(self:combatTalentScale(t, 4, 7)) end,
 	tactical = { ATTACKAREA = { confusion = 2, fear = 2 }, DISABLE = { confusion = 2, fear = 2 } },
 	requires_target = true,
 	target = function(self, t)
