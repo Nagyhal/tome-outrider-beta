@@ -60,8 +60,8 @@ newTalent{
 			pet:setEffect(pet.EFF_OUTRIDER_BEASTMASTER_MARK, t.getDur(self, t), {target=target})
 		end
 	end,
-	callbackOnArcheryAttack = function(self, t, target, hitted, crit, weapon, ammo, damtype, mult, dam)
-		if target and hitted then
+	callbackOnArcheryAttack = function(self, t, target, hitted, crit, weapon, ammo, damtype, mult, dam, talent)
+		if talent.id==t.id and target and hitted then
 			t.setMark(self, t, target, dam)
 		end
 	end,
