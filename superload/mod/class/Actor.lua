@@ -258,7 +258,10 @@ local base_learnPool = _M.learnPool
 
 function _M:learnPool(t)
 	if t.loyalty or t.sustain_loyalty then
-		self:checkPool(t.id, self.T_OUTRIDER_MOUNT)
+		local no_hotkey, ohk = not self:hasMount(), _
+		if no_hotkey then ohk, self.hotkey = self.hotkey,nil end
+		local done, err = pcall(self:checkPool(t.id, self.T_OUTRIDER_MOUNT))
+		if no_hotkey then self.hotkey = ohk end
 	end
 	base_learnPool(self,t)
 end

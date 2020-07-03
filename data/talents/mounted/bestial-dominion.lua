@@ -17,6 +17,10 @@
 -- Nicolas Casalini "DarkGod"
 -- darkgod@te4.org
 
+local PetNameGenerator = require "mod.dialogs.PetNameGenerator"
+local Dialog = require "engine.ui.Dialog"
+local LevelupDialog = require "mod.dialogs.LevelupDialog"
+
 local mounts_list = {
 	wolf = {
 		base = "BASE_NPC_CANINE",
@@ -176,6 +180,9 @@ function befriendMount(self, m)
 	end
 	-- Mount used for Mounted Combat abilities, TODO: Consider making this more modular for multiple mounts owned
 	self.outrider_pet = m
+	self.outrider_done_challenge_reminder = nil
+	self.outrider_summon_reminder = nil
+	self.outrider_done_name_reminder = nil
 	m.ai = "outrider_pet"
 	m.owner = self
 	m.summoner= self
@@ -268,7 +275,6 @@ end
 --Dialogs
 ---------------------------------------------------------------
 function doChangeNameDialog(self, pet)
-	local Dialog = require "engine.ui.Dialog"
 	return Dialog:multiButtonPopup(
 		"A worthy name for such a beast!",
 		([[Outrider! It seems that you are making swift progress. It is good that you have wasted no time in setting out and bringing those who work against you, and all that is good and noble in Eyal, to their knees. 
@@ -314,14 +320,34 @@ local rules = {
 
 --- Create a dialog where the player can choose from generated mount names.
 function doGeneratedNamesDialog(self, pet)
-	local PetNameGenerator = require "mod.dialogs.PetNameGenerator"
 	local ds = PetNameGenerator:getPetNames(self, pet)
 end
 
-function doHowToTrainYourMountDialog(self, pet)
-	local Dialog = require "engine.ui.Dialog"
-	local LevelupDialog = require "mod.dialogs.LevelupDialog"
+function doGeneratedNamesDialog(self, pet)
+	local ds = PetNameGenerator:getPetNames(self, pet)
+end
 
+function doChallengeTheWildsReminder(self)
+	local function useChallengeTheWilds()
+		self:forceUseTalent(self.T_OUTRIDER_CHALLENGE_THE_WILDS, {ignore_ressources=true})
+	end
+	Dialog:yesnoLongPopup("Outrider, listen!",
+		([[Something seems to be stalking, just out of sight. Perhaps this is the #{bold}#beast#{normal}# with which you seek to forge your bond? You have not used Challenge The Wilds to initiate your hunt, but now would be a good time to do that.]]),
+		300, useChallengeTheWilds,
+		"Activate Challenge the Wilds; start my wild hunt!", "I don't want to tame wild beasts, I want to KILL!")
+end
+
+function doChallengeTheWildsReminder2(self)
+	Dialog:simpleLongPopup("The time is now!",
+		[[You have slain everything that stands before you and the bestial mount you are about to master.
+
+		Perhaps it is time to use your Wild Challenge to draw it out into the open!
+
+		But beware, this is no ordinary denizen of this place - you can feel it. A higher cunning dwells within this creature, and it will not be easily subdued. You should find a safe and secure place before you make your provocations.]],
+		600)
+end
+
+function doHowToTrainYourMountDialog(self, pet)
 	local function openLevelUpDialog() 
 		local ds = LevelupDialog.new(pet, nil, nil)
 		game:registerDialog(ds)
@@ -414,17 +440,40 @@ newTalent{
 		if pet then pet:forceLevelup(level) end
 
 		if not self.done_outrider_onlevelup then
-			if pet and pet.unused_talents or pet.unused_talents_types then
+			if pet and (pet.unused_talents or pet.unused_generics) then
 				doHowToTrainYourMountDialog(self, pet)
 				self.done_outrider_onlevelup = true
 			end
 		end
 	end,
+	callbackOnKill = function(self, t)
+		-- Here we only handle reminders to use Challenge The Wilds
+		--
+		if not self.outrider_pet and not self:hasEffect(self.EFF_OUTRIDER_WILD_CHALLENGE) then
+			if not self.outrider_done_challenge_reminder then
+				doChallengeTheWildsReminder(self)
+				self.outrider_done_challenge_reminder = true
+			end
+		end
+		if self:hasEffect(self.EFF_OUTRIDER_WILD_CHALLENGE) then
+			local p = self:hasEffect(self.EFF_OUTRIDER_WILD_CHALLENGE)
+			if p and p.ct==0 and self.outrider_summon_reminder~="done" then
+				local count = self.outrider_summon_reminder or 1
+				if count < 5 then
+					self:attr("outrider_summon_reminder", count+1, true)
+				else
+					doChallengeTheWildsReminder2(self)
+					self:attr("outrider_summon_reminder", "done", true)
+				end
+			end
+		end
+	end,
 	callbackOnChangeLevel = function(self, t)
 		local pet = self:getOutriderPet()
-		if pet and not pet.done_change_name then
+		if pet and not pet.done_change_name and not self.outrider_done_name_reminder then
 			doChangeNameDialog(self, pet)
 		end
+		self.outrider_done_name_reminder=true
 	end,
 	callbackOnStatChange = function(self, t, stat, v)
 		local pet = self.outrider_pet
@@ -452,9 +501,10 @@ newTalent{
 		local Dialog = require "engine.ui.Dialog"
 		local fct = function(ret)
 			if not ret then return end
-			t.doSummon(self, t)
-			self:removeEffect(self.EFF_OUTRIDER_WILD_CHALLENGE, nil, true)
-			self:startTalentCooldown(self.T_OUTRIDER_CHALLENGE_THE_WILDS)
+			if t.doSummon(self, t) then 
+				self:removeEffect(self.EFF_OUTRIDER_WILD_CHALLENGE, nil, true)
+				self:startTalentCooldown(self.T_OUTRIDER_CHALLENGE_THE_WILDS)
+			end
 			return true
 		end
 		return Dialog:yesnoLongPopup("Your quarry is near...", "You can feel your quarry stalking nearby - but it does not stalk alone. Moreover, letting out your Wild Challenge could bring threats greater than mere beasts upon you. If the time is not ripe or the area not primed for the hunt, then it is better you do not proceed.", 300, fct, "I am ready! RELEASE MY FURY!", "I need to prepare for my trial.")
@@ -474,27 +524,27 @@ newTalent{
 		end
 		table.sort(coords, f)
 
-		--TODO: Make this not crash if not enough room.
-		local first = true
+		-- @todo Make this drop the monsters off-screen if not enough room.
+		local done_mount = false
 		for i=1, rng.range(6, 8) do
-			if not coords[i] then return end
-			if first then 
+			if not coords[i] then break end
+			if not done_mount then 
 				local mount = makeBestialMount(self, self:getTalentLevel(t))
 				mountSetupSummon(self, mount, coords[i][1], coords[i][2], true)
 				mount:setEffect(mount.EFF_OUTRIDER_WILD_CHALLENGER, 2, {src=self})
+				done_mount=true
 			else
 				local base_list=require("mod.class.NPC"):loadList("data/general/npcs/canine.lua")
-				local filter = {base_list=base_list
-				}
+				local filter = {base_list=base_list}
 
 				local e = game.zone:makeEntity(game.level, "actor", filter)
 				e.make_escort = nil
 				e.exp_worth=0
+				e:learnTalent(e.T_OUTRIDER_WILD_CHALLENGE_SUMMONED, true, 1)
 				game.zone:addEntity(game.level, e, "actor", coords[i][1], coords[i][2])
 			end
-
-			first=false
 		end
+		if done_mount then return true end
 	end,
 	doBefriendMount = function(self, t, mount)
 		return befriendMount(self, mount)
@@ -605,6 +655,46 @@ newTalent{
 	info = function(self, t)
 		return ([[Modify loyalty by the mount's innate loyalty modifier.]]
 			):format()
+	end,
+}
+
+newTalent{
+	name = "Wild Challenge (Summoned)", short_name = "OUTRIDER_WILD_CHALLENGE_SUMMONED", image = "talents/challenge_the_wilds.png",
+	type = {"mounted/mounted-base", 1},
+	mode = "passive",
+	hide = "always",
+	points = 1,
+	callbackOnTakeDamage = function(self, t, src, x, y, type, dam, state)
+		-- We need to check this after the damage has been dealt with takeHit, so use onTickEnd:
+		game:onTickEnd(function()
+			if self.life < self.max_life/2 then 
+				self.ai = "flee_dmap"
+				self.outrider_fleeing_challenger = true
+				self.last_dist = 0
+				game.logSeen(game.player, "%s turns and flees back into the wilds!", self.name:capitalize())
+			end
+		end)
+	end,
+	callbackOnAct = function(self, t)
+		if not self.outrider_fleeing_challenger then return end
+
+		-- If the poor beast is fleeing and can't move for 3 turns, let it go
+		local dist = getDistToNearestEnemy(self) or math.max(self.last_dist, 10)
+		if dist <= self.last_dist then
+			self:attr("stuck_in_place", 1)
+		end
+
+		self.last_dist = dist
+
+		--Disappear if we flee far enough
+		if dist >= 10 or (self.stuck_in_place and self.stuck_in_place>=3) then 
+			game.logSeen(game.player, "#PINK#The %s disappears into the wilds.", self.name:capitalize())
+			self:die()
+			self.dead_by_unsummon = true
+		end
+	end,
+	info = function(self, t)
+		return [[This creature has come to fight, beckoned by the Wild Challenge, but it may yet be subdued by the Outrider. Flees at 50% health.]]
 	end,
 }
 
