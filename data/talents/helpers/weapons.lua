@@ -169,3 +169,20 @@ end
 function isNextToEnemy(self)
 	return #getAdjacentActors(self, {only_enemies=true}) > 0
 end
+
+function getDistToNearestEnemy(self)
+	-- We're going to update the user's FOV cache
+	-- If we move instantly, the new FOV is usually calculated /after/
+	-- the movement, which we don't want.
+	self:computeFOV()
+
+	local i = 1 
+	for i, act in ipairs(self.fov.actors_dist) do
+		if act and not act.dead and self.fov.actors[act] then
+			-- Break out the loop when we have our nearest enemy
+			if self:reactionToward(act) < 0 then
+				return math.sqrt(self.fov.actors[act].sqdist)
+			end
+		end
+	end
+end
