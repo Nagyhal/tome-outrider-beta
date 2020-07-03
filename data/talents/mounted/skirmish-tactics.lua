@@ -103,6 +103,7 @@ newTalent{
 	deactivate_on = {no_combat=true, rest=true},
 	tactical = { BUFF = 1 },
 	cooldown = 5,
+	drain_stamina = function(self, t) return t.getStamina(self, t) end,
 	no_energy = true,
 	remove_on_zero = true,
 	requires_target = true,
@@ -115,6 +116,12 @@ newTalent{
 	on_pre_use = function(self, t, silent, fake) 
 		return preCheckIsMounted(self, t, silent, fake) and preCheckArcheryInAnySlot(self, t, silent, fake)
 	end,
+	on_learn = function(self, t)
+		self:checkPool(t.id, "T_STAMINA_POOL")
+	end,
+	iconOverlay = function(self, t, p)
+		return tostring(p.ct), "buff_font_smaller"
+	end,
 	----Helper functions---------------------------------------
 	doShot = function(self, t)
 		local tgt = self:isTalentActive(t.id)["target"]
@@ -125,17 +132,14 @@ newTalent{
 				ignore_energy=true, ignore_cd=true, force_target=tgt, ignore_ressources=true, silent=true, speed=0.5
 			})
 		end
-		if did_shot and not use_stamina(self, t.getStamina(self, t)) then
-			local spend = math.min(t.getStamina(self, t), self:getStamina())
-			self:incStamina(-spend) --Never free!
-			t.forceDisactivate(self, t)
-			return
-		end
+		-- if did_shot and not use_stamina(self, t.getStamina(self, t)) then
+		-- 	-- local spend = math.min(t.getStamina(self, t), self:getStamina())
+		-- 	-- self:incStamina(-spend) --Never free!
+		-- 	t.forceDisactivate(self, t)
+		-- 	return
+		-- end
 
 		local p = self:isTalentActive(t.id); p.dont_shoot = nil
-	end,
-	callbackOnAct = function(self, t, p)
-		t.checkTarget(self, t, p)
 	end,
 	checkTarget = function(self, t)
 		local target = table.get(self:isTalentActive(t.id), "target")
@@ -170,9 +174,19 @@ newTalent{
 	--Likewise, if we remove our archery weapon, we can't use
 	--  Mounted Archery any more.
 	callbackOnActBase = function(self, t)
+		local p = self:isTalentActive(t.id)
+		p.ct = p.ct - 1
+		if p.ct <= 0 then t.forceDisactivate(self, t) end
+
 		if t.checkTarget(self, t) and t.checkCanShoot(self, t) then
-			t.doShot(self, t)
+			-- t.doShot(self, t)
 		end
+	end,
+	callbackOnAct = function(self, t, p)
+		t.checkTarget(self, t, p)
+	end,
+	callbackOnChangeLevel = function(self, t, p)
+		t.forceDisactivate(self, t)
 	end,
 	callbackOnCombatAttack = function(self, t, weapon, ammo)
 		t.dontShootThisTurn(self, t)
@@ -203,7 +217,43 @@ newTalent{
 
 		local mount = self:getMount()
 		game.logSeen(self, "%s looses arrows at %s from atop %s!", self.name:capitalize(), target.name, mount.name)
-		return {target=target, ct=5}
+
+		-- We're going to create a fake actor to do the shooting for us
+		-- This way we can use exactly the amount of energy specified by the Outrider's
+		-- ranged weapon speed.
+		local Actor = require "mod.class.Actor"
+
+		local e = Actor.new{
+			name="dummy_shooter",
+			outrider=self,
+			act = function(self)
+				-- I'm trying not to use any upvalues here
+				local outrider = self.outrider
+				-- Attack at the same archery speed as the Outrider
+				if outrider:isTalentActive(outrider.T_OUTRIDER_MOUNTED_ARCHERY) then
+					outrider:callTalent(outrider.T_OUTRIDER_MOUNTED_ARCHERY, "doShot")
+					self:useEnergy(game.energy_to_act * outrider:getSpeed "archery")
+				else
+					game.level:removeEntity(self)
+				end
+			end}
+		game.level:addEntity(e)
+
+		-- Hack! We need to get a similar global speed to the outrider...
+		local new_metatable = table.clone(getmetatable(e))
+		e.__oldindex = getmetatable(e).__index
+		e.global_speed = nil
+
+		-- So we reference the *exact* global speed of the Outrider, always!
+		new_metatable.__index = function(table, key)
+			if key=="global_speed" then
+				return table.outrider.global_speed
+			else return table.__oldindex[key]
+			end
+		end
+		setmetatable(e, new_metatable)
+
+		return {target=target, ct=5, e=e}
 	end,
 	deactivate = function(self, t, p) 
 		return true
@@ -222,7 +272,7 @@ newTalent{
 		-- local cooldown = t.getCooldown(self,t)
 
 		--You are a master of brutal ranged harrying techniques, both mounted and on foot, increasing your weapon damage by %d%% and physical power by 30 when using bows.
-		return ([[When riding, you can sustain to loose arrows at your target as you move. Each turn, if you move or rest with a bow equipped, you stand tall and let soar an arrow at your hapless target, just as if you had used the Shoot talent. This costs %.1f stamina per shot and will deactivate if you move out of range, dismount or use another weapon to attack.]]):
+		return ([[When riding, you can sustain to loose arrows at your target as you move. Each turn for five turns, if you move or rest with a bow equipped, you stand tall and let soar an arrow at your hapless target, just as if you had used the Shoot talent. This costs %.1f stamina per shot and will deactivate if you move out of range, dismount or use another weapon to attack.]]):
 		format(stamina)
 	end,
 }
