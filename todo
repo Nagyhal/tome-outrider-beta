@@ -99,11 +99,13 @@ Riding forth (two days deadline) :
   ✔ Subdue the beast : Tweak it @done (20-06-25 13:23)
   ✔ Unbridled Ferocity : Make the mount bigger @done (20-06-25 16:48)
   ✔ Flanking : Merge it with beast flanking @done (20-06-25 19:13)
+  ✔ Challenge : Dialog if you forget to use your Wild Challenge @done (20-06-25 22:54)
+  ✔ Master of Brutality : Make it a passive? @done (20-06-25 22:54)
+  ✔ Challenge dialogs : test @done (20-06-25 22:54)
+  ✔ Challenge fleeing wolves : test @done (20-06-25 22:54)
   ☐ Flanking : Test it to hell and back
   ☐ Flanking : Make it work at a distance (ooo!), but maybe not initiating the temporary effect
   ☐ Mounted Archery : Make an archer and make it work well
-  ☐ Challenge : Dialog if you forget to use your Wild Challenge
-  ☐ Master of Brutality : Make it a passive?
   ☐ Fix the way dragged_entities works
   ☐ After executing this basic handiwork, switch to re-instating your dev tools
   -------------------------------
