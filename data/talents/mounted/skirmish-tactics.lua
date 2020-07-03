@@ -69,7 +69,7 @@ newTalent{
 
 		--You are a master of brutal ranged harrying techniques, both mounted and on foot, increasing your weapon damage by %d%% and physical power by 30 when using bows.
 
-		return ([[Whether you were a child of the wild steppes, or you came of age beneath the starry skies of the great Northern wastes, you were born to rain fury with your bow from atop your bestial steed. 
+		return ([[Whether you were a child of the wild steppes or the great Northern wastes, you were born to rain fury with your bow from atop your bestial steed. 
 
 			Increases physical power by 30 when using bows or slings, and also increase your ranged damage while riding by %d%%.
 
