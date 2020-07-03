@@ -245,7 +245,7 @@ newTalent{
 	cooldown = 16,
 	stamina = 15,
 	random_ego = "attack",
-	range = function(self, t) return self:combatTalentScale(t, 3, 4) end,
+	range = function(self, t) return self:combatTalentScale(t, 2, 3) end,
 	-- @todo (AI): Return a tactical table dependent on current situation
 	tactical = { ATTACK = { weapon = 1 }, DISABLE = { pin = 2 } },
 	-- @todo (AI): We need to draw past the target and check behind them
@@ -351,7 +351,7 @@ newTalent{
 			This damage even goes straight through damage shields. At talent level 3, you attack with such timing that you overload the energies of the shield, shattering it. This has a %d%% chance of happening (%d%% half effect).]]):
 		format(dam_pct, range, knockback_range, dur, shatter_chance, half_shatter_chance)
 	end,
-	getKnockbackRange = function(self, t) return math.round(self:combatTalentScale(t, 2.7, 4.2)) end,
+	getKnockbackRange = function(self, t) return math.round(self:combatTalentScale(t, 3.0, 4.25)) end,
 	getDur = function(self, t) return math.round(self:combatTalentScale(t, 3, 4))  end,
 	getDam = function(self, t) return self:combatTalentScale(t, 1.0, 1.6) end,
 	getShatterChance = function(self, t)
