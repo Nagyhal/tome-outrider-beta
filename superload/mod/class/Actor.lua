@@ -484,7 +484,7 @@ end
 --- A ludicrous hack.
 local base_quickSwitchWeapons = _M.quickSwitchWeapons
 function _M:quickSwitchWeapons(free_swap, message, silent)
-	if self:isTalentActive(self.T_OUTRIDER_MASTER_OF_BRUTALITY) and message=="warden" then
+	if self:knowTalent(self.T_OUTRIDER_MASTER_OF_BRUTALITY) and message=="warden" then
 		message = nil
 	end
 

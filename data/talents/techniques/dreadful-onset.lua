@@ -64,20 +64,8 @@ newTalent{
 	type = {"technique/dreadful-onset", 1},
 	require = mnt_dexcun_req1,
 	points = 5,
-	mode = "sustained",
-	cooldown = 30,
-	sustain_stamina = 40,
-	tactical = { BUFF = 3 },
-	on_pre_use = function(self, t, silent, fake)
-		return preCheckOutriderWeaponBothSlots(self, t, silent, fake)
-	end,
-	clearTempVals = function(self, t, p)
-		for i = #(p.__tmpvals or {}), 1, -1  do
-			self:removeTemporaryValue(p.__tmpvals[i][1], p.__tmpvals[i][2])
-			p.__tmpvals[i] = nil
-		end
-	end,
-	addTempVals = function(self, t, p)
+	mode = "passive",
+	passives = function(self, t, p)
 		p.free_off=false
 		if hasOutriderWeapon(self) then
 			if hasFreeOffhand(self) then
@@ -92,31 +80,14 @@ newTalent{
 			end
 		end
 		self:talentTemporaryValue(p, "outrider_master_of_brutality", t.getCritChance(self, t))
+		-- Rather than rewriting the basic Shoot and Attack actions, we
+		-- make use of the baked-in Temporal Warden swap in rather hackish way.
 		self:talentTemporaryValue(p, "warden_swap", 1)
 		self:talentTemporaryValue(p, "outrider_swap", 1)
-		return p
 	end,
-	callbackOnWear  = function(self, t, o, bypass_set) t.checkOnWeaponSwap(self, t, o) end,
-	callbackOnTakeoff  = function(self, t, o, bypass_set) t.checkOnWeaponSwap(self, t, o) end,
-	checkOnWeaponSwap = function(self, t, o)
-		if o.type and o.type=="weapon" then
-			game:onTickEnd(function()
-				local p = self:isTalentActive(t.id)
-				if p and hasOutriderWeapon(self) or hasOutriderWeaponQS(self) then 
-					t.clearTempVals(self, t, p)
-					t.addTempVals(self, t, p)
-				else
-					self:forceUseTalent(t.id, {no_energy=true})
-				end
-			end)
-		end
-	end,
-	activate = function(self, t)
-		return t.addTempVals(self, t, {})
-	end,
-	deactivate = function(self, t, p)
-		return true
-	end,
+	callbackOnWear  = function(self, t, o, bypass_set) self:updateTalentPassives(t.id) end,
+	callbackOnTakeoff  = function(self, t, o, bypass_set) self:updateTalentPassives(t.id) end,
+	callbackOnQuickSwitchWeapons = function(self, t, o) self:updateTalentPassives(t.id) end,
 	info = function(self, t)
 		local mindpower = t.getMindpower(self, t)
 		local crit_power = t.getCritPower(self, t)

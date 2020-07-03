@@ -299,7 +299,6 @@ class:bindHook("Actor:updateModdableTile:middle", function(self, data)
 end)
 
 class:bindHook("Actor:updateModdableTile:front", function(self, data)
-	game.log"ganderwog"
 	-----------------------------------------------------------------------
 	-- Display the rider high on the mount
 	-----------------------------------------------------------------------
