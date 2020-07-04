@@ -147,6 +147,10 @@ newTalent{
 		return {type="cone", cone_angle=cone_angle, source_actor=self, selffire=false, range=0, radius=move_dist, talent=t}
 	end,
 	on_pre_use = function(self, t, silent, fake) return preCheckCanMove(self, t, silent, fake) end,
+	cooldownStop = function(self, t)
+		-- Hack to enable resting while talent is permanently cooling down
+		self.talents_auto[t.id] = nil
+	end,
 	callbackOnActBase = function(self, t)
 		if self:hasEffect(self.EFF_OUTRIDER_FEIGNED_RETREAT) then
 			if self.talents_cd[t.id] then
@@ -213,12 +217,16 @@ newTalent{
 
 		-----------------------------------------------------------------------
 		-- Set the temp effects
-		-----------------------------------------------------------------------
 		target:setEffect(target.EFF_OUTRIDER_FEIGNED_RETREAT_TARGET, 1, {src=self})
 		if not target:hasEffect(target.EFF_OUTRIDER_FEIGNED_RETREAT_TARGET) then
 			return true
 		end
 		self:setEffect(self.EFF_OUTRIDER_FEIGNED_RETREAT, 2, {target=target, damage=t.getDamPct(self, t)/100})
+
+		-----------------------------------------------------------------------
+		-- Allow player to rest while Feigned Retreat is cooling down
+		-----------------------------------------------------------------------
+		self.talents_auto[t.id] = true
 
 		return true
 	end,
@@ -229,7 +237,7 @@ newTalent{
 		local str = attacks_no>1 and "attacks" or "attack"
 		return ([[Turning suddenly and feigning flight from battle, you ready a cruel ambush. Rush up to %d squares away from your target, but deal %d%% damage with your next %d %s against it.
 
-			If you fail to slay your mark, Feigned Retreat stays on cooldown, as the ruse is now known. You must kill 30 more combatants in order to recover it.]]):
+			If you fail to slay your mark, Feigned Retreat stays on cooldown, as the ruse is now discovered. You must kill 30 more combatants in order to recover it.]]):
 		format(dist, dam_pct, attacks_no, str)
 	end,
 	getDist = function(self, t) return self:combatTalentScale(t, 4,  7) end,

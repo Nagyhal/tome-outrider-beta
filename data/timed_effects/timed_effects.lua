@@ -1315,7 +1315,7 @@ newEffect{
 		format(eff.target_name, eff.dam*100, his_her, eff.attacks_no, eff.ct)
 	end,
 	parameters = {target, target_name="the victim", dam=1.1, attacks_no=1, ct=30},
-	charges = function(self, eff) return eff.ct end,
+	-- charges = function(self, eff) return eff.ct end,
 	type = "other",
 	subtype = { miscellaneous=true },
 	status = "beneficial",
@@ -1327,6 +1327,7 @@ newEffect{
 			self:removeEffect(eff.effect_id, false, true)
 		else
 			eff.ct = eff.ct-1
+			self:alterTalentCoolingdown("T_OUTRIDER_FEIGNED_RETREAT", -1)
 			if eff.ct <= 0 then self:removeEffect(eff.effect_id, false, true) end
 		end
 	end,
