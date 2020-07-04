@@ -59,9 +59,11 @@ function _M:physicalCrit(dam, weapon, target, atk, def, add_chance, crit_power_a
 	add_chance = add_chance or 0
 
 	--Flanking
-	local eff = target:hasEffect(target.EFF_OUTRIDER_FLANKING)
-	if eff then
-		crit_power_add = crit_power_add + eff.crit_dam
+	if target then
+		local eff = target:hasEffect(target.EFF_OUTRIDER_FLANKED)
+		if eff and table.keys(eff.alies)[self] then
+			crit_power_add = crit_power_add + eff.crit_dam
+		end
 	end
 
 	--Master of Brutality

@@ -182,23 +182,22 @@ class:bindHook("DamageProjector:final", function(self, data)
 		end
 	end
 
-	if target then
-		if target:knowTalent(target.T_OUTRIDER_UNCANNY_TENACITY) then
-			if data.dam > self.max_life*.15 then
-				if not target:isTalentCoolingDown(target.T_OUTRIDER_UNCANNY_TENACITY) then
-					local res_pct= target:callTalent(target.T_OUTRIDER_UNCANNY_TENACITY, "getImmediateRes")
-					local true_res =  data.dam*res_pct
-					data.dam = data.dam - true_res
-					game.logSeen(target, "#CRIMSON#%s overcomes %d of the damage!", target.name:capitalize(), true_res)
-					target:callTalent(target.T_OUTRIDER_UNCANNY_TENACITY, "setEffect")
-					target:startTalentCooldown(target.T_OUTRIDER_UNCANNY_TENACITY)
-				end
+	if target and target:knowTalent(target.T_OUTRIDER_UNCANNY_TENACITY) then
+		if data.dam > self.max_life*0.15 then
+			if not target:isTalentCoolingDown(target.T_OUTRIDER_UNCANNY_TENACITY) then
+				local res_pct= target:callTalent(target.T_OUTRIDER_UNCANNY_TENACITY, "getImmediateRes")
+				local true_res =  data.dam*res_pct
+				data.dam = data.dam - true_res
+				game.logSeen(target, "#CRIMSON#%s overcomes %d of the damage!", target.name:capitalize(), true_res)
+				target:callTalent(target.T_OUTRIDER_UNCANNY_TENACITY, "setEffect")
+				target:startTalentCooldown(target.T_OUTRIDER_UNCANNY_TENACITY)
 			end
 		end
 	end
 
 	return data
 end)
+
 class:bindHook("Actor:postUseTalent", function(self, data)
 	local ab = data.t
 	--Regen Loyalty on inscription usage if applicable
@@ -218,10 +217,6 @@ class:bindHook("Actor:getTalentFullDescription:ressources", function(self, data)
 	local d, t = data.str, data.t
 	if not config.ignore_ressources then
 		local fatigue_factor = (t.requires_mounted or self:isMounted()) and self:combatFatigue() or 0
-		-- if t.loyalty then d:add({"color",0x6f,0xff,0x83}, "Loyalty cost: ", {"color",0xff,0xe4,0xb5}, ""..math.round(util.getval(t.loyalty, self, t) * (100 + fatigue_factor) / 100, 0.1), true)
-		-- end
-		-- if t.sustain_loyalty then d:add({"color",0x6f,0xff,0x83}, "Sustain loyalty cost: ", {"color",0xFF, 0xFF, 0x00}, ""..(util.getval(t.sustain_loyalty, self, t)), true)
-		-- end
 	end
 	data.d = d
 end)
@@ -249,28 +244,6 @@ class:bindHook("Actor:takeHit", function(self, data)
 		-- local pct = self:combatScale(data.value, 10, self.max_life*1, 50, self.max_life*.25)
 		if rng.percent(25) then rider:forceDismount() end
 	end
-end)
-
--- class:bindHook("UISet:Classic:Resources", function(self, data)
--- 	local src = data.player.show_owner_loyalty_pool and data.player.summoner or data.player
--- 	if src:knowTalent(data.player.T_LOYALTY_POOL) then
--- 		self:mouseTooltip(self.TOOLTIP_LOYALTY, self:makeTextureBar("#SALMON#Loyalty:", nil, src:getLoyalty(), src.max_loyalty, src.loyalty_regen, data.x, data.h, 255, 255, 255,
--- 	 		{r=0xff / 3, g=0xcc / 3, b=0x80 / 3},
--- 	 		{r=0xff / 6, g=0xcc / 6, b=0x80 / 6}))
--- 		data.h = data.h + self.font_h
--- 	end
--- 	return data
--- end)
-
-local function handleStrikeAtTheHeart(self, data)
-	if self:hasEffect(self.EFF_OUTRIDER_STRIKE_AT_THE_HEART) then
-		self:callTalent(self.T_OUTRIDER_STRIKE_AT_THE_HEART, "handleStrike", data.target, data.hitted)
-	end
-end
-
-class:bindHook("Combat:attackTargetWith", function(self, data)
-	handleStrikeAtTheHeart(self, data)
-	return data
 end)
 
 class:bindHook("Combat:attackTarget", function(self, data)
