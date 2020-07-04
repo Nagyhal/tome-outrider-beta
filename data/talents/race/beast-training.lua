@@ -1,136 +1,34 @@
 newTalent{
-	name = "Fortitude", short_name = "OUTRIDER_FORTITUDE", image = "talents/fortitude.png",
+	name = "Brute Strength", short_name = "OUTRIDER_BRUTE_STRENGTH", image = "talents/brute_strength.png",
 	type = {"race/beast-training", 1},
 	mode = "passive",
 	points = 5,
-	no_unlearn_last = true,
-	passives = function(self, t, p)
-		local str, con = math.max(0, self:getStat("str") - 10), math.max(0, self:getStat("con") - 10)
-		local total = str+con
+	info = function(self, t)
+		local percent_inc = t.getPercentInc(self, t)*100
+		return ([[Your beast is a prodigy of size and sinew, growing in strength well beyond the norm. Gain %d%% increased melee attack damage.]]):
+		format(percent_inc)
+	end,
+	getPercentInc = function(self, t) return math.sqrt(self:getTalentLevel(t) / 5) / 1.5 end,
+}
 
-		self:talentTemporaryValue(p, "combat_armor", t.getArmour(self, t)*total)
-		self:talentTemporaryValue(p, "combat_armor_hardiness", t.getArmourHardiness(self, t)*total)
-		self:talentTemporaryValue(p, "combat_physresist", t.getSave(self, t)*total)
-		self:talentTemporaryValue(p, "combat_spellresist", t.getSave(self, t)*total)
-	end,
-	on_learn = function(self, t)
-	end,
-	on_unlearn = function(self, t, p)
-	end,
-	callbackOnStatChange = function(self, t, stat, v)
-		if stat == self.STAT_CON or stat == self.STAT_WIL then
-			self:updateTalentPassives(t.id)
-			-- t.on_unlearn(self, t, p)
-			-- t.on_learn(self, t)
-		end	
+newTalent{
+	name = "Natural Armour", short_name = "OUTRIDER_NATURAL_ARMOUR", image = "talents/natural_armour.png",
+	type = {"race/beast-training", 1},
+	mode = "passive",
+	points = 5,
+	passives = function(self, t, p)
+		self:talentTemporaryValue(p, "combat_armor", t.getArmour(self, t))
+		self:talentTemporaryValue(p, "combat_armor_hardiness", t.getArmourHardiness(self, t))
 	end,
 	info = function(self, t)
 		local armour = t.getArmour(self, t)
 		local armour_hardiness = t.getArmourHardiness(self, t)
-		local save = t.getSave(self, t)
 
-		local armour_inc = t.getArmourInc(self, t)
-		local armour_hardiness_inc = t.getArmourHardinessInc(self, t)
-		local save_inc = t.getSaveInc(self, t)
-
-		local total = math.max(0, self:getStat("str") - 10) + math.max(0, self:getStat("con") - 10)
-
-		local total_armour = armour_inc*total
-		local total_armour_hardiness = armour_hardiness_inc*total
-		local total_save = save_inc*total
-
-		return ([[Constant battle has honed your beast's powers of resilience, allowing it stay in the fight for longer. Gain %d points of armour, %d%% armour hardiness and %d points of physical and spell save.
-
-			Also, Consitution above 10 will now increase armour by %.2f.
-			Willpower above 10 will improve physical and spell save by %.2f.
-
-			%s:
-			Armour +%d
-			Physical Save: +%d
-			Spell Save: +%d]]):
-		format(armour, armour_hardiness, save,
-			armour_inc, save_inc,
-			self:knowTalent(t) and "Bonuses at level 1" or "Current Bonuses",
-				total_armour, total_save, total_save)
+		return ([[As your beast has grown in prowess, its outer hide has thickened and hardened, becoming like a natural layer of armour. Gain %d points of armour and %d%% armour hardiness.]]):
+		format(armour, armour_hardiness)
 	end,
 	getArmour = function(self, t) return self:combatTalentScale(t, 10, 25, 0.35) end,
 	getArmourHardiness = function(self, t) return self:combatTalentLimit(t, 50, 30, 45) end,
-	getSave = function(self, t) return self:combatTalentScale(t, 7, 27) end,
-
-	getArmourInc = function(self, t) return self:combatTalentScale(t, .5, 1) end,
-	getArmourHardinessInc = function(self, t) return self:combatTalentScale(t, .7, 1) end,
-	getSaveInc = function(self, t) return self:combatTalentScale(t, .25, .4) end,
-	getLifeInc = function(self, t) return self:combatTalentScale(t, 1, 4) end,
-}
-
-newTalent{
-	name = "Hunting Prowess", short_name = "OUTRIDER_HUNTING_PROWESS", image = "talents/hunting_prowess.png",
-	type = {"race/beast-training", 1},
-	mode = "passive",
-	points = 5,
-	no_unlearn_last = true,
-	passives = function(self, t, p)
-		local dex, cun = math.max(0, self:getStat("dex") - 10), math.max(0, self:getStat("cun") - 10)
-		local total = dex+cun
-
-		self:talentTemporaryValue(p, "resists_pen", {[DamageType.PHYSICAL] = t.getPhysPen(self, t)*total})
-
-		self:talentTemporaryValue(p, "combat_physcrit", t.getCritChance(self, t)*total)
-		self:talentTemporaryValue(p, "combat_spellcrit", t.getCritChance(self, t)*total)
-		self:talentTemporaryValue(p, "combat_mindcrit", t.getCritChance(self, t)*total)
-
-		self:talentTemporaryValue(p, "combat_critpower", t.getCritPower(self, t)*total)
-		--con life boost found in on_learn
-		--armor
-		self:talentTemporaryValue(p, "combat_apr", t.getAPR(self, t)*cun)
-	end,
-	on_learn = function(self, t)
-	end,
-	on_unlearn = function(self, t, p)
-	end,
-	callbackOnStatChange = function(self, t, stat, v)
-		if stat == self.STAT_WIL or stat == self.STAT_CUN then
-			self:updateTalentPassives(t.id)
-			-- t.on_unlearn(self, t, p)
-			-- t.on_learn(self, t)
-		end	
-	end,
-	info = function(self, t)
-		local phys_pen = t.getPhysPen(self, t)
-		local crit_chance = t.getCritChance(self, t)
-		local crit_power = t.getCritPower(self, t)
-		local apr = t.getAPR(self, t)
-
-		local phys_pen_inc = t.getPhysPenInc(self, t)
-		local crit_chance_inc = t.getCritChanceInc(self, t)
-		local crit_power_inc = t.getCritPowerInc(self, t)
-		local apr_inc = t.getAPRInc(self, t)
-
-		local total = math.max(0, self:getStat("dex") - 10) + math.max(0, self:getStat("cun") - 10)
-		local total_phys_pen = phys_pen_inc*total
-		local total_crit_chance = crit_chance_inc*total
-		local total_crit_power = crit_power_inc *total
-		local total_apr = apr_inc*math.max(0, self:getStat("cun") - 10)
-
-		return ([[By tooth or claw, your beast learns to take down its mark. Increase your beast's physical resistance penetration by %d%% and armour penetration by %d.
-
-			Also, Cunning above 10 will now increase critical power by %.2f%%
-
-			%s:
-			Critical Power: +%d%%]]):
-		format(phys_pen, apr, crit_power_inc,
-				self:knowTalent(t) and "Bonuses at level 1" or "Current Bonuses",
-				total_crit_power)
-	end,
-	getPhysPen = function(self, t) return self:combatTalentLimit(t, 75, 20, 50) end,
-	getAPR = function(self, t) return self:combatTalentScale(t, 7, 25) end,
-	getCritChance = function(self, t) return self:combatTalentScale(t, .1, .2) end,
-	getCritPower = function(self, t) return self:combatTalentScale(t, .3, .5) end,
-
-	getPhysPenInc = function(self, t) return self:combatTalentScale(t, .45, .7) end,
-	getCritChanceInc = function(self, t) return self:combatTalentScale(t, .1, .2) end,
-	getCritPowerInc = function(self, t) return self:combatTalentScale(t, .3, .5) end,
-	getAPRInc = function(self, t) return self:combatTalentScale(t, .75, 1) end,
 }
 
 newTalent{
@@ -138,95 +36,113 @@ newTalent{
 	type = {"race/beast-training", 1},
 	mode = "passive",
 	points = 5,
-	no_unlearn_last = true,
 	passives = function(self, t, p)
-		local con, wil = math.max(0, self:getStat("con") - 10), math.max(0, self:getStat("wil") - 10)
-		local total = con+wil
-
-		self:talentTemporaryValue(p, "resists", {all = t.getResistAll(self, t)*total})
-		self:talentTemporaryValue(p, "ignore_direct_crits", t.getShrugoffChance(self, t)*total)
-
-		self:talentTemporaryValue(p, "max_life", t.getLifeInc(self, t)*con)
-	end,
-	on_learn = function(self, t)
-	end,
-	on_unlearn = function(self, t, p)
-	end,
-	callbackOnStatChange = function(self, t, stat, v)
-		if stat == self.STAT_CON or stat == self.STAT_WIL then
-			self:updateTalentPassives(t.id)
-			-- t.on_unlearn(self, t, p)
-			-- t.on_learn(self, t)
-		end	
-	end,
-	info = function(self, t)
-		local resist_all = t.getResistAll(self, t)
-		local shrugoff_chance = t.getShrugoffChance(self, t)
-		local life_inc = t.getLifeInc(self, t)
-
-		local total = math.max(0, self:getStat("con") - 10)
-		local total_life = life_inc*total 
-
-		return ([[Increase resist all by %d%%, and reduce chance to be critically hit by %d%%.
-
-			Also, levelling Constitution grants %.1f additional life.
-
-			%s:
-			Max Life: +%d]]):
-		format(resist_all, shrugoff_chance, life_inc,
-				self:knowTalent(t) and "Bonuses at level 1" or "Current Bonuses",
-				total_life)
-	end,
-	getShrugoffChance = function(self, t) return self:combatTalentLimit(t, 50, 20, 35) end,
-	getResistAll = function(self, t) return self:combatTalentLimit(t, 35, 6.5, 20) end,
-	getLifeInc = function(self, t) return self:combatTalentScale(t, 1, 4) end,
-}
-
-newTalent{
-	name = "Grit", short_name = "OUTRIDER_GRIT", image = "talents/grit.png",
-	type = {"race/beast-training", 1},
-	mode = "passive",
-	points = 5,
-	no_unlearn_last = true,
-	passives = function(self, t, p)
-		local str, dex = math.max(0, self:getStat("str") - 10), math.max(0, self:getStat("dex") - 10)
-		local total = str+dex
-
-		self:talentTemporaryValue(p, "stun_immune", t.getRes(self, t)*total/100)
-		self:talentTemporaryValue(p, "pin_immune", t.getRes(self, t)*total/100)
-		self:talentTemporaryValue(p, "knockback_immune", t.getRes(self, t)*total/100)
-		self:talentTemporaryValue(p, "fear_immune", t.getRes(self, t)*total/100)
-	end,
-	on_learn = function(self, t)
-	end,
-	on_unlearn = function(self, t, p)
-	end,
-	callbackOnStatChange = function(self, t, stat, v)
-		if stat == self.STAT_STR or stat == self.STAT_DEX then
-			self:updateTalentPassives(t.id)
-			-- t.on_unlearn(self, t, p)
-			-- t.on_learn(self, t)
-		end	
+		self:talentTemporaryValue(p, "stun_immune", t.getRes(self, t))
+		self:talentTemporaryValue(p, "pin_immune", t.getRes(self, t))
+		self:talentTemporaryValue(p, "knockback_immune", t.getRes(self, t))
+		self:talentTemporaryValue(p, "fear_immune", t.getRes(self, t))
 	end,
 	info = function(self, t)
 		local res = t.getRes(self, t)
 
-		-- local total = math.max(0, self:getStat("str") - 10) + math.max(0, self:getStat("dex") - 10)
-		-- local total_res = res*total
-
-		return ([[Gain %d%% stun resist, %d%% pin resist, %d%% knockback resist and %d%% fear resist.]]):
-
-			-- %s:
-			-- Stun Resist: +%.1f%%
-			-- Pin Resist: +%.1f%%
-			-- Knockback Resist: +%.1f%%
-			-- Fear Resist: +%.1f%%]]):
+		return ([[Constant battle has honed your beast's powers of resilience, allowing it stay in the fight for longer. Gain %d%% stun resist, %d%% pin resist, %d%% knockback resist and %d%% fear resist.]]):
 		format(res, res, res, res)
-				-- self:knowTalent(t) and "Values at level 1" or "Current Values",
-				-- total_res, total_res, total_res, total_res)
 	end,
-	getRes = function(self, t) return self:combatTalentLimit(t, 100, 20, 65) end,
+	getRes = function(self, t)
+		local base = self:combatTalentLimit(t, 100, 20, 65)
+		--I couldn't stand the scaling of 20, 39, 51, so let's change it to 20, 40, 50
+		if self:getTalentLevelRaw(t) <= 5 and self:getTalentTypeMastery(t.type[1])==1 then
+			base = math.round(base, 5)
+		end
+		return base
+	end,
 }
 
--- @idea  Take this old Subdue the Beast feature and tack it onto here
--- As you master the domestication of wild riding beasts, you are able to still their fury long enough to inscribe them with infusions. You gain an infusion slot for your mount, and may gain others for each Bestial Dominion talent you raise to 5/5 (up to 3 slots).
+newTalent{
+	name = "Elemental Adaptation", short_name = "OUTRIDER_ELEMENTAL_ADAPTATION", image = "talents/elemental_adaptation.png",
+	type = {"race/beast-training", 1},
+	mode = "passive",
+	levelup_screen_break_line = true,
+	points = 5,
+	passives = function(self, t, p)
+		local res = t.getRes(self, t)
+		self:talentTemporaryValue(p, "resists", {
+			fire = res,
+			cold = res,
+			lightning = res,
+			acid = res,
+			nature = res,
+			light = res,
+			darkness = res,
+			blight = res,
+			temporal = res,
+			arcane = res,
+		})
+	end,
+	info = function(self, t)
+		local res = t.getRes(self, t)
+
+		return ([[Exposure to many of this world's toughest terrains and most dangerous denizens has acclimatized your beast to magic and elemental attacks, granting resistance to all non-physical, non-mind damage of %d%%.]]):
+		format(res)
+	end,
+	getRes = function(self, t) return self:combatTalentLimit(t, 35, 6.5, 20) end,
+}
+
+newTalent{
+	name = "Survival Instincts", short_name = "OUTRIDER_SURVIVAL_INSTINCTS", image = "talents/survival_instincts.png",
+	type = {"race/beast-training", 1},
+	mode = "passive",
+	points = 5,
+	passives = function(self, t, p)
+		self:talentTemporaryValue(p, "die_at", -t.getLife(self, t))
+	end,
+	callbackOnLevelup = function(self, t ,level)
+		self:updateTalentPassives(t.id)
+	end,
+	callbackOnTakeDamage = function(self, t)
+		-- Do this at the end of the tick, as we haven't taken damage yet.
+		game:onTickEnd(function()
+			t.doCheck(self, t)
+		end, "check_survival_instincts")
+	end,
+	callbackOnAct = function(self, t)
+		t.doCheck(self, t)
+	end,
+	doCheck = function(self, t)
+		if self.life < 0 and not self.dead then
+			self:setEffect(self.EFF_OUTRIDER_SURVIVAL_INSTINCTS, 2, {life_pct_needed=25})
+		end
+	end,
+	info = function(self, t)
+		local life = t.getLife(self, t)
+		local recovery = t.getRecoveryRatio(self, t)*100
+
+		return ([[Your beast is unnaturally surviveable—but on its own terms. It will not die until it reaches %d negative life points (scaling with talent and character level), but instead, going below 0 life, it will lose all Loyalty toward you and flee. You may soothe it by standing next to it and not doing anything else; each turn doing this regains %d%% of max life. At 25%% life it will return to your side to fight anew.]]):
+		format(life, recovery)
+	end,
+	getLife = function(self, t)
+		local base = 40 + self.level * 4 
+		return base * self:combatTalentScale(t, .7, 1.5)
+	end,
+	getRecoveryRatio = function(self, t) return self:combatTalentScale(t, .03, .1) end,
+}
+
+newTalent{
+	name = "Killing Force", short_name = "OUTRIDER_KILLING_FORCE", image = "talents/killing_force.png",
+	type = {"race/beast-training", 1},
+	mode = "passive",
+	points = 5,
+	passives = function(self, t, p)
+		self:talentTemporaryValue(p, "resists_pen", {[DamageType.PHYSICAL] = t.getPhysPen(self, t)})
+		self:talentTemporaryValue(p, "combat_apr", t.getAPR(self, t))
+	end,
+	info = function(self, t)
+		local phys_pen = t.getPhysPen(self, t)
+		local apr = t.getAPR(self, t)
+
+		return ([[Fangs sharpened and claws honed on the field of war, your beast has learnt how to strike a swift killing blow. Increase your beast's physical resistance penetration by %d%% and armour penetration by %d.]]):
+		format(phys_pen, apr)
+	end,
+	getAPR = function(self, t) return self:combatTalentScale(t, 7, 25) end,
+	getPhysPen = function(self, t) return self:combatTalentLimit(t, 75, 20, 50) end,
+}

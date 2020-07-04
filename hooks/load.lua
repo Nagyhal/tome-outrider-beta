@@ -286,7 +286,10 @@ class:bindHook("Combat:attackTarget", function(self, data)
 		data.stop = true
 	end
 
-	handleStrikeAtTheHeart(self, data)
+	if self:knowTalent(self.T_OUTRIDER_BRUTE_STRENGTH) then
+		data.mult = data.mult * (1 + self:callTalent(self.T_OUTRIDER_BRUTE_STRENGTH, "getPercentInc"))
+	end
+
 	return data
 end)
 

@@ -1,6 +1,7 @@
 -------------------------------------------------------------------------------
 --- Helper functions.
 -------------------------------------------------------------------------------
+
 --- Used when the mount is Riled Up and close to the owner
 -- The mount will run around and act a little crazy, even if there's no enemies
 -- in sight.
@@ -41,10 +42,10 @@ end
 --- AI routines.
 -------------------------------------------------------------------------------
 
----Special AI behaviours for Outrider mounts.
---Handles mainly disobedience effects, so far, and also calls the targeting
---function in case the pet is mounted. Some behaviours are also set by the
---disobedience effects themselves.
+--- Special AI behaviours for Outrider mounts.
+-- Handles mainly disobedience effects, so far, and also calls the targeting
+-- function in case the pet is mounted. Some behaviours are also set by the
+-- disobedience effects themselves.
 newAI("pet_behaviour", function(self)
 	local ox, oy = self.x, self.y
 	local target = getLiveAITarget(self)
@@ -56,6 +57,24 @@ newAI("pet_behaviour", function(self)
 	--@todo local frenzied = self:hasEffect(self.EFF_OUTRIDER_FRENZIED) 
 	--@todo local terror_stricken = self:hasEffect(self.EFF_OUTRIDER_TERROR_STRICKEN) 
 
+	-----------------------------------------------------------
+	-- Talents: Survival Instincts                           --
+	-----------------------------------------------------------
+	if self:hasEffect(self.EFF_OUTRIDER_SURVIVAL_INSTINCTS) then
+		-- Update our fleeing target to be the owner, always
+		self.ai_target.actor = self.owner
+		-- Flee if we're near
+		if core.fov.distance(self.x, self.y, self.owner.x, self.owner.y) <= 10 then
+			self:runAI("flee_dmap")
+		elseif random.percent(25) then
+			-- Give the wolf a chance to act normally if it's already fled the owner
+			self:runAI("flee_dmap")
+		end
+	end
+
+	-----------------------------------------------------------
+	-- Disobedience : Skittish                               --
+	-----------------------------------------------------------
 	if target and skittish then
 		if rng.percent(skittish.chance) then
 			--Flee from target
@@ -67,6 +86,9 @@ newAI("pet_behaviour", function(self)
 		end
 	end
 
+	-----------------------------------------------------------
+	-- Disobedience : Riled Up                               --
+	-----------------------------------------------------------
 	if target and riled_up then
 		if rng.percent(riled_up.chance) then
 			--50% chance to rush in like a madman
@@ -84,6 +106,9 @@ newAI("pet_behaviour", function(self)
 	if riled_up and not target and not self.aiSeeTargetPos then 
 		rompAroundTheOwner(self, self.owner)
 	end
+
+	-----------------------------------------------------------
+	-- Finishing up:
 
 	local ret = {self:runAI("target_mount")}
 
